@@ -595,8 +595,14 @@ function listenToFirebase(roomId) {
         if (data.gameState)
 		{
 			Object.assign(gameState, data.gameState);
-			if (gameState.p1 && !gameState.p1.lastRoll) gameState.p1.lastRoll = [];
-			if (gameState.p2 && !gameState.p2.lastRoll) gameState.p2.lastRoll = [];
+			if (gameState.p1) {
+				if (!gameState.p1.lastRoll) gameState.p1.lastRoll = [];
+				if (!gameState.p1.inventory) gameState.p1.inventory = [];
+			}
+			if (gameState.p2) {
+				if (!gameState.p2.lastRoll) gameState.p2.lastRoll = [];
+				if (!gameState.p2.inventory) gameState.p2.inventory = [];
+			}
 		}
         if (data.market) market = data.market;
         if (data.deck) deck = data.deck;
@@ -609,8 +615,18 @@ function listenToFirebase(roomId) {
 const logEl = document.getElementById("game-log");
 function log(msg, bold = false) { logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`; logEl.scrollTop = logEl.scrollHeight; }
 function showPopup(title, body) { document.getElementById("popup-title").innerText = title; document.getElementById("popup-body").innerHTML = body; document.getElementById("game-popup").style.display = "flex"; }
-function getCardRef(playerId, cardId) { if (playerId === 0) return null; return (playerId === 1 ? gameState.p1 : gameState.p2).inventory.find(c => c.id === cardId); }
-function hasCard(playerId, cardId) { return !!getCardRef(playerId, cardId); }
+function getCardRef(playerId, cardId)
+{
+	if (playerId === 0) return null;
+	
+	const inv = (playerId === 1 ? gameState.p1 : gameState.p2)?.inventory || [];
+
+	return inv.find(c => c.id === cardId); 
+}
+function hasCard(playerId, cardId)
+{
+	return !!getCardRef(playerId, cardId);
+}
 
 // ============================================================
 // CPU AI DIFFICULTY SYSTEM
