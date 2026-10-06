@@ -565,11 +565,9 @@ function initializeGame() {
         if (onlineLocalRole === 1) {
             // --- HOST (PLAYER 1) ---
             let hostName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Host";
-            let defaultP2Name = document.getElementById("cpu-name").value.trim().split(" ")[0] || "Player 2";
             let p1T = document.getElementById("p1-transform-type").value;
             let cpuT = document.getElementById("cpu-transform-type").value;
 
-            // Host constructs the single source-of-truth gameState
             gameState.gameMode = "online";
             gameState.showDiceText = showDiceText;
             gameState.showEnergyActions = showEnergyActions;
@@ -577,7 +575,7 @@ function initializeGame() {
             gameState.p1.name = hostName;
             gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
 
-            gameState.p2.name = defaultP2Name;
+            gameState.p2.name = "Waiting...";
             gameState.p2.transformTarget = p1T;
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
@@ -585,17 +583,23 @@ function initializeGame() {
             else gameState.p1.energy = 1;
 
             refillMarket();
-            startTurn(); // Syncs initial state to Firebase
+            startTurn(); 
+            syncToFirebase(); // Syncs initial payload to games/ROOMID
             listenToFirebase(onlineRoomId);
 
         } else {
             // --- GUEST (PLAYER 2) ---
-            // Save the guest's input name locally so we can update p2.name ONCE connected
-            const guestChosenName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Guest";
-            window.pendingGuestName = guestChosenName;
+            let guestName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Guest";
 
-            // Immediately start listening without overwriting gameState locally
+            // 1. Connect listener first
             listenToFirebase(onlineRoomId);
+
+            // 2. Update ONLY p2.name inside games/ROOMID/gameState/p2
+            if (window.db && window.dbUpdate && window.dbRef) {
+                window.dbUpdate(window.dbRef(window.db, "games/" + onlineRoomId + "/gameState/p2"), {
+                    name: guestName
+                });
+            }
         }
         return;
     }
@@ -688,14 +692,23 @@ function listenToFirebaseOld(roomId) {
 }
 
 function listenToFirebase(roomId) {
-    const roomRef = ref(db, `rooms/${roomId}`);
-    onValue(roomRef, (snapshot) => {
+    if (!window.db || !window.dbRef || !window.dbOnValue) return;
+
+    const roomRef = window.dbRef(window.db, "games/" + roomId);
+    
+    window.dbOnValue(roomRef, (snapshot) => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data || !data.gameState) return;
 
-        gameState = data;
+        // Prevent syncToFirebase from firing back while updating local state
+        isSyncingFromFirebase = true;
 
-        // Sanitize arrays from Firebase
+        gameState = data.gameState;
+        if (data.market) market = data.market;
+        if (data.deck) deck = data.deck;
+        if (data.discardPile) discardPile = data.discardPile;
+
+        // Sanitize arrays incoming from Firebase
         ['p1', 'p2'].forEach(p => {
             if (gameState[p]) {
                 gameState[p].inventory = gameState[p].inventory ? (Array.isArray(gameState[p].inventory) ? gameState[p].inventory : Object.values(gameState[p].inventory)) : [];
@@ -707,18 +720,9 @@ function listenToFirebase(roomId) {
         if (!gameState.log) gameState.log = [];
         if (!Array.isArray(gameState.log)) gameState.log = Object.values(gameState.log);
 
-        // If Guest has a pending name, update p2.name and push to Firebase once
-        if (onlineLocalRole === 2 && window.pendingGuestName) {
-            const guestName = window.pendingGuestName;
-            window.pendingGuestName = null; // Clear so it only executes once
-
-            if (gameState.p2 && gameState.p2.name !== guestName) {
-                gameState.p2.name = guestName;
-                syncToFirebase(); // Updates Player 2 name on Host screen
-            }
-        }
-
         updateUI();
+
+        isSyncingFromFirebase = false;
     });
 }
 
