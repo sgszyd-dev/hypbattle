@@ -434,7 +434,8 @@ let gameState = {
     p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
     dice: Array(6).fill({ face: "-", kept: false }),
-    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false
+    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
+	log: [] // Store log messages here
 };
 
 let onlineRoomId = "";
@@ -468,6 +469,42 @@ function toggleGameMode() {
     } else {
         document.getElementById("p2-header-label").innerText = "Player 2";
     }
+}
+
+function addLog(msg) {
+    if (!gameState) return;
+
+    // Ensure array exists
+    if (!gameState.log) gameState.log = [];
+
+    // Optional timestamp or formatting
+    gameState.log.push(msg);
+
+    // Keep the log to a reasonable size (e.g., last 50 entries)
+    if (gameState.log.length > 50) {
+        gameState.log.shift();
+    }
+
+    // Sync to Firebase and update local UI
+    syncToFirebase();
+    updateUI();
+}
+
+function renderLog() {
+    const logBox = document.getElementById("game-log"); // Replace with your log div ID
+    if (!logBox || !gameState) return;
+
+    // Handle Firebase object-to-array conversion and missing data
+    let logs = gameState.log || [];
+    if (!Array.isArray(logs)) {
+        logs = Object.values(logs);
+    }
+
+    // Render entries
+    logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
+
+    // Auto-scroll to the latest message
+    logBox.scrollTop = logBox.scrollHeight;
 }
 
 function setOnlineRole(role) {
@@ -514,65 +551,81 @@ function updateSetupImages() {
 }
 
 function initializeGame() {
-    let p1N = document.getElementById("p1-name").value;
-    let cpuN = document.getElementById("cpu-name").value;
+    let p1N = document.getElementById("p1-name").value.trim();
+    let cpuN = document.getElementById("cpu-name").value.trim();
     let cpuNFinal = cpuN === "Random" ? NAMES.filter(n => n !== p1N)[Math.floor(Math.random() * (NAMES.length - 1))] : cpuN;
-    if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
     
     let p1T = document.getElementById("p1-transform-type").value;
     let cpuT = document.getElementById("cpu-transform-type").value;
     
     gameState.gameMode = document.getElementById("game-mode-option").value;
-    gameState.p1.name = p1N.split(" ")[0]; gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-    gameState.p2.name = cpuNFinal.split(" ")[0]; gameState.p2.transformTarget = p1T;
-    gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
     gameState.showDiceText = document.getElementById("dice-text-option").value === "on";
     gameState.showEnergyActions = document.getElementById("energy-actions-option").value === "on";
 
     document.getElementById("energy-actions-panel-1").style.display = gameState.showEnergyActions ? "block" : "none";
     document.getElementById("settings-modal").style.display = "none";
-    document.getElementById("ui-p1-name").innerText = gameState.p1.name;
     
     if (gameState.gameMode === "online") {
         onlineRoomId = document.getElementById("online-room-code").value.trim().toUpperCase() || "ROOM123";
         onlineLocalRole = parseInt(document.getElementById("online-role-option").value, 10);
         
-        document.getElementById("ui-cpu-name").innerText = gameState.p2.name;
         document.getElementById("energy-actions-panel-2").style.display = gameState.showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
 
-        // Listen for Realtime Database state updates
-        listenToFirebase(onlineRoomId);
-
-        // Host initializes starting game state
         if (onlineLocalRole === 1) {
+            // Host setup (Player 1)
+            gameState.p1.name = p1N.split(" ")[0] || "Host";
+            gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+            gameState.p2.name = "Guest"; // Placeholder until guest joins
+            gameState.p2.transformTarget = p1T;
+
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
+            
             refillMarket();
-            startTurn();
+            startTurn(); // syncs to Firebase
+        } else {
+            // Guest setup (Player 2)
+            // Guest uses the p1-name input box as their player name
+            gameState.p2.name = p1N.split(" ")[0] || "Guest";
+            
+            // Sync guest name to Firebase so host sees it
+            syncToFirebase();
         }
+
+        // Listen for incoming database updates
+        listenToFirebase(onlineRoomId);
+
     } else if (gameState.gameMode === "pvp") {
-        document.getElementById("ui-cpu-name").innerText = gameState.p2.name;
+        if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
+        gameState.p1.name = p1N.split(" ")[0]; gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+        gameState.p2.name = cpuNFinal.split(" ")[0]; gameState.p2.transformTarget = p1T;
+
         document.getElementById("energy-actions-panel-2").style.display = gameState.showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
 
         gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
         if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
-        refillMarket(); startTurn();
+        refillMarket(); 
+        startTurn();
     } else {
-        document.getElementById("ui-cpu-name").innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
+        // Solo / vs CPU mode
+        gameState.p1.name = p1N.split(" ")[0]; gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+        gameState.p2.name = cpuNFinal.split(" ")[0]; gameState.p2.transformTarget = p1T;
+        gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
+
         document.getElementById("p1-last-keep-section").style.display = "none";
 
         gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
         if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
-        refillMarket(); startTurn();
+        refillMarket(); 
+        startTurn();
     }
 
-    document.getElementById("track-labels").innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
+    updateUI();
 }
-
 // FIREBASE GAME STATE SYNCHRONIZATION (STEP 4)
 function syncToFirebase() {
     if (gameState.gameMode !== "online" || !onlineRoomId || isSyncingFromFirebase || !window.db) return;
@@ -603,6 +656,8 @@ function listenToFirebase(roomId) {
 				if (!gameState.p2.lastRoll) gameState.p2.lastRoll = [];
 				if (!gameState.p2.inventory) gameState.p2.inventory = [];
 			}
+			if (!gameState.log) gameState.log = [];
+			
 		}
         if (data.market) market = data.market;
         if (data.deck) deck = data.deck;
@@ -867,8 +922,21 @@ function updateUI() {
     let isHumanTurn = isLocalPlayerTurn();
     let isP1 = gameState.activePlayer === 1;
 
-    let p1NameEl = document.getElementById("ui-p1-name");
-    let p2NameEl = document.getElementById("ui-cpu-name");
+    if (gameState && gameState.p1 && gameState.p2) {
+		document.getElementById("ui-p1-name").innerText = gameState.p1.name || "Player 1";
+		
+		if (gameState.gameMode === "vs-cpu") {
+			document.getElementById("ui-cpu-name").innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
+		} else {
+			document.getElementById("ui-cpu-name").innerText = gameState.p2.name || "Player 2";
+		}
+
+		const trackLabels = document.getElementById("track-labels");
+		if (trackLabels) {
+			trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
+		}
+	}
+	
     p1NameEl.classList.remove("active-player-glow");
     p2NameEl.classList.remove("active-player-glow");
     if (gameState.activePlayer === 1) {
@@ -907,7 +975,9 @@ function updateUI() {
         btnEnd2.style.background = btnEnd2.disabled ? '' : 'var(--cpu)';
     }
 
-    renderDiceAndActions(isHumanTurn); renderMarket(); renderInventory(1); renderInventory(2); checkWinCondition();
+    renderDiceAndActions(isHumanTurn); renderMarket(); renderInventory(1); renderInventory(2); 
+	renderLog();
+	checkWinCondition();
 }
 
 function renderDiceAndActions(isHumanTurn) {
@@ -1291,19 +1361,29 @@ function confirmLucidity() { document.getElementById("lucidity-modal").style.dis
 
 async function resolveDice() {
     gameState.phase = "shop";
-    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
-    let oppP = gameState.activePlayer === 1 ? gameState.p2 : gameState.p1;
-    let oppId = gameState.activePlayer === 1 ? 2 : 1;
+    
+    // Convert activePlayer to Number to prevent string mismatch ("1" === 1 being false)
+    const activePlayerNum = Number(gameState.activePlayer);
+    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+    let oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
+    let oppId = activePlayerNum === 1 ? 2 : 1;
     let isHumanTurn = isLocalPlayerTurn();
 
-    activeP.lastRoll = gameState.dice.map(d => d.face);
-    
+    // Save BOTH lastRoll and lastKeep
+    const currentDiceFaces = gameState.dice.map(d => d.face);
+    activeP.lastRoll = [...currentDiceFaces];
+    activeP.lastKeep = [...currentDiceFaces];
+
+    // Sync immediately so opponent sees resolved dice before dialogs pop up
+    syncToFirebase();
+    updateUI();
+
     let counts = { "🌀 SPIRAL": 0, "💧 LUCIDITY": 0, "⚡ ENERGY": 0, "⛓️ SUBMISSION": 0, "🔥 AROUSAL": 0, "👁️ TRANSFORM": 0 };
-    gameState.dice.forEach(d => { if (d.face !== "-") counts[d.face]++; });
+    gameState.dice.forEach(d => { if (d && d.face !== "-") counts[d.face] = (counts[d.face] || 0) + 1; });
 
     if (counts["⚡ ENERGY"] > 0) { 
         let gain = counts["⚡ ENERGY"];
-        if (hasCard(gameState.activePlayer, 45)) { gain += 1; log("Power Boost granted +1 extra Energy!"); }
+        if (hasCard(activePlayerNum, 45)) { gain += 1; log("Power Boost granted +1 extra Energy!"); }
         activeP.energy += gain; log(`+${gain} Energy.`); 
     }
     
@@ -1311,13 +1391,13 @@ async function resolveDice() {
         if (oppP.shieldActive) log("Rapid Pulse shielded Trance!"); 
         else { 
             let tPush = counts["🌀 SPIRAL"];
-            if (hasCard(gameState.activePlayer, 0)) { tPush += 1; log("Deep Gaze deepened Trance by 1 more!"); }
-            oppP.trance += tPush; log(`Opp Trance +${tPush}`); checkTranceSetback(oppP, gameState.activePlayer); 
+            if (hasCard(activePlayerNum, 0)) { tPush += 1; log("Deep Gaze deepened Trance by 1 more!"); }
+            oppP.trance += tPush; log(`Opp Trance +${tPush}`); checkTranceSetback(oppP, activePlayerNum); 
         } 
     }
     
     let lCount = counts["💧 LUCIDITY"];
-    if (hasCard(gameState.activePlayer, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
+    if (hasCard(activePlayerNum, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
     if (lCount > 0) {
         if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
             log(`Lucidity rolled, but stats are 0.`);
@@ -1339,25 +1419,26 @@ async function resolveDice() {
     }
 
     let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
-    if (hasCard(gameState.activePlayer, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
+    if (hasCard(activePlayerNum, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
     if (arousalEffect > 0) { if (!oppP.shieldActive) { increaseArousal(oppP, arousalEffect, oppId); log(`Opp Arousal +${arousalEffect}`); } }
 
     if (counts["⛓️ SUBMISSION"] >= 3) {
-		let effect = 1 + (counts["⛓️ SUBMISSION"] - 3); pushSubmission(gameState.activePlayer === 1 ? effect : -effect, gameState.activePlayer); log(`Sub track pushed.`);
-        if (hasCard(gameState.activePlayer, 23)) { increaseArousal(oppP, 1, oppId); log("Submissive Flush triggered: Opp Arousal +1."); }
-        if (hasCard(gameState.activePlayer, 24)) { gameState.somnambulismTurn = true; log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
+        let effect = 1 + (counts["⛓️ SUBMISSION"] - 3); pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); log(`Sub track pushed.`);
+        if (hasCard(activePlayerNum, 23)) { increaseArousal(oppP, 1, oppId); log("Submissive Flush triggered: Opp Arousal +1."); }
+        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
     }
 
     if (counts["👁️ TRANSFORM"] >= 3) {
-        let effect = 1 + (counts["👁️ TRANSFORM"] - 3); applyTransform(oppId, effect, gameState.activePlayer); log(`Opp Transform +${effect}`);
-        if (hasCard(gameState.activePlayer, 2)) { applyTransform(oppId, 1, gameState.activePlayer); log(`Dream State actively boosted Transform damage by 1!`); }
-        if (hasCard(gameState.activePlayer, 22)) { pushSubmission(gameState.activePlayer === 1 ? 1 : -1, gameState.activePlayer); log("Mental Shackles triggered: Sub pushed +1."); }
+        let effect = 1 + (counts["👁️ TRANSFORM"] - 3); applyTransform(oppId, effect, activePlayerNum); log(`Opp Transform +${effect}`);
+        if (hasCard(activePlayerNum, 2)) { applyTransform(oppId, 1, activePlayerNum); log(`Dream State actively boosted Transform damage by 1!`); }
+        if (hasCard(activePlayerNum, 22)) { pushSubmission(activePlayerNum === 1 ? 1 : -1, activePlayerNum); log("Mental Shackles triggered: Sub pushed +1."); }
     }
 
-    if (hasCard(gameState.activePlayer, 3) && counts["⛓️ SUBMISSION"]>0 && counts["👁️ TRANSFORM"]>0 && counts["🔥 AROUSAL"]>0 && counts["🌀 SPIRAL"]>0 && counts["💧 LUCIDITY"]>0 && counts["⚡ ENERGY"]>0) {
-        applyTransform(oppId, 5, gameState.activePlayer); log(`Trigger Word activated! Opponent takes +5 Transform!`);
+    if (hasCard(activePlayerNum, 3) && counts["⛓️ SUBMISSION"]>0 && counts["👁️ TRANSFORM"]>0 && counts["🔥 AROUSAL"]>0 && counts["🌀 SPIRAL"]>0 && counts["💧 LUCIDITY"]>0 && counts["⚡ ENERGY"]>0) {
+        applyTransform(oppId, 5, activePlayerNum); log(`Trigger Word activated! Opponent takes +5 Transform!`);
     }
 
+    // Final sync after dialogs & statutory effects settle
     syncToFirebase();
     updateUI();
 }
