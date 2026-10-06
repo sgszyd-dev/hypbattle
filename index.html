@@ -491,19 +491,15 @@ function addLog(msg) {
 }
 
 function renderLog() {
-    const logBox = document.getElementById("game-log"); // Replace with your log div ID
+    const logBox = document.getElementById("game-log"); // Replace with your HTML log container ID
     if (!logBox || !gameState) return;
 
-    // Handle Firebase object-to-array conversion and missing data
     let logs = gameState.log || [];
     if (!Array.isArray(logs)) {
         logs = Object.values(logs);
     }
 
-    // Render entries
     logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
-
-    // Auto-scroll to the latest message
     logBox.scrollTop = logBox.scrollHeight;
 }
 
@@ -577,24 +573,21 @@ function initializeGame() {
             // Host setup (Player 1)
             gameState.p1.name = p1N.split(" ")[0] || "Host";
             gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-            gameState.p2.name = "Guest"; // Placeholder until guest joins
+            gameState.p2.name = "Guest"; 
             gameState.p2.transformTarget = p1T;
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
             
             refillMarket();
-            startTurn(); // syncs to Firebase
+            startTurn(); // Creates initial state and pushes to Firebase
         } else {
             // Guest setup (Player 2)
-            // Guest uses the p1-name input box as their player name
-            gameState.p2.name = p1N.split(" ")[0] || "Guest";
-            
-            // Sync guest name to Firebase so host sees it
-            syncToFirebase();
+            // Store chosen Guest name temporarily; listenToFirebase will send it once room is loaded
+            window.pendingGuestName = p1N.split(" ")[0] || "Guest";
         }
 
-        // Listen for incoming database updates
+        // Connect to Firebase listener
         listenToFirebase(onlineRoomId);
 
     } else if (gameState.gameMode === "pvp") {
@@ -626,6 +619,8 @@ function initializeGame() {
 
     updateUI();
 }
+
+
 // FIREBASE GAME STATE SYNCHRONIZATION (STEP 4)
 function syncToFirebase() {
     if (gameState.gameMode !== "online" || !onlineRoomId || isSyncingFromFirebase || !window.db) return;
@@ -657,6 +652,16 @@ function listenToFirebase(roomId) {
 				if (!gameState.p2.inventory) gameState.p2.inventory = [];
 			}
 			if (!gameState.log) gameState.log = [];
+			if (!Array.isArray(gameState.log)) {
+                gameState.log = Object.values(gameState.log);
+            }
+			// 2. Safely apply Guest name once room state is loaded
+            if (onlineLocalRole === 2 && window.pendingGuestName) {
+                gameState.p2.name = window.pendingGuestName;
+                window.pendingGuestName = null; // Prevent re-triggering
+                syncToFirebase();
+            }
+			
 			
 		}
         if (data.market) market = data.market;
@@ -668,8 +673,31 @@ function listenToFirebase(roomId) {
 }
 
 const logEl = document.getElementById("game-log");
-function log(msg, bold = false) { logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`; logEl.scrollTop = logEl.scrollHeight; }
-function showPopup(title, body) { document.getElementById("popup-title").innerText = title; document.getElementById("popup-body").innerHTML = body; document.getElementById("game-popup").style.display = "flex"; }
+function log(msg, bold = false) {
+	if (!gameState) return;
+	if (!gameState.log) gameState.log = [];
+	if (!Array.isArray(gameState.log)) {
+        gameState.log = Object.values(gameState.log);
+    }
+
+    gameState.log.push(msg);
+
+    if (gameState.log.length > 50) {
+        gameState.log.shift();
+    }
+
+    renderLog();
+	
+    logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+
+function showPopup(title, body) {
+    document.getElementById("popup-title").innerText = title;
+    document.getElementById("popup-body").innerHTML = body;
+    document.getElementById("game-popup").style.display = "flex";
+}
 function getCardRef(playerId, cardId) {
     if (playerId === 0 || !gameState) return null;
     
