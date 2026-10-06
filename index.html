@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Complete V5.2 (Two Player Support)</title>
+    <title>Hypnotic Duel - Complete V6.0 (Two Player Support)</title>
     <style>
         :root {
             --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
@@ -316,14 +316,14 @@
                <div class="modal-col" id="p1-setup-col">
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
                     <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
-                    <label>Name:</label> <select id="p1-name" onchange="updateSetupImages()"></select>
-                    <label>Target Transformation:</label> <select id="p1-transform-type"></select>
+                    <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
+                    <label id="p1-trasnform-label">Transform Opponent into:</label> <select id="p1-transform-type"></select>
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
                     <div class="image-stub" id="setup-cpu-image" style="height: 180px; margin-bottom: 10px;"></div>
-                    <label>Name:</label> <select id="cpu-name" onchange="updateSetupImages()"></select>
-                    <label>Target Transformation:</label> <select id="cpu-transform-type"></select>
+                    <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
+                    <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type"></select>
                     <div id="cpu-diff-wrap" style="display:flex; flex-direction:column; gap:10px;">
                         <label>Difficulty:</label>
                         <select id="cpu-difficulty">
@@ -366,8 +366,8 @@
                     </div>
                     <label style="margin-top: 10px;">Dice Display:</label>
                     <select id="dice-text-option"><option value="on">Text + Symbols</option><option value="off">Symbols Only</option></select>
-                    <label style="margin-top: 10px;">Default Energy Actions:</label>
-                    <select id="energy-actions-option"><option value="off" selected>Don't Show</option><option value="on">Show</option></select>
+                    <!--label style="margin-top: 10px;">Default Energy Actions:</label>
+                    <select id="energy-actions-option"><option value="off" selected>Don't Show</option><option value="on">Show</option></select-->
                 </div>
             </div>
             <div style="display:flex; gap:10px; margin-top:15px;">
@@ -546,9 +546,24 @@ const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION"
 const NAMES = ["Alex (M)", "Roz (F)", "Victor (M)", "Siobhán (F)", "Tex (M)", "Cassandra (F)", "Damian (M)", "Seraphina (F)", "Leo (M)", "Fable (F)"];
 const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny"];
 
+const CHARACTER_MANIFEST = {
+    "Alex (M)": ["Bunny", "Pig"],
+    "Roz (F)": ["Werewolf"],
+    "Victor (M)": [],
+    "Siobhán (F)": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet"],
+    "Tex (M)": ["Cow", "Cat"],
+    "Cassandra (F)": [],
+    "Damian (M)": [],
+    "Seraphina (F)": [],
+    "Leo (M)": [],
+    "Fable (F)": ["Cat", "Bunny", "Cow"]
+	};
+
+
+
 // --- DEBUG CONFIGURATION ---
 const cardDebugOn = false;
-const debugCards = [34, 17, 3]; // Set the 3 card IDs you want dealt first
+const debugCards = [41, 17, 3]; // Set the 3 card IDs you want dealt first
 
 const KNOWN_CARDS = [
     { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more." },
@@ -626,15 +641,68 @@ let lucidityResolve = null;
 window.onload = () => {
     const populate = (id, arr, addRandom = false) => {
         const select = document.getElementById(id);
+        select.innerHTML = "";
         if(addRandom) select.innerHTML += `<option value="Random">Random</option>`;
         arr.forEach(item => select.innerHTML += `<option value="${item}">${item}</option>`);
     };
-    populate("p1-name", NAMES); populate("cpu-name", NAMES, true);
-    populate("p1-transform-type", TRANSFORMS); populate("cpu-transform-type", TRANSFORMS, true);
-    generateDeck();
+
+    populate("p1-name", NAMES);
+    populate("cpu-name", NAMES, true);
+
+    if (typeof generateDeck === 'function') generateDeck();
 	deck = prepareDebugDeck(deck);
-    updateSetupImages();
+
+    // Initial trigger to cross-link labels and options
+    onP1NameChange();
+    onCpuNameChange();
 };
+
+function onP1NameChange() {
+    updateSetupImages();
+    
+    const p1Raw = document.getElementById("p1-name").value;
+    const p1Clean = p1Raw.split(" ")[0];
+    
+    // Update P2/CPU's transform label
+    const cpuLabel = document.getElementById("cpu-transform-label");
+    if (cpuLabel) cpuLabel.textContent = `Transform ${p1Clean} into:`;
+
+    // Populate CPU's target transformation choices based on P1's character
+    populateTransformDropdown("cpu-transform-type", p1Raw);
+}
+
+function onCpuNameChange() {
+    updateSetupImages();
+    
+    const cpuRaw = document.getElementById("cpu-name").value;
+    const cpuClean = cpuRaw === "Random" ? "Opponent" : cpuRaw.split(" ")[0];
+    
+    // Update P1's transform label
+    const p1Label = document.getElementById("p1-transform-label");
+    if (p1Label) p1Label.textContent = `Transform ${cpuClean} into:`;
+
+    // Populate P1's target transformation choices based on CPU's character
+    populateTransformDropdown("p1-transform-type", cpuRaw);
+}
+
+function populateTransformDropdown(selectId, opposingCharName) {
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+
+    selectEl.innerHTML = "";
+
+    const mode = document.getElementById("game-mode-option")?.value;
+
+    // Use full transform list for Online mode, "Random", or unmapped characters
+    if (mode === "online" || opposingCharName === "Random" || !CHARACTER_MANIFEST[opposingCharName]) {
+        TRANSFORMS.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
+        return;
+    }
+
+    // Use specific transform list mapped to the opposing character
+    const available = CHARACTER_MANIFEST[opposingCharName];
+    available.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
+}
 
 function toggleGameMode() {
     let mode = document.getElementById("game-mode-option").value;
@@ -765,7 +833,8 @@ function updateSetupImages() {
 function initializeGame() {
     const gameMode = document.getElementById("game-mode-option").value;
     const showDiceText = document.getElementById("dice-text-option").value === "on";
-    const showEnergyActions = document.getElementById("energy-actions-option").value === "on";
+    const showEnergyActions = false;
+	//document.getElementById("energy-actions-option").value === "on";
 
     document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
     document.getElementById("settings-modal").style.display = "none";
