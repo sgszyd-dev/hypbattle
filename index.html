@@ -951,27 +951,31 @@ function updateUI() {
     let isP1 = gameState.activePlayer === 1;
 
     if (gameState && gameState.p1 && gameState.p2) {
-		document.getElementById("ui-p1-name").innerText = gameState.p1.name || "Player 1";
+		const p1NameEL = document.getElementById("ui-p1-name")
+		p1NameEl.innerText = gameState.p1.name || "Player 1";
 		
+		const p2NameEl = document.getElementById("ui-cpu-name")
 		if (gameState.gameMode === "vs-cpu") {
-			document.getElementById("ui-cpu-name").innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
+			p2NameEl.innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
 		} else {
-			document.getElementById("ui-cpu-name").innerText = gameState.p2.name || "Player 2";
+			p2NameEl.innerText = gameState.p2.name || "Player 2";
 		}
 
 		const trackLabels = document.getElementById("track-labels");
 		if (trackLabels) {
 			trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
 		}
+		
+		p1NameEl.classList.remove("active-player-glow");
+		p2NameEl.classList.remove("active-player-glow");
+		if (gameState.activePlayer === 1) {
+			p1NameEl.classList.add("active-player-glow");
+		} else {
+			p2NameEl.classList.add("active-player-glow");
+		}
 	}
 	
-    p1NameEl.classList.remove("active-player-glow");
-    p2NameEl.classList.remove("active-player-glow");
-    if (gameState.activePlayer === 1) {
-        p1NameEl.classList.add("active-player-glow");
-    } else {
-        p2NameEl.classList.add("active-player-glow");
-    }
+    
 
     let dirArrowsLeft = isP1 ? "◄◄ " : "";
     let dirArrowsRight = !isP1 ? " ►►" : "";
