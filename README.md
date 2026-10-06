@@ -1,2 +1,3 @@
 # hypbattle
 HypBattle game
+newline
