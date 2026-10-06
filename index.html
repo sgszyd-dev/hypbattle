@@ -570,30 +570,28 @@ function initializeGame() {
         document.getElementById("p1-last-keep-section").style.display = "block";
 
         if (onlineLocalRole === 1) {
-            // Host setup (Player 1)
-            gameState.p1.name = p1N.split(" ")[0] || "Host";
+            // Host creates initial game state using selected character names
+            gameState.p1.name = p1N.split(" ")[0] || "Player1";
+            gameState.p2.name = cpuNFinal.split(" ")[0] || "Player2";
             gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-            gameState.p2.name = "Guest"; 
             gameState.p2.transformTarget = p1T;
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
             
             refillMarket();
-            startTurn(); // Creates initial state and pushes to Firebase
-        } else {
-            // Guest setup (Player 2)
-            // Store chosen Guest name temporarily; listenToFirebase will send it once room is loaded
-            window.pendingGuestName = p1N.split(" ")[0] || "Guest";
+            startTurn(); // Syncs initial state to Firebase
         }
 
-        // Connect to Firebase listener
+        // Both Host and Guest listen for state updates from Firebase
         listenToFirebase(onlineRoomId);
 
     } else if (gameState.gameMode === "pvp") {
         if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
-        gameState.p1.name = p1N.split(" ")[0]; gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-        gameState.p2.name = cpuNFinal.split(" ")[0]; gameState.p2.transformTarget = p1T;
+        gameState.p1.name = p1N.split(" ")[0]; 
+        gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+        gameState.p2.name = cpuNFinal.split(" ")[0]; 
+        gameState.p2.transformTarget = p1T;
 
         document.getElementById("energy-actions-panel-2").style.display = gameState.showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
@@ -605,8 +603,10 @@ function initializeGame() {
         startTurn();
     } else {
         // Solo / vs CPU mode
-        gameState.p1.name = p1N.split(" ")[0]; gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-        gameState.p2.name = cpuNFinal.split(" ")[0]; gameState.p2.transformTarget = p1T;
+        gameState.p1.name = p1N.split(" ")[0]; 
+        gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+        gameState.p2.name = cpuNFinal.split(" ")[0]; 
+        gameState.p2.transformTarget = p1T;
         gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
 
         document.getElementById("p1-last-keep-section").style.display = "none";
@@ -619,7 +619,6 @@ function initializeGame() {
 
     updateUI();
 }
-
 
 // FIREBASE GAME STATE SYNCHRONIZATION (STEP 4)
 function syncToFirebase() {
@@ -634,7 +633,7 @@ function syncToFirebase() {
     window.dbSet(window.dbRef(window.db, "games/" + onlineRoomId), payload);
 }
 
-function listenToFirebase(roomId) {
+function listenToFirebaseOld(roomId) {
     if (!window.db) return;
     window.dbOnValue(window.dbRef(window.db, "games/" + roomId), (snapshot) => {
         const data = snapshot.val();
@@ -669,6 +668,34 @@ function listenToFirebase(roomId) {
         if (data.discardPile) discardPile = data.discardPile;
         isSyncingFromFirebase = false;
         updateUI();
+    });
+}
+
+function listenToFirebase(roomId) {
+    const roomRef = ref(db, `rooms/${roomId}`);
+    onValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            gameState = data;
+
+            // Ensure inventory arrays exist
+            if (gameState.p1) {
+                gameState.p1.inventory = gameState.p1.inventory ? (Array.isArray(gameState.p1.inventory) ? gameState.p1.inventory : Object.values(gameState.p1.inventory)) : [];
+                gameState.p1.lastRoll = gameState.p1.lastRoll || [];
+            }
+            if (gameState.p2) {
+                gameState.p2.inventory = gameState.p2.inventory ? (Array.isArray(gameState.p2.inventory) ? gameState.p2.inventory : Object.values(gameState.p2.inventory)) : [];
+                gameState.p2.lastRoll = gameState.p2.lastRoll || [];
+            }
+
+            // Ensure log array exists
+            if (!gameState.log) gameState.log = [];
+            if (!Array.isArray(gameState.log)) {
+                gameState.log = Object.values(gameState.log);
+            }
+
+            updateUI();
+        }
     });
 }
 
