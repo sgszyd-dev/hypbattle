@@ -1645,6 +1645,7 @@ function startTurn() {
 	let diceCount = 6 + anchorBonus;
     if (activeP.vulnerability > 0) {
         diceCount = Math.max(1, diceCount - activeP.vulnerability);
+		if (diceCount < 3) diceCount = 3;
         log(`Vulnerability restricts ${activeP.name} to ${diceCount} dice.`);
     }
     if (gameState.somnambulismTurn) { diceCount = Math.max(1, diceCount - 1); gameState.somnambulismTurn = false; }
@@ -2478,7 +2479,7 @@ const HELP_CONTENT = {
     quick: `
         <div class="help-section">
             <h3>Objective</h3>
-            <p><strong>Transform your opponent to 10 or more to win.</strong> Transform is the offensive victory track: when your move pushes the opponent to 10+, you win.</p>
+            <p><strong>Completely transform your opponent before they transform you to win.</strong> There are 10 stages of transformation: when your move pushes the opponent to 10+, you win.</p>
         </div>
         <div class="help-section">
             <h3>Your Turn</h3>
@@ -2487,11 +2488,11 @@ const HELP_CONTENT = {
                 <div class="help-box"><strong>2. Keep</strong><br>Click dice to lock the ones you want to keep.</div>
                 <div class="help-box"><strong>3. Reroll</strong><br>Roll the unkept dice again while you have rerolls remaining.</div>
                 <div class="help-box"><strong>4. Resolve</strong><br>Resolve the final dice to apply their effects.</div>
-                <div class="help-box"><strong>5. Shop</strong><br>Spend Energy on cards. You may buy multiple cards if you can afford them.</div>
+                <div class="help-box"><strong>5. Shop</strong><br>Spend Energy on cards and/or clear the card market. You may buy multiple cards if you can afford them.</div>
                 <div class="help-box"><strong>6. End Turn</strong><br>Finish the shop phase and pass play to the other player unless an effect grants another turn.</div>
             </div>
         </div>
-        <div class="help-section">
+		<div class="help-section">
 			<h3>Online Play Setup</h3>
 			<p>Hypnotic Duel supports two-player online play using Firebase. One player is the <strong>Host</strong> and the other is the <strong>Guest</strong>.</p>
 
@@ -2523,7 +2524,7 @@ const HELP_CONTENT = {
         <div class="help-section">
             <h3>The Six Dice</h3>
             <p>🌀 Trance &nbsp; 💧 Lucidity &nbsp; ⚡ Energy &nbsp; ⛓️ Submission &nbsp; 🔥 Arousal &nbsp; 👁️ Transform</p>
-            <p>Most dice have an individual effect. Matching 3 or more of the same face can create a stronger combination effect.</p>
+            <p>Most dice have an individual effect. Matching 3 or more of ⛓️ or 👁️ can create a stronger combination effect.</p>
         </div>
         <div class="help-section">
             <h3>First Strategy Tip</h3>
@@ -2536,25 +2537,25 @@ const HELP_CONTENT = {
     rules: `
         <div class="help-section">
             <h3>Game Objective</h3>
-            <p>Each player is trying to <strong>Transform the opponent to 10 or more</strong>. The player whose opponent reaches 10+ is the winner. If both reach 10+ during the same active turn/effect, the active player wins the tie.</p>
+            <p>Each player is trying to <strong>Completely transform the opponent to a target</strong>. The player whose opponent is completely transformed through the 10 stages of transformation first is the winner. If both players are completely transformed during the same active turn/effect, the active player wins the tie.</p>
         </div>
         <div class="help-section">
             <h3>Turn Structure</h3>
             <ol>
                 <li><strong>Rolling phase:</strong> roll, lock useful dice, and reroll unkept dice.</li>
                 <li><strong>Resolve:</strong> apply the final roll's individual effects and combinations.</li>
-                <li><strong>Shop phase:</strong> buy cards and use available Energy actions.</li>
+                <li><strong>Shop phase:</strong> buy cards or clear the market.</li>
                 <li><strong>End Turn:</strong> end-of-turn effects resolve before the next player's turn.</li>
             </ol>
         </div>
         <div class="help-section">
             <h3>Submission Track</h3>
-            <p>The track runs from -5 to +5. Positive values favor Player 1; negative values favor Player 2. A sufficiently strong Submission roll pushes the track. Pushing beyond an endpoint overflows into Transform damage against the player on that end.</p>
+            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions.</p>
             <p>At Submission 3 or more, a roll of ⛓️ produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of push.</p>
         </div>
         <div class="help-section">
             <h3>Trance</h3>
-            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback and removes 5 Trance before the Setback effect is applied.</p>
+            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You get to choose whether they are more submissive (+2) or more aroused (+2). Then they wake up with 0 Trance again.</p>
         </div>
         <div class="help-section">
             <h3>Arousal & Rerolls</h3>
@@ -2562,11 +2563,11 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Transform</h3>
-            <p>Three 👁️ dice produce 1 Transform, with each additional 👁️ adding another point. Cards can increase Transform damage. Transforming the opponent to 10+ ends the game in your favor.</p>
+            <p>Three 👁️ dice produce 1 Transformation of the opponent, with each additional 👁️ adding another point. Cards can increase the number of Transformations. Transforming the opponent to 10+ ends the game in your favor.</p>
         </div>
         <div class="help-section">
             <h3>Energy</h3>
-            <p>Each ⚡ die gives 1 Energy. Energy is spent on cards and certain actions. Power Boost can increase Energy gained from dice.</p>
+            <p>Each ⚡ die gives 1 Energy. Energy is spent on cards and being able to wipe the cards in the market and refill it. The card <i>Power Boost</i> can increase Energy gained from dice.</p>
         </div>
         <div class="help-section">
             <h3>Lucidity</h3>
@@ -2574,7 +2575,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Vulnerability</h3>
-            <p>Vulnerability reduces the number of dice you roll, to a minimum of one. 💧 Lucidity can remove Vulnerability.</p>
+            <p>If the card <i>Powerful Transform</i> is in play, Vulnerability reduces the number of dice the opposing player can roll, to a minimum of three. 💧 Lucidity can remove Vulnerability.</p>
         </div>
     `,
     dice: `
