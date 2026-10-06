@@ -107,6 +107,26 @@
         .log { background: #111; padding: 10px; height: 180px; overflow-y: scroll; border-radius: 5px; font-family: monospace; font-size: 0.9em; }
         .cpu-last-roll { font-size: 1.8em; letter-spacing: 5px; text-align: center; margin-top: 10px; background: #111; border-radius: 5px; padding: 5px;}
         .vuln-badge { color: #ff9f1c; font-weight: bold; font-size: 0.9em; }
+		
+		.btn-end-turn {
+			margin-top: auto;
+			padding: 14px;
+			font-size: 1.1em;
+			font-weight: bold;
+			letter-spacing: 0.5px;
+			text-transform: uppercase;
+			border-radius: 6px;
+			transition: background-color 0.2s ease, filter 0.2s ease, transform 0.1s ease;
+		}
+
+		.btn-end-turn:not(:disabled):hover {
+			filter: brightness(1.15);
+			transform: translateY(-1px);
+		}
+
+		.btn-end-turn:not(:disabled):active {
+			transform: translateY(0);
+		}
     </style>
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
@@ -309,7 +329,7 @@
             <h3>Active Cards</h3>
             <div id="p1-inventory" class="inventory"></div>
 
-            <button onclick="endTurn()" id="btn-end-turn-1" style="margin-top: auto; padding: 15px;">End Turn</button>
+            <button onclick="endTurn()" id="btn-end-turn-1" class="btn-end-turn">End Turn</button>
         </div>
 
         <!-- CENTER PANEL -->
@@ -363,7 +383,7 @@
             <h3>Active Cards</h3>
             <div id="p2-inventory" class="inventory"></div>
             
-            <button onclick="endTurn()" id="btn-end-turn-2" style="display: none; margin-top: auto; padding: 15px;">End Turn</button>
+            <button onclick="endTurn()" id="btn-end-turn-2" class="btn-end-turn" style="display: none;">End Turn</button>
         </div>
     </div>
 
@@ -1436,7 +1456,9 @@ function startTurn() {
     if (hasCard(gameState.activePlayer, 43)) { gameState.rerollsLeft += 1; log("Mental Awakening granted +1 reroll."); }
 
     gameState.phase = "rolling";
-    let diceCount = hasCard(gameState.activePlayer, 7) || hasCard(gameState.activePlayer, 17) ? 7 : 6;
+	const activePObj = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+	const anchorBonus = (activePObj.inventory || []).filter(c => c && (c.id === 7 || c.id === 17)).length;
+	let diceCount = 6 + anchorBonus;
     if (activeP.vulnerability > 0) {
         diceCount = Math.max(1, diceCount - activeP.vulnerability);
         log(`Vulnerability restricts ${activeP.name} to ${diceCount} dice.`);
