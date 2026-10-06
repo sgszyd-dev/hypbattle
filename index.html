@@ -846,7 +846,7 @@ function updateUI() {
 
 	const p1LastRoll = gameState.p1?.lastRoll || [];
 	const p2LastRoll = gameState.p2?.lastRoll || [];
-    document.getElementById("p1-last-roll").innerText = p1LastRoll > 0 ? p1LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
+    document.getElementById("p1-last-roll").innerText = p1LastRoll.length > 0 ? p1LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
     document.getElementById("cpu-last-roll").innerText = p2LastRoll.length > 0 ? p2LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
 
     const track = document.getElementById("submission-track"); track.innerHTML = "";
