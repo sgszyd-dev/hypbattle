@@ -146,13 +146,13 @@
         <div class="modal-content">
             <h2>Game Settings</h2>
             <div class="settings-grid">
-               <div class="modal-col">
-                    <h3 style="color: var(--player)">Player 1</h3>
+               <div class="modal-col" id="p1-setup-col">
+                    <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
                     <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="updateSetupImages()"></select>
                     <label>Target Transformation:</label> <select id="p1-transform-type"></select>
                 </div>
-                <div class="modal-col">
+                <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
                     <div class="image-stub" id="setup-cpu-image" style="height: 180px; margin-bottom: 10px;"></div>
                     <label>Name:</label> <select id="cpu-name" onchange="updateSetupImages()"></select>
@@ -462,6 +462,20 @@ function toggleGameMode() {
     document.getElementById("cpu-diff-wrap").style.display = mode === "solo" ? "flex" : "none";
     document.getElementById("online-room-wrap").style.display = mode === "online" ? "flex" : "none";
     
+    const p1Col = document.getElementById("p1-setup-col");
+    const p2Col = document.getElementById("p2-setup-col");
+    const p1Header = document.getElementById("p1-header-label");
+
+    if (mode === "online") {
+        if (p2Col) p2Col.style.display = "none";
+        if (p1Col) p1Col.style.gridColumn = "span 2";
+        if (p1Header) p1Header.innerText = "Your Settings";
+    } else {
+        if (p2Col) p2Col.style.display = "flex";
+        if (p1Col) p1Col.style.gridColumn = "span 1";
+        if (p1Header) p1Header.innerText = "Player 1";
+    }
+
     if (mode === "solo") {
         document.getElementById("p2-header-label").innerText = "CPU";
     } else if (mode === "online") {
@@ -562,21 +576,20 @@ function initializeGame() {
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
 
+        let localName = document.getElementById("p1-name").value.trim().split(" ")[0] || (onlineLocalRole === 1 ? "Host" : "Guest");
+        let localTarget = document.getElementById("p1-transform-type").value;
+
         if (onlineLocalRole === 1) {
             // --- HOST (PLAYER 1) ---
-            let hostName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Host";
-            let p1T = document.getElementById("p1-transform-type").value;
-            let cpuT = document.getElementById("cpu-transform-type").value;
-
             gameState.gameMode = "online";
             gameState.showDiceText = showDiceText;
             gameState.showEnergyActions = showEnergyActions;
 
-            gameState.p1.name = hostName;
-            gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+            gameState.p1.name = localName;
+            gameState.p2.transformTarget = localTarget; // Host sets the target transformation for Player 2
 
             gameState.p2.name = "Waiting...";
-            gameState.p2.transformTarget = p1T;
+            gameState.p1.transformTarget = TRANSFORMS[0]; // Placeholder until Guest sets Player 1's target transformation
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; 
@@ -589,15 +602,16 @@ function initializeGame() {
 
         } else {
             // --- GUEST (PLAYER 2) ---
-            let guestName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Guest";
-            window.pendingGuestName = guestName;
+            window.pendingGuestName = localName;
+            window.pendingGuestTarget = localTarget;
 
             listenToFirebase(onlineRoomId);
 
             if (window.db && window.dbUpdate && window.dbRef) {
-                window.dbUpdate(window.dbRef(window.db, "games/" + onlineRoomId + "/gameState/p2"), {
-                    name: guestName
-                });
+                let updates = {};
+                updates["games/" + onlineRoomId + "/gameState/p2/name"] = localName;
+                updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
+                window.dbUpdate(window.dbRef(window.db), updates);
             }
         }
         return;
@@ -706,10 +720,22 @@ function listenToFirebase(roomId) {
             if (data.deck) deck = data.deck;
             if (data.discardPile) discardPile = data.discardPile;
 
-            // Preserve Guest name if Host data arrives with "Waiting..." or "Guest"
-            if (onlineLocalRole === 2 && window.pendingGuestName) {
-                if (gameState.p2) {
+            // Sync Guest selections to Firebase if Host state overwrites with placeholders
+            if (onlineLocalRole === 2) {
+                let needsUpdate = false;
+                if (window.pendingGuestName) {
                     gameState.p2.name = window.pendingGuestName;
+                    needsUpdate = true;
+                }
+                if (window.pendingGuestTarget) {
+                    gameState.p1.transformTarget = window.pendingGuestTarget;
+                    needsUpdate = true;
+                }
+                if (needsUpdate && window.dbUpdate) {
+                    let updates = {};
+                    updates["games/" + onlineRoomId + "/gameState/p2/name"] = gameState.p2.name;
+                    updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = gameState.p1.transformTarget;
+                    window.dbUpdate(window.dbRef(window.db), updates);
                 }
             }
 
