@@ -175,7 +175,7 @@
                         <option value="pvp">2 Player Local</option>
                         <option value="online">2 Player Online (Firebase)</option>
                     </select>
-                   <div id="online-room-wrap" style="display:none; flex-direction:column; gap:10px; margin-top:10px; background: #222; padding: 12px; border-radius: 6px;">
+                   <div id="online-room-wrap" style="display:none; flex-direction:column; gap:10px; 		margin-top:10px; background: #222; padding: 12px; border-radius: 6px;">
                         <label style="font-weight: bold; color: var(--accent);">Online Setup:</label>
                         <div style="display: flex; gap: 8px;">
                             <button type="button" onclick="setOnlineRole('host')" id="btn-role-host" style="flex:1; background: var(--accent);">Host Online Game</button>
@@ -592,7 +592,12 @@ function listenToFirebase(roomId) {
         const data = snapshot.val();
         if (!data) return;
         isSyncingFromFirebase = true;
-        if (data.gameState) Object.assign(gameState, data.gameState);
+        if (data.gameState)
+		{
+			Object.assign(gameState, data.gameState);
+			if (gameState.p1 && !gameState.p1.lastRoll) gameState.p1.lastRoll = [];
+			if (gameState.p2 && !gameState.p2.lastRoll) gameState.p2.lastRoll = [];
+		}
         if (data.market) market = data.market;
         if (data.deck) deck = data.deck;
         if (data.discardPile) discardPile = data.discardPile;
@@ -818,8 +823,10 @@ function updateUI() {
         img.onerror = () => container.innerHTML = `Image Req:<br/>${filename}`;
     });
 
-    document.getElementById("p1-last-roll").innerText = gameState.p1.lastRoll.length > 0 ? gameState.p1.lastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
-    document.getElementById("cpu-last-roll").innerText = gameState.p2.lastRoll.length > 0 ? gameState.p2.lastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
+	const p1LastRoll = gameState.p1?.lastRoll || [];
+	const p2LastRoll = gameState.p2?.lastRoll || [];
+    document.getElementById("p1-last-roll").innerText = p1LastRoll > 0 ? p1LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
+    document.getElementById("cpu-last-roll").innerText = p2lastRoll.length > 0 ? p2lastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
 
     const track = document.getElementById("submission-track"); track.innerHTML = "";
     let activeIndex = Math.max(0, Math.min(10, gameState.submission + 5)); 
