@@ -1232,7 +1232,9 @@ function checkTranceSetback(oppP, activePlayerId) {
     }
 }
 
-function increaseArousal(pObj, amount, playerId) {
+function increaseArousal(target, amount, playerId) {
+	let pObj = typeof target === "object" ? target : gameState["p" + target];
+	if (!pObj) return;
     let oldArousal = pObj.arousal;
     pObj.arousal = Math.min(5, pObj.arousal + amount);
     if (pObj.arousal > oldArousal && hasCard(playerId, 32)) { pObj.energy += 1; log(`Guided Heat triggered: +1 Energy from arousal increase.`); }
@@ -1477,14 +1479,15 @@ async function resolveDice() {
 
     gameState.phase = "shop";
     
-    // Convert activePlayer to Number to prevent string mismatches ("1" === 1)
     const activePlayerNum = Number(gameState.activePlayer);
-    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
-    let oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
     let oppId = activePlayerNum === 1 ? 2 : 1;
     let isHumanTurn = isLocalPlayerTurn();
 
-    // Baseline property guards (prevents NaN bugs)
+    // Bind initial live player references
+    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+    let oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
+
+    // Baseline property guards
     activeP.trance = activeP.trance || 0;
     activeP.arousal = activeP.arousal || 0;
     activeP.vulnerability = activeP.vulnerability || 0;
@@ -1497,7 +1500,7 @@ async function resolveDice() {
     activeP.lastRoll = [...currentDiceFaces];
     activeP.lastKeep = [...currentDiceFaces];
 
-    // Robust dice face count normalization (matches regardless of emojis or casing)
+    // Count dice faces
     let counts = { SPIRAL: 0, LUCIDITY: 0, ENERGY: 0, SUBMISSION: 0, AROUSAL: 0, TRANSFORM: 0 };
     gameState.dice.forEach(d => { 
         if (!d || d.face === "-") return;
@@ -1531,10 +1534,6 @@ async function resolveDice() {
         } 
     }
 
-    // Intermediate sync so opponent sees Energy & Spiral results immediately on Firebase
-    syncToFirebase();
-    updateUI();
-
     // 3. Lucidity
     let lCount = counts.LUCIDITY;
     if (hasCard(activePlayerNum, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
@@ -1543,13 +1542,23 @@ async function resolveDice() {
             log(`Lucidity rolled, but stats are 0.`);
         } else if (isHumanTurn) {
             let showVuln = hasCard(oppId, 41) || activeP.vulnerability > 0;
+            
+            // Execution pauses here while player uses dialog
             let allocations = await showLucidityDialog(lCount, activeP, showVuln);
             
+            // RE-BIND activeP & oppP to live gameState after await
+            activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+            oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
+
             if (allocations) {
-                if (allocations.trance > 0) activeP.trance = Math.max(0, activeP.trance - allocations.trance);
-                if (allocations.arousal > 0) activeP.arousal = Math.max(0, activeP.arousal - allocations.arousal);
-                if (allocations.vuln > 0) activeP.vulnerability = Math.max(0, activeP.vulnerability - allocations.vuln);
-                log(`Lucidity applied: Trance -${allocations.trance}, Arousal -${allocations.arousal}, Vuln -${allocations.vuln}`);
+                let tSub = Number(allocations.trance || 0);
+                let aSub = Number(allocations.arousal || 0);
+                let vSub = Number(allocations.vuln || 0);
+
+                if (tSub > 0) activeP.trance = Math.max(0, activeP.trance - tSub);
+                if (aSub > 0) activeP.arousal = Math.max(0, activeP.arousal - aSub);
+                if (vSub > 0) activeP.vulnerability = Math.max(0, activeP.vulnerability - vSub);
+                log(`Lucidity applied: Trance -${tSub}, Arousal -${aSub}, Vuln -${vSub}`);
             }
         } else {
             let rem = lCount;
@@ -1565,7 +1574,11 @@ async function resolveDice() {
     if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
-            increaseArousal(oppP, arousalEffect, oppId); 
+            if (typeof increaseArousal === "function") {
+                increaseArousal(oppP, arousalEffect, oppId);
+            } else {
+                oppP.arousal = (oppP.arousal || 0) + arousalEffect;
+            }
             log(`Opp Arousal +${arousalEffect}`); 
         } 
     }
@@ -1575,7 +1588,11 @@ async function resolveDice() {
         let effect = 1 + (counts.SUBMISSION - 3); 
         pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); 
         log(`Sub track pushed.`);
-        if (hasCard(activePlayerNum, 23)) { increaseArousal(oppP, 1, oppId); log("Submissive Flush triggered: Opp Arousal +1."); }
+        if (hasCard(activePlayerNum, 23)) { 
+            if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId); 
+            else oppP.arousal = (oppP.arousal || 0) + 1;
+            log("Submissive Flush triggered: Opp Arousal +1."); 
+        }
         if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
     }
 
@@ -1594,7 +1611,7 @@ async function resolveDice() {
         log(`Trigger Word activated! Opponent takes +5 Transform!`);
     }
 
-    // Final sync after Lucidity dialog finishes
+    // Final sync to push changes to Firebase and both screens
     syncToFirebase();
     updateUI();
 }
