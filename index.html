@@ -615,17 +615,22 @@ function listenToFirebase(roomId) {
 const logEl = document.getElementById("game-log");
 function log(msg, bold = false) { logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`; logEl.scrollTop = logEl.scrollHeight; }
 function showPopup(title, body) { document.getElementById("popup-title").innerText = title; document.getElementById("popup-body").innerHTML = body; document.getElementById("game-popup").style.display = "flex"; }
-function getCardRef(playerId, cardId)
-{
-	if (playerId === 0) return null;
-	
-	const inv = (playerId === 1 ? gameState.p1 : gameState.p2)?.inventory || [];
+function getCardRef(playerId, cardId) {
+    if (playerId === 0 || !gameState) return null;
+    
+    const player = playerId === 1 ? gameState.p1 : gameState.p2;
+    let inv = player?.inventory || [];
 
-	return inv.find(c => c.id === cardId); 
+    // Convert Firebase object back into an Array if needed
+    if (!Array.isArray(inv)) {
+        inv = Object.values(inv);
+    }
+
+    return inv.find(c => c && c.id === cardId) || null; 
 }
-function hasCard(playerId, cardId)
-{
-	return !!getCardRef(playerId, cardId);
+
+function hasCard(playerId, cardId) {
+    return !!getCardRef(playerId, cardId);
 }
 
 // ============================================================
