@@ -908,10 +908,12 @@ function isLocalPlayerTurn() {
 }
 
 function updateUI() {
-    if (gameState.gameEnded) return;
+    if (!gameState || gameState.gameEnded) return;
     
-    ['p1', 'p2'].forEach((p, i) => {
+    ['p1', 'p2'].forEach((p) => {
         let pObj = gameState[p];
+        if (!pObj) return;
+
         document.getElementById(`${p}-trance`).innerText = pObj.trance;
         document.getElementById(`${p}-arousal`).innerText = pObj.arousal;
         document.getElementById(`${p}-transform`).innerText = pObj.transform;
@@ -922,66 +924,73 @@ function updateUI() {
         let filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(11, pObj.transform)}.jpg`;
         let imgPath = `images/avatars/${pObj.name}/${filename}`;
         let container = document.getElementById(`${p}-image`);
-        const img = new Image(); img.src = imgPath;
-        img.onload = () => container.innerHTML = `<img src="${imgPath}" onclick="openImageModal('${imgPath}')" />`;
-        img.onerror = () => container.innerHTML = `Image Req:<br/>${filename}`;
+        if (container) {
+            const img = new Image(); 
+            img.src = imgPath;
+            img.onload = () => container.innerHTML = `<img src="${imgPath}" onclick="openImageModal('${imgPath}')" />`;
+            img.onerror = () => container.innerHTML = `Image Req:<br/>${filename}`;
+        }
     });
 
-	const p1LastRoll = gameState.p1?.lastRoll || [];
-	const p2LastRoll = gameState.p2?.lastRoll || [];
+    const p1LastRoll = gameState.p1?.lastRoll || [];
+    const p2LastRoll = gameState.p2?.lastRoll || [];
     document.getElementById("p1-last-roll").innerText = p1LastRoll.length > 0 ? p1LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
     document.getElementById("cpu-last-roll").innerText = p2LastRoll.length > 0 ? p2LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
 
-    const track = document.getElementById("submission-track"); track.innerHTML = "";
-    let activeIndex = Math.max(0, Math.min(10, gameState.submission + 5)); 
-    for(let i=0; i<11; i++) {
-        let cls = 'node';
-        if (i === activeIndex) {
-            if (i === 0) cls += ' active-left-end';
-            else if (i === 10) cls += ' active-right-end';
-            else cls += ' active';
+    const track = document.getElementById("submission-track");
+    if (track) {
+        track.innerHTML = "";
+        let activeIndex = Math.max(0, Math.min(10, gameState.submission + 5)); 
+        for(let i = 0; i < 11; i++) {
+            let cls = 'node';
+            if (i === activeIndex) {
+                if (i === 0) cls += ' active-left-end';
+                else if (i === 10) cls += ' active-right-end';
+                else cls += ' active';
+            }
+            let nDiv = document.createElement("div");
+            nDiv.className = cls;
+            track.appendChild(nDiv);
         }
-        let nDiv = document.createElement("div");
-        nDiv.className = cls;
-        track.appendChild(nDiv);
     }
 
-    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    const activePlayerNum = Number(gameState.activePlayer);
+    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
     let isHumanTurn = isLocalPlayerTurn();
-    let isP1 = gameState.activePlayer === 1;
+    let isP1 = activePlayerNum === 1;
 
-    if (gameState && gameState.p1 && gameState.p2) {
-		const p1NameEl = document.getElementById("ui-p1-name")
-		p1NameEl.innerText = gameState.p1.name || "Player 1";
-		
-		const p2NameEl = document.getElementById("ui-cpu-name")
-		if (gameState.gameMode === "vs-cpu") {
-			p2NameEl.innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
-		} else {
-			p2NameEl.innerText = gameState.p2.name || "Player 2";
-		}
+    const p1NameEl = document.getElementById("ui-p1-name");
+    const p2NameEl = document.getElementById("ui-cpu-name");
 
-		const trackLabels = document.getElementById("track-labels");
-		if (trackLabels) {
-			trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
-		}
-		
-		p1NameEl.classList.remove("active-player-glow");
-		p2NameEl.classList.remove("active-player-glow");
-		if (gameState.activePlayer === 1) {
-			p1NameEl.classList.add("active-player-glow");
-		} else {
-			p2NameEl.classList.add("active-player-glow");
-		}
-	}
-	
-    
+    if (p1NameEl && gameState.p1) {
+        p1NameEl.innerText = gameState.p1.name || "Player 1";
+        p1NameEl.classList.remove("active-player-glow");
+        if (isP1) p1NameEl.classList.add("active-player-glow");
+    }
+
+    if (p2NameEl && gameState.p2) {
+        if (gameState.gameMode === "vs-cpu") {
+            p2NameEl.innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
+        } else {
+            p2NameEl.innerText = gameState.p2.name || "Player 2";
+        }
+        p2NameEl.classList.remove("active-player-glow");
+        if (!isP1) p2NameEl.classList.add("active-player-glow");
+    }
+
+    const trackLabels = document.getElementById("track-labels");
+    if (trackLabels && gameState.p1 && gameState.p2) {
+        trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
+    }
 
     let dirArrowsLeft = isP1 ? "◄◄ " : "";
     let dirArrowsRight = !isP1 ? " ►►" : "";
     let turnIndicator = document.getElementById("turn-indicator");
-    turnIndicator.innerText = `${dirArrowsLeft}${activeP.name}'s Turn${dirArrowsRight}`;
-    turnIndicator.style.color = isP1 ? "var(--player)" : "var(--cpu)";
+    if (turnIndicator && activeP) {
+        turnIndicator.innerText = `${dirArrowsLeft}${activeP.name}'s Turn${dirArrowsRight}`;
+        turnIndicator.style.color = isP1 ? "var(--player)" : "var(--cpu)";
+    }
+    
     document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
     
     document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
@@ -997,7 +1006,7 @@ function updateUI() {
 
     // UI Button Toggles P2
     if (gameState.gameMode === "pvp" || gameState.gameMode === "online") {
-        let isP2 = gameState.activePlayer === 2;
+        let isP2 = activePlayerNum === 2;
         document.getElementById("btn-buy-arousal-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 3 || gameState.phase !== "shop";
         document.getElementById("btn-buy-transform-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 5 || gameState.phase !== "shop";
         document.getElementById("btn-buy-submission-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 6 || gameState.phase !== "shop";
@@ -1007,9 +1016,12 @@ function updateUI() {
         btnEnd2.style.background = btnEnd2.disabled ? '' : 'var(--cpu)';
     }
 
-    renderDiceAndActions(isHumanTurn); renderMarket(); renderInventory(1); renderInventory(2); 
-	renderLog();
-	checkWinCondition();
+    renderDiceAndActions(isHumanTurn); 
+    renderMarket(); 
+    renderInventory(1); 
+    renderInventory(2); 
+    renderLog();
+    checkWinCondition();
 }
 
 function renderDiceAndActions(isHumanTurn) {
