@@ -547,76 +547,92 @@ function updateSetupImages() {
 }
 
 function initializeGame() {
-    let p1N = document.getElementById("p1-name").value.trim();
-    let cpuN = document.getElementById("cpu-name").value.trim();
-    let cpuNFinal = cpuN === "Random" ? NAMES.filter(n => n !== p1N)[Math.floor(Math.random() * (NAMES.length - 1))] : cpuN;
-    
-    let p1T = document.getElementById("p1-transform-type").value;
-    let cpuT = document.getElementById("cpu-transform-type").value;
-    
-    gameState.gameMode = document.getElementById("game-mode-option").value;
-    gameState.showDiceText = document.getElementById("dice-text-option").value === "on";
-    gameState.showEnergyActions = document.getElementById("energy-actions-option").value === "on";
+    const gameMode = document.getElementById("game-mode-option").value;
+    const showDiceText = document.getElementById("dice-text-option").value === "on";
+    const showEnergyActions = document.getElementById("energy-actions-option").value === "on";
 
-    document.getElementById("energy-actions-panel-1").style.display = gameState.showEnergyActions ? "block" : "none";
+    document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
     document.getElementById("settings-modal").style.display = "none";
-    
-    if (gameState.gameMode === "online") {
+
+    if (gameMode === "online") {
         onlineRoomId = document.getElementById("online-room-code").value.trim().toUpperCase() || "ROOM123";
         onlineLocalRole = parseInt(document.getElementById("online-role-option").value, 10);
-        
-        document.getElementById("energy-actions-panel-2").style.display = gameState.showEnergyActions ? "block" : "none";
+
+        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
 
         if (onlineLocalRole === 1) {
-            // Host creates initial game state using selected character names
-            gameState.p1.name = p1N.split(" ")[0] || "Player1";
-            gameState.p2.name = cpuNFinal.split(" ")[0] || "Player2";
+            // --- HOST (PLAYER 1) ---
+            let hostName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Host";
+            let defaultP2Name = document.getElementById("cpu-name").value.trim().split(" ")[0] || "Player 2";
+            let p1T = document.getElementById("p1-transform-type").value;
+            let cpuT = document.getElementById("cpu-transform-type").value;
+
+            // Host constructs the single source-of-truth gameState
+            gameState.gameMode = "online";
+            gameState.showDiceText = showDiceText;
+            gameState.showEnergyActions = showEnergyActions;
+
+            gameState.p1.name = hostName;
             gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+
+            gameState.p2.name = defaultP2Name;
             gameState.p2.transformTarget = p1T;
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
-            if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
-            
+            if (gameState.activePlayer === 1) gameState.p2.energy = 1; 
+            else gameState.p1.energy = 1;
+
             refillMarket();
             startTurn(); // Syncs initial state to Firebase
+            listenToFirebase(onlineRoomId);
+
+        } else {
+            // --- GUEST (PLAYER 2) ---
+            // Save the guest's input name locally so we can update p2.name ONCE connected
+            const guestChosenName = document.getElementById("p1-name").value.trim().split(" ")[0] || "Guest";
+            window.pendingGuestName = guestChosenName;
+
+            // Immediately start listening without overwriting gameState locally
+            listenToFirebase(onlineRoomId);
         }
-
-        // Both Host and Guest listen for state updates from Firebase
-        listenToFirebase(onlineRoomId);
-
-    } else if (gameState.gameMode === "pvp") {
-        if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
-        gameState.p1.name = p1N.split(" ")[0]; 
-        gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-        gameState.p2.name = cpuNFinal.split(" ")[0]; 
-        gameState.p2.transformTarget = p1T;
-
-        document.getElementById("energy-actions-panel-2").style.display = gameState.showEnergyActions ? "block" : "none";
-        document.getElementById("btn-end-turn-2").style.display = "block";
-        document.getElementById("p1-last-keep-section").style.display = "block";
-
-        gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
-        if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
-        refillMarket(); 
-        startTurn();
-    } else {
-        // Solo / vs CPU mode
-        gameState.p1.name = p1N.split(" ")[0]; 
-        gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
-        gameState.p2.name = cpuNFinal.split(" ")[0]; 
-        gameState.p2.transformTarget = p1T;
-        gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
-
-        document.getElementById("p1-last-keep-section").style.display = "none";
-
-        gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
-        if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
-        refillMarket(); 
-        startTurn();
+        return;
     }
 
+    // --- LOCAL / VS-CPU MODES ---
+    let p1N = document.getElementById("p1-name").value.trim();
+    let cpuN = document.getElementById("cpu-name").value.trim();
+    let cpuNFinal = cpuN === "Random" ? NAMES.filter(n => n !== p1N)[Math.floor(Math.random() * (NAMES.length - 1))] : cpuN;
+
+    if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
+
+    let p1T = document.getElementById("p1-transform-type").value;
+    let cpuT = document.getElementById("cpu-transform-type").value;
+
+    gameState.gameMode = gameMode;
+    gameState.showDiceText = showDiceText;
+    gameState.showEnergyActions = showEnergyActions;
+
+    gameState.p1.name = p1N.split(" ")[0]; 
+    gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+    gameState.p2.name = cpuNFinal.split(" ")[0]; 
+    gameState.p2.transformTarget = p1T;
+
+    if (gameMode === "pvp") {
+        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
+        document.getElementById("btn-end-turn-2").style.display = "block";
+        document.getElementById("p1-last-keep-section").style.display = "block";
+    } else {
+        document.getElementById("p1-last-keep-section").style.display = "none";
+        gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
+    }
+
+    gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
+    if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
+    
+    refillMarket(); 
+    startTurn();
     updateUI();
 }
 
@@ -675,27 +691,34 @@ function listenToFirebase(roomId) {
     const roomRef = ref(db, `rooms/${roomId}`);
     onValue(roomRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-            gameState = data;
+        if (!data) return;
 
-            // Ensure inventory arrays exist
-            if (gameState.p1) {
-                gameState.p1.inventory = gameState.p1.inventory ? (Array.isArray(gameState.p1.inventory) ? gameState.p1.inventory : Object.values(gameState.p1.inventory)) : [];
-                gameState.p1.lastRoll = gameState.p1.lastRoll || [];
-            }
-            if (gameState.p2) {
-                gameState.p2.inventory = gameState.p2.inventory ? (Array.isArray(gameState.p2.inventory) ? gameState.p2.inventory : Object.values(gameState.p2.inventory)) : [];
-                gameState.p2.lastRoll = gameState.p2.lastRoll || [];
-            }
+        gameState = data;
 
-            // Ensure log array exists
-            if (!gameState.log) gameState.log = [];
-            if (!Array.isArray(gameState.log)) {
-                gameState.log = Object.values(gameState.log);
+        // Sanitize arrays from Firebase
+        ['p1', 'p2'].forEach(p => {
+            if (gameState[p]) {
+                gameState[p].inventory = gameState[p].inventory ? (Array.isArray(gameState[p].inventory) ? gameState[p].inventory : Object.values(gameState[p].inventory)) : [];
+                gameState[p].lastRoll = gameState[p].lastRoll || [];
+                gameState[p].lastKeep = gameState[p].lastKeep || [];
             }
+        });
 
-            updateUI();
+        if (!gameState.log) gameState.log = [];
+        if (!Array.isArray(gameState.log)) gameState.log = Object.values(gameState.log);
+
+        // If Guest has a pending name, update p2.name and push to Firebase once
+        if (onlineLocalRole === 2 && window.pendingGuestName) {
+            const guestName = window.pendingGuestName;
+            window.pendingGuestName = null; // Clear so it only executes once
+
+            if (gameState.p2 && gameState.p2.name !== guestName) {
+                gameState.p2.name = guestName;
+                syncToFirebase(); // Updates Player 2 name on Host screen
+            }
         }
+
+        updateUI();
     });
 }
 
@@ -928,10 +951,16 @@ function cpuShouldBuySubmissionWithEnergy() {
 }
 
 function isLocalPlayerTurn() {
+    if (!gameState) return false;
+
+    const activeP = Number(gameState.activePlayer);
+
     if (gameState.gameMode === "online") {
-        return gameState.activePlayer === onlineLocalRole;
+        return activeP === Number(onlineLocalRole);
     }
-    return gameState.activePlayer === 1 || gameState.gameMode === "pvp";
+
+    // Offline modes: local PvP allows both players; vs-CPU only allows Player 1
+    return activeP === 1 || gameState.gameMode === "pvp";
 }
 
 function updateUI() {
