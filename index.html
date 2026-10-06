@@ -117,23 +117,36 @@
             text-transform: uppercase;
             border-radius: 6px;
             
-            /* Permanent yellow border and glow effect */
+            /* Neutral default state (no glow/yellow border) */
+            border: 2px solid #444;
+            box-shadow: none;
+            transition: background-color 0.2s ease, filter 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        /* Active Turn / Enabled State */
+        .btn-end-turn:not(:disabled) {
             border: 2px solid #ffd700;
             box-shadow: 0 0 10px #ffd700, 0 0 20px rgba(255, 215, 0, 0.4);
-            
-            transition: background-color 0.2s ease, filter 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            cursor: pointer;
         }
 
         .btn-end-turn:not(:disabled):hover {
             filter: brightness(1.15);
             transform: translateY(-1px);
-            
-            /* Intensify glow on hover */
             box-shadow: 0 0 15px #ffd700, 0 0 30px rgba(255, 215, 0, 0.7);
         }
 
         .btn-end-turn:not(:disabled):active {
             transform: translateY(0);
+        }
+
+        /* Disabled State (Not Player's Turn / Action Locked) */
+        .btn-end-turn:disabled {
+            border-color: #333;
+            box-shadow: none;
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: none;
         }
     </style>
 
