@@ -1846,7 +1846,11 @@ function executeInstant(card, playerId) {
     else if (card.id === 4) { applyTransform(oppId, 1, playerId); p.trance = 0; log(`Whispered Command! Opponent Transform +1, Trance reduced to 0.`); } 
 	// remove virtual dice
     //else if (card.id === 5) rollVirtualDice(playerId, 2, card.name);
-    else if (card.id === 6) { increaseArousal(opp, 2, oppId, playerId); log(`Velvet Voice! Opponent Arousal +2.`); } 
+    else if (card.id === 6) { if (opp.shieldActive) log(`Velvet Voice blocked by ${opp.name}'s Rapid Pulse.`);
+    else {
+        increaseArousal(opp, 2, oppId, playerId);
+        log(`Velvet Voice! Opponent Arousal +2.`);
+    } } 
     else if (card.id === 8 || card.id === 48) { increaseTrance(opp, 2, playerId);
     pushSubmission(playerId === 1 ? 2 : -2, playerId);
     log(`${card.name}! Opponent Trance +2, Sub pushed 2.`); } 
