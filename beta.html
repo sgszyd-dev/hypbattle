@@ -621,6 +621,9 @@ const KNOWN_CARDS = [
     { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {aggressive: 50, defensive: 10, v23low: 30} }
 ];
 
+// Emergency Submission Cards list
+const SUBMISSION_RECOVERY_CARDS = [10, 11, 15, 18, 34, 39, 48];
+
 let deck = [];
 let market = [];
 let discardPile = [];
@@ -1116,9 +1119,20 @@ function cpuKeepDie(face, difficulty, counts) {
 }
 
 function cpuChooseDiceToKeep() {
+	const pinned = isCpuPinnedInSubmission();
     const difficulty = getCpuDifficulty();
     const counts = { spiral: cpuCountFace("🌀 SPIRAL"), lucidity: cpuCountFace("💧 LUCIDITY"), energy: cpuCountFace("⚡ ENERGY"), submission: cpuCountFace("⛓️ SUBMISSION"), arousal: cpuCountFace("🔥 AROUSAL"), transform: cpuCountFace("👁️ TRANSFORM") };
-    gameState.dice.forEach(die => { if (!die.kept) die.kept = cpuKeepDie(die.face, difficulty, counts); });
+    gameState.dice.forEach(die => 
+	{
+		if (!die.kept)
+		{
+			// emergency override for submission
+			if (pinned && die.face.includes("SUBMISSION"))
+				die.kept = true;
+			else
+				die.kept = cpuKeepDie(die.face, difficulty, counts); 
+		}
+	});
 }
 
 function cpuShouldUseRapidPulse() {
@@ -1151,6 +1165,18 @@ function cpuShouldUseAbsoluteFocus(keptCount) {
     return getCpuDifficulty() === "random" ? Math.random() > 0.8 : keptCount < 4;
 }
 
+
+//Checks if the CPU is pinned near the losing edge of the submission track.
+// Adjust 'PINNED_THRESHOLD' or polarity (+ / -) to match your game's track orientation.
+function isCpuPinnedInSubmission() {
+    // Example: If +5 is defeat for CPU, pinned is +3 or higher.
+    // If -5 is defeat for CPU, change condition to: gameState.submission <= -3
+    const PINNED_THRESHOLD = 3; 
+    return gameState.submission >= PINNED_THRESHOLD;
+}
+
+
+
 function cpuCardPurchaseScore(card) {
     const difficulty = getCpuDifficulty();
     if (difficulty === "random") return Math.random() * 100;
@@ -1173,6 +1199,11 @@ function cpuCardPurchaseScore(card) {
 	
 	
 	// 3. Dynamic Situational Adjustments
+    // EMERGENCY PINNED PRIORITY (ALL AI LEVELS)
+    if (isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) {
+        // Massive score boost to force immediate priority over almost all other market cards
+        score += 60; 
+    }
     
     // Defensive Emergency: Boost defense/cleansing if CPU is under heavy Trance/Arousal/Vulnerability
     const inDanger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
@@ -1245,6 +1276,12 @@ function cpuShouldBuyCard(card, effectiveCost) {
 	const difficulty = getCpuDifficulty();
     if (effectiveCost > p.energy && !gameState.freeBuyActive) return false;
     if (difficulty === "random") return Math.random() > 0.5;
+	
+	// Emergency Override: Always buy submission recovery cards when pinned if affordable
+    if (isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) {
+        return true;
+    }
+	
     if (difficulty === "smart") return true;
 
     const score = cpuCardPurchaseScore(card);
@@ -1322,6 +1359,10 @@ function cpuShouldBuyTransformWithEnergy() {
 function cpuShouldBuySubmissionWithEnergy() {
     const p = gameState.p2; const difficulty = getCpuDifficulty();
     if (p.energy < 6) return false;
+	// Priority 1: If pinned, ALL AI levels dump remaining energy into Submission
+    if (isCpuPinnedInSubmission()) {
+        return true;
+    }
     if (difficulty === "v23low") return p.energy >= 7 && p.transform >= 7 && gameState.p1.transform >= 8 && gameState.submission > -5;
     if (difficulty === "aggressive") return p.energy >= 6 && p.transform >= 5 && gameState.p1.transform >= 5;
     if (difficulty === "defensive") return p.energy >= 8 && p.transform >= 6 && gameState.p1.transform >= 7 && gameState.submission > -5;
@@ -2320,6 +2361,7 @@ function executeCPUTurn() {
 				// --------------------------------------------------------
                 // TACTICAL MARKET PRIORITIZATION (CARDS RATED 70+)
                 // --------------------------------------------------------
+				const isPinned = isCpuPinnedInSubmission();
                 let highValueTarget = null;
                 let maxTargetScore = 0;
 
@@ -2327,6 +2369,9 @@ function executeCPUTurn() {
                     let card = market[i];
                     if (!card || !passesCardSpecificConditions(card)) continue;
                     let score = cpuCardPurchaseScore(card);
+					if (isPinned && SUBMISSION_RECOVERY_CARDS.includes(card.id)) {
+						score += 50;
+					}
                     if (score >= 70 && score > maxTargetScore) {
                         maxTargetScore = score;
                         highValueTarget = card;
