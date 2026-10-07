@@ -1,0 +1,3081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypnotic Duel - Beta V7.0 (Two Player Support)</title>
+    <style>
+        :root {
+            --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
+            --accent: #9d4edd; --accent-hover: #7b2cbf;
+            --cpu: #ff4d4d; --player: #4cc9f0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: var(--panel); padding: 30px; border-radius: 8px; width: 600px;
+        }
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .modal-content h2, .modal-content h1 { text-align: center; margin-top: 0; grid-column: span 2; }
+        .modal-col { display: flex; flex-direction: column; gap: 10px; }
+        .modal-content select, .modal-content button, .modal-content input {
+            padding: 8px; border-radius: 4px; background: #333; color: white; border: 1px solid #555;
+        }
+        .start-btn { width: 100%; background: var(--accent) !important; font-size: 1.2em; cursor: pointer; margin-top: 15px;}
+        .start-btn:hover { background: var(--accent-hover) !important; }
+
+        .lucidity-row {
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 10px; background: #222; padding: 12px; border-radius: 5px; font-size: 1.1em;
+        }
+        .lucidity-row div { display: flex; align-items: center; gap: 10px; }
+        .lucidity-row button { width: 35px; height: 35px; padding: 0; font-size: 1.2em; background: #444; border: none; cursor: pointer; border-radius: 4px; }
+        .lucidity-row button:hover { background: #555; }
+
+        .board { display: flex; gap: 15px; width: 100%; max-width: 1200px; }
+        .panel { background: var(--panel); padding: 15px; border-radius: 8px; flex: 1; display: flex; flex-direction: column; }
+        .center-board { flex: 2; gap: 10px; }
+        h2, h3 { margin: 0 0 10px 0; border-bottom: 2px solid var(--accent); padding-bottom: 5px; transition: text-shadow 0.3s; }
+        
+        .active-player-glow {
+            text-shadow: 0 0 15px currentColor, 0 0 25px currentColor;
+        }
+
+        .image-stub {
+            width: 100%; height: 300px; background: #111; border: 2px dashed #555;
+            display: flex; justify-content: center; align-items: center; text-align: center;
+            margin-bottom: 15px; font-family: monospace; color: #888; border-radius: 5px; overflow: hidden;
+            position: relative;
+        }
+        .image-stub img { width: 100%; height: 100%; object-fit: cover; object-position: center top; transition: transform 0.2s ease; cursor: pointer; }
+        .image-stub img:hover { transform: scale(1.03); }
+        .winner-highlight { border: 4px solid #ffcc00; box-shadow: 0 0 20px #ffcc00; background: #222; }
+
+        .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; }
+        .track-container { background: #111; padding: 15px; border-radius: 5px; text-align: center; }
+        .track-nodes { display: flex; justify-content: space-between; position: relative; margin-top: 10px; }
+        .track-nodes::before {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; 
+            background: #444; z-index: 1; transform: translateY(-50%);
+        }
+        
+        /* Submission Track Nodes & Styling */
+        .node { width: 20px; height: 20px; background: #333; border-radius: 50%; z-index: 2; border: 2px solid #555; position: relative; }
+        .node.active { background: var(--accent); border-color: white; box-shadow: 0 0 10px var(--accent); transform: scale(1.3); }
+        .node.active-left-end { background: var(--cpu); border-color: yellow; box-shadow: 0 0 15px yellow; transform: scale(1.3); z-index: 3; }
+        .node.active-right-end { background: var(--player); border-color: yellow; box-shadow: 0 0 15px yellow; transform: scale(1.3); z-index: 3; }
+
+        .market-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .card { 
+            background: #222; border: 1px solid var(--accent); border-radius: 5px; padding: 10px; flex: 1; 
+            display: flex; flex-direction: column; justify-content: space-between; font-size: 0.9em;
+        }
+        .card-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        .card-type { font-size: 0.8em; color: #aaa; }
+        
+        .inventory { display: flex; flex-direction: column; gap: 5px; max-height: 165px; overflow-y: auto; padding-right: 5px; }
+        .inventory::-webkit-scrollbar { width: 6px; }
+        .inventory::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 10px; }
+        .inv-card { background: #222; border: 1px solid #555; padding: 8px; border-radius: 5px; font-size: 0.85em; }
+        .inv-card button { margin-top: 5px; font-size: 0.9em; padding: 4px; }
+
+        .dice-container { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: center; margin: 15px 0; }
+        .die {
+            background: #333; border: 2px solid #555; padding: 5px; border-radius: 5px;
+            text-align: center; cursor: pointer; user-select: none; width: 65px; height: 65px; font-weight: bold; font-size: 0.8em;
+            display: flex; align-items: center; justify-content: center; word-break: break-word; flex-direction: column;
+        }
+        .die.kept { border-color: var(--accent); background: #443355; }
+        .die.cpu-kept { border-color: var(--cpu); background: #553333; }
+        
+        button {
+            background: var(--accent); color: white; border: none; padding: 8px 12px;
+            border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-top: 5px;
+        }
+        button:hover { filter: brightness(1.1); }
+        button:disabled { background: #555 !important; cursor: not-allowed; }
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        
+        .log { background: #111; padding: 10px; height: 180px; overflow-y: scroll; border-radius: 5px; font-family: monospace; font-size: 0.9em; }
+        .cpu-last-roll { font-size: 1.8em; letter-spacing: 5px; text-align: center; margin-top: 10px; background: #111; border-radius: 5px; padding: 5px;}
+        .vuln-badge { color: #ff9f1c; font-weight: bold; font-size: 0.9em; }
+		
+		.btn-end-turn {
+			margin-top: auto;
+			padding: 14px;
+			font-size: 1.1em;
+			font-weight: bold;
+			letter-spacing: 0.5px;
+			text-transform: uppercase;
+			border-radius: 6px;
+			
+			/* Neutral default state (no glow/yellow border) */
+			border: 2px solid #444;
+			box-shadow: none;
+			transition: background-color 0.2s ease, filter 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		/* Active Turn / Enabled State */
+		.btn-end-turn:not(:disabled) {
+			border: 2px solid #ffd700;
+			box-shadow: 0 0 10px #ffd700, 0 0 20px rgba(255, 215, 0, 0.4);
+			cursor: pointer;
+		}
+
+		.btn-end-turn:not(:disabled):hover {
+			filter: brightness(1.15);
+			transform: translateY(-1px);
+			box-shadow: 0 0 15px #ffd700, 0 0 30px rgba(255, 215, 0, 0.7);
+		}
+
+		.btn-end-turn:not(:disabled):active {
+			transform: translateY(0);
+		}
+
+		/* Disabled State (Not Player's Turn / Action Locked) */
+		.btn-end-turn:disabled {
+			border-color: #333;
+			box-shadow: none;
+			opacity: 0.5;
+			cursor: not-allowed;
+			filter: none;
+		}
+
+
+        /* ============================================================
+           HELP / RULES / GUIDED TUTORIAL UI
+           ============================================================ */
+        .help-btn {
+            width: auto !important;
+            background: #444 !important;
+            border: 1px solid #666;
+            font-weight: bold;
+            padding: 10px 16px;
+        }
+        .help-btn:hover { background: #555 !important; }
+        .help-modal-content {
+            width: min(980px, 92vw);
+            max-height: 88vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 22px;
+        }
+        .help-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .help-tab {
+            width: auto !important;
+            margin: 0 !important;
+            padding: 8px 13px !important;
+            background: #333 !important;
+            border: 1px solid #555 !important;
+        }
+        .help-tab.active { background: var(--accent) !important; border-color: var(--accent) !important; }
+        .help-scroll {
+            overflow-y: auto;
+            padding: 0 6px 10px 2px;
+            line-height: 1.5;
+        }
+        .help-section { margin-bottom: 20px; }
+        .help-section h3 { margin-bottom: 8px; }
+        .help-section p { margin: 7px 0; }
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .help-box {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .help-die {
+            font-size: 1.15em;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        .help-card-search {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0 0 12px 0 !important;
+        }
+        .help-card-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .help-card-entry {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .help-card-entry strong { color: var(--accent); }
+        .help-card-entry .help-card-meta { color: #aaa; font-size: 0.85em; }
+        .tutorial-overlay {
+            z-index: 500;
+            background: rgba(0,0,0,0.72);
+            pointer-events: none;
+        }
+        .tutorial-panel {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            transform: translateX(-50%);
+            width: min(650px, 90vw);
+            background: var(--panel);
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 20px rgba(157,78,221,0.35);
+            pointer-events: auto;
+        }
+        .tutorial-panel h2 { border-bottom: 2px solid var(--accent); padding-bottom: 7px; }
+        .tutorial-panel.tutorial-top {
+            top: 22px;
+            bottom: auto;
+        }
+        .tutorial-progress { color: #aaa; font-size: 0.85em; margin-bottom: 8px; }
+        .tutorial-actions { display: flex; gap: 8px; margin-top: 15px; }
+        .tutorial-actions button { margin: 0; }
+        .tutorial-highlight {
+            position: relative !important;
+            z-index: 501 !important;
+            box-shadow: 0 0 0 4px #ffd700, 0 0 25px 8px rgba(255,215,0,0.65) !important;
+            border-radius: 8px !important;
+        }
+        .tutorial-dismiss {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: auto !important;
+            background: transparent !important;
+            color: #aaa;
+            padding: 2px 6px !important;
+            margin: 0 !important;
+        }
+        @media (max-width: 800px) {
+            .help-grid, .help-card-list { grid-template-columns: 1fr; }
+            .help-modal-content { width: 94vw; }
+        }
+
+    </style>
+
+    <!-- Firebase Compatibility SDKs for simple CDN integration -->
+    <script type="module">
+	  // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+      import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBBVf9n4i5Kd3MKXlZIDZB_HJAVi1dkYRo",
+        authDomain: "hypbattle.firebaseapp.com",
+        databaseURL: "https://hypbattle-default-rtdb.firebaseio.com",
+        projectId: "hypbattle",
+        storageBucket: "hypbattle.firebasestorage.app",
+        messagingSenderId: "574159934992",
+        appId: "1:574159934992:web:223f97ef915ef24533dc95",
+        measurementId: "G-ENG86CT7J4"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const db = getDatabase(app);
+
+      // Expose Firebase Database functions globally for game state integration
+      window.db = db;
+      window.dbRef = ref;
+      window.dbSet = set;
+      window.dbOnValue = onValue;
+      window.dbUpdate = update;
+    </script>
+</head>
+<body>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Game Settings</h2>
+            <div class="settings-grid">
+               <div class="modal-col" id="p1-setup-col">
+                    <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
+                    <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
+                    <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
+                    <label id="p1-trasnform-label">Transform Opponent into:</label> <select id="p1-transform-type"></select>
+                </div>
+                <div class="modal-col" id="p2-setup-col">
+                    <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
+                    <div class="image-stub" id="setup-cpu-image" style="height: 180px; margin-bottom: 10px;"></div>
+                    <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
+                    <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type"></select>
+                    <div id="cpu-diff-wrap" style="display:flex; flex-direction:column; gap:10px;">
+                        <label>Difficulty:</label>
+                        <select id="cpu-difficulty">
+                            <option value="random">Beginner</option>
+                            <option value="smart">Easy</option>
+                            <option value="aggressive">Normal</option>
+                            <option value="v23low">Hard</option>
+                            <option value="defensive">Expert</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-col" style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px;">
+                    <label>Game Mode:</label>
+                    <select id="game-mode-option" onchange="toggleGameMode()">
+                        <option value="solo">1 Player vs CPU</option>
+                        <option value="pvp">2 Player Local</option>
+                        <option value="online">2 Player Online (Firebase)</option>
+                    </select>
+                   <div id="online-room-wrap" style="display:none; flex-direction:column; gap:10px; 		margin-top:10px; background: #222; padding: 12px; border-radius: 6px;">
+                        <label style="font-weight: bold; color: var(--accent);">Online Setup:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" onclick="setOnlineRole('host')" id="btn-role-host" style="flex:1; background: var(--accent);">Host Online Game</button>
+                            <button type="button" onclick="setOnlineRole('guest')" id="btn-role-guest" style="flex:1; background: #444;">Join Online Game</button>
+                        </div>
+
+                        <div id="host-controls" style="display: flex; flex-direction: column; gap: 6px; margin-top: 5px;">
+                            <label>Room Code:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="online-room-code" placeholder="e.g. ROOM123" value="ROOM123" style="flex:1;" />
+                                <button type="button" onclick="generateHostRoom()" style="width: auto; padding: 0 12px; background: #555;">Generate</button>
+                            </div>
+                            <span id="host-status-msg" style="font-size: 0.85em; color: #4cc9f0;">Host mode active (Player 1). Share this Room Code with your opponent.</span>
+                        </div>
+
+                        <!-- Hidden select element for compatibility with initializeGame() -->
+                        <select id="online-role-option" style="display: none;">
+                            <option value="1" selected>Host (Player 1)</option>
+                            <option value="2">Guest (Player 2)</option>
+                        </select>
+                    </div>
+                    <label style="margin-top: 10px;">Dice Display:</label>
+                    <select id="dice-text-option"><option value="on">Text + Symbols</option><option value="off">Symbols Only</option></select>
+                    <!--label style="margin-top: 10px;">Default Energy Actions:</label>
+                    <select id="energy-actions-option"><option value="off" selected>Don't Show</option><option value="on">Show</option></select-->
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button type="button" class="help-btn" onclick="openHelpModal('quick')" style="flex:1;">? How to Play</button>
+                <button type="button" class="help-btn" onclick="prepareGuidedTutorial()" style="flex:1;">Guided Tutorial</button>
+            </div>
+            <button class="start-btn" onclick="initializeGame()">Start Game</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="game-over-modal" class="modal-overlay" style="display: none; z-index: 300;">
+        <div class="modal-content" style="width: 700px;">
+            <h1 id="go-title">Game Over</h1>
+            <div class="settings-grid">
+                <div id="go-p1-panel" style="text-align: center; padding: 10px; border-radius: 8px;">
+                    <h2 id="go-p1-name">Player 1</h2><div class="image-stub" id="go-p1-image"></div><div id="go-p1-status" style="font-weight: bold; font-size: 1.2em;"></div>
+                </div>
+                <div id="go-p2-panel" style="text-align: center; padding: 10px; border-radius: 8px;">
+                    <h2 id="go-p2-name">CPU</h2><div class="image-stub" id="go-p2-image"></div><div id="go-p2-status" style="font-weight: bold; font-size: 1.2em;"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="start-btn" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
+                <button class="start-btn" onclick="document.getElementById('game-over-modal').style.display='none'" style="margin-top: 0; background: #666 !important;">View Board</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIRTUAL ROLLS POPUP -->
+    <div id="game-popup" class="modal-overlay" style="display: none; z-index: 200;">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <h2 id="popup-title">Title</h2>
+            <div id="popup-body" style="margin: 20px 0; font-size: 1.3em; line-height: 1.8;">Body</div>
+            <button class="start-btn" onclick="document.getElementById('game-popup').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <!-- LUCIDITY ALLOCATION MODAL -->
+    <div id="lucidity-modal" class="modal-overlay" style="display: none; z-index: 250;">
+        <div class="modal-content" style="width: 400px;">
+            <h2>Distribute Lucidity</h2>
+            <div style="font-size: 1.2em; text-align: center; margin-bottom: 20px;">
+                Points Available: <span id="lucidity-points-left" style="font-weight:bold; color:var(--player)">0</span>
+            </div>
+
+            <div class="lucidity-row" id="lucidity-row-trance">
+                <span>Trance (Max: <span id="lucidity-max-trance">0</span>)</span>
+                <div>
+                    <button onclick="adjLucidity('trance', -1)">-</button>
+                    <span id="lucidity-val-trance" style="display:inline-block; width: 30px; text-align:center; font-weight:bold;">0</span>
+                    <button onclick="adjLucidity('trance', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="lucidity-row" id="lucidity-row-arousal">
+                <span>Arousal (Max: <span id="lucidity-max-arousal">0</span>)</span>
+                <div>
+                    <button onclick="adjLucidity('arousal', -1)">-</button>
+                    <span id="lucidity-val-arousal" style="display:inline-block; width: 30px; text-align:center; font-weight:bold;">0</span>
+                    <button onclick="adjLucidity('arousal', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="lucidity-row" id="lucidity-row-vuln" style="display:none;">
+                <span class="vuln-badge">Vulnerability (Max: <span id="lucidity-max-vuln">0</span>)</span>
+                <div>
+                    <button onclick="adjLucidity('vuln', -1)">-</button>
+                    <span id="lucidity-val-vuln" style="display:inline-block; width: 30px; text-align:center; font-weight:bold;">0</span>
+                    <button onclick="adjLucidity('vuln', 1)">+</button>
+                </div>
+            </div>
+
+            <button class="start-btn" onclick="confirmLucidity()">Confirm</button>
+        </div>
+    </div>
+
+    <!-- MAIN GAME -->
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin-bottom: 10px;">
+        <h1 style="margin: 0;">Hypnotic Duel</h1>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button class="help-btn" onclick="openHelpModal('quick')">? How to Play</button>
+            <button onclick="location.reload()" style="width: auto; background: #e63946; font-weight: bold; padding: 10px 20px;">Reset Game</button>
+        </div>
+    </div>
+
+    <div class="board">
+        <!-- PLAYER 1 PANEL -->
+        <div class="panel">
+            <h2 id="ui-p1-name" style="color: var(--player)">Player 1</h2>
+            <div class="image-stub" id="p1-image">Image Stub</div>
+            <div class="stat">Trance 🌀: <span id="p1-trance">0</span></div>
+            <div class="stat">Arousal 🔥: <span id="p1-arousal">0</span></div>
+            <div class="stat">Transform 👁️: <span id="p1-transform">0</span></div>
+            <div class="stat">Energy ⚡: <span id="p1-energy">0</span></div>
+            <div class="stat vuln-badge" id="p1-vuln-container" style="display:none;">Vulnerability: <span id="p1-vuln">0</span></div>
+            
+            <div id="energy-actions-panel-1" style="display: none;">
+                <hr style="width: 100%; border: 1px solid #444;">
+                <h3>Energy Actions</h3>
+                <button onclick="buyAction('arousal', 1)" id="btn-buy-arousal-1">-1 Arousal (3⚡)</button>
+                <button onclick="buyAction('transform', 1)" id="btn-buy-transform-1">+1 Opponent Transform (5⚡)</button>
+                <button onclick="buyAction('submission', 1)" id="btn-buy-submission-1">Push Sub 2 (6⚡)</button>
+            </div>
+            
+            <div id="p1-last-keep-section" style="display: none;">
+                <hr style="width: 100%; border: 1px solid #444;">
+                <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Keep</h3>
+                <div class="cpu-last-roll" id="p1-last-roll">--</div>
+            </div>
+
+            <hr style="width: 100%; border: 1px solid #444;">
+            <h3>Active Cards</h3>
+            <div id="p1-inventory" class="inventory"></div>
+
+            <button onclick="endTurn()" id="btn-end-turn-1" class="btn-end-turn">End Turn</button>
+        </div>
+
+        <!-- CENTER PANEL -->
+        <div class="panel center-board">
+            <div class="track-container">
+                <h3 style="border: none; margin: 0 0 5px 0; text-align: center; font-size: 1.2em;">Submission</h3>
+                <div style="display: flex; justify-content: space-between; color: #aaa; font-size: 0.9em;" id="track-labels">
+                    <span>P1 Will Obey</span><span>Neutral</span><span>CPU Will Obey</span>
+                </div>
+                <div class="track-nodes" id="submission-track"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px;">
+                <h3 style="border: none; margin: 0;">Market</h3>
+                <button onclick="wipeMarket()" id="btn-wipe-market" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Wipe Row (2⚡)</button>
+            </div>
+            <div class="market-row" id="market-container"></div>
+
+            <h3 style="display: flex; flex-direction: column; align-items: center; border: none; gap: 5px; margin: 10px 0 0 0;">
+                <span id="turn-indicator">►► Turn ◄◄</span> 
+                <span style="font-size: 0.85em; font-weight: normal;" id="rerolls-indicator"></span>
+            </h3>
+            <div class="dice-container" id="dice-container"></div>
+            <div class="actions-grid" id="actions-grid"></div>
+            <div class="log" id="game-log"></div>
+        </div>
+
+        <!-- PLAYER 2 / CPU PANEL -->
+        <div class="panel">
+            <h2 id="ui-cpu-name" style="color: var(--cpu)">CPU</h2>
+            <div class="image-stub" id="p2-image">Image Stub</div>
+            <div class="stat">Trance 🌀: <span id="p2-trance">0</span></div>
+            <div class="stat">Arousal 🔥: <span id="p2-arousal">0</span></div>
+            <div class="stat">Transform 👁️: <span id="p2-transform">0</span></div>
+            <div class="stat">Energy ⚡: <span id="p2-energy">0</span></div>
+            <div class="stat vuln-badge" id="p2-vuln-container" style="display:none;">Vulnerability: <span id="p2-vuln">0</span></div>
+            
+            <div id="energy-actions-panel-2" style="display: none;">
+                <hr style="width: 100%; border: 1px solid #444;">
+                <h3>Energy Actions</h3>
+                <button onclick="buyAction('arousal', 2)" id="btn-buy-arousal-2">-1 Arousal (3⚡)</button>
+                <button onclick="buyAction('transform', 2)" id="btn-buy-transform-2">+1 Opponent Transform (5⚡)</button>
+                <button onclick="buyAction('submission', 2)" id="btn-buy-submission-2">Push Sub 2 (6⚡)</button>
+            </div>
+
+            <hr style="width: 100%; border: 1px solid #444;">
+            <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Keep</h3>
+            <div class="cpu-last-roll" id="cpu-last-roll">--</div>
+            
+            <hr style="width: 100%; border: 1px solid #444;">
+            <h3>Active Cards</h3>
+            <div id="p2-inventory" class="inventory"></div>
+            
+            <button onclick="endTurn()" id="btn-end-turn-2" class="btn-end-turn" style="display: none;">End Turn</button>
+        </div>
+    </div>
+
+<script>
+const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
+const NAMES = ["Alex (M)", "Roz (F)", "Victor (M)", "Siobhán (F)", "Tex (M)", "Cassandra (F)", "Damian (M)", "Seraphina (F)", "Leo (M)", "Fable (F)"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny"];
+
+const CHARACTER_MANIFEST = {
+    "Alex (M)": ["Bunny", "Pig"],
+    "Roz (F)": ["Werewolf"],
+    "Victor (M)": [],
+    "Siobhán (F)": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet"],
+    "Tex (M)": ["Cow", "Cat"],
+    "Cassandra (F)": [],
+    "Damian (M)": [],
+    "Seraphina (F)": [],
+    "Leo (M)": [],
+    "Fable (F)": ["Cat", "Bunny", "Cow","Otter"]
+	};
+
+
+
+// --- DEBUG CONFIGURATION ---
+const cardDebugOn = false;
+const debugCards = [41, 17, 3]; // Set the 3 card IDs you want dealt first
+
+// remove virtual dice: 5, 21
+// add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
+
+const KNOWN_CARDS = [
+    { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {agg: 50, def: 10, v23: 40} },
+	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {agg: 30, def: 30, v23: 30} },
+	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {agg: 75, def: 10, v23: 60} },
+	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {agg: 40, def: 10, v23: 30} },
+	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {agg: 65, def: 30, v23: 60} },
+    { id: 5, name: "Mental Block", cost: 3, type: "Instant", desc: "Roll 2 virtual dice. Results are applied immediately in a popup dialog.", ai: {agg: 50, def: 50, v23: 40} },
+	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {agg: 70, def: 10, v23: 50} },
+	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {agg: 80, def: 80, v23: 90} },
+	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {agg: 75, def: 15, v23: 65} },
+	{ id: 9, name: "Deep Safeties", cost: 4, type: "Keep", desc: "When you use 💧 Lucidity, add 1 to its effect.", ai: {agg: 15, def: 85, v23: 55} },
+	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {agg: 70, def: 70, v23: 70} },
+	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {agg: 40, def: 40, v23: 30} },
+	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {agg: 50, def: 50, v23: 40} },
+	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you use 🔥 Arousal, increase opponent's arousal 1 level more.", ai: {agg: 60, def: 10, v23: 40} },
+	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {agg: 55, def: 50, v23: 40} },
+	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {agg: 50, def: 50, v23: 40} },
+    { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {agg: 40, def: 40, v23: 35} },
+    { id: 17, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {agg: 80, def: 80, v23: 90} },
+    { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {agg: 60, def: 20, v23: 30} },
+    { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {agg: 20, def: 20, v23: 20} },
+    { id: 20, name: "Absolute Focus", cost: 4, type: "Keep", desc: "Starts with 3 charges. Spend a charge for an extra reroll. Discard when spent.", charges: 3, ai: {agg: 50, def: 50, v23: 50} },
+    { id: 21, name: "Guided Vision", cost: 2, type: "Instant", desc: "Roll 1 virtual die. Result is applied immediately in a popup dialog.", ai: {agg: 10, def: 10, v23: 10} },
+    { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {agg: 65, def: 15, v23: 55} },
+    { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {agg: 60, def: 15, v23: 45} },
+    { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {agg: 55, def: 45, v23: 45} },
+    { id: 25, name: "Pendulum Swing", cost: 3, type: "Instant", desc: "Deepen your submission by 2 and transform the opponent 1.", ai: {agg: 30, def: 30, v23: 30} },
+    { id: 26, name: "Waking Trance", cost: 4, type: "Keep", desc: "Gain an active button to Sell this card for +2 Energy.", ai: {agg: 50, def: 50, v23: 40} },
+    { id: 27, name: "Endless Staircase", cost: 2, type: "Keep", desc: "At the end of your turn, if you have no ⚡, gain 1 ⚡.", ai: {agg: 35, def: 35, v23: 25} },
+	{ id: 28, name: "Hypnotic Focus", cost: 5, type: "Keep", desc: "The first card you buy each turn costs 2 less energy.", ai: {agg: 50, def: 50, v23: 60} },
+    { id: 29, name: "Compliant Mind", cost: 3, type: "Keep", desc: "Buying cards costs you 1 less ⚡.", ai: {agg: 30, def: 30, v23: 40} },
+    { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {agg: 60, def: 20, v23: 35} },
+    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {agg: 30, def: 5, v23: 20} },
+    { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {agg: 10, def: 40, v23: 15} },
+    { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {agg: 10, def: 40, v23: 10} },
+    { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {agg: 15, def: 80, v23: 60} },
+    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {agg: 10, def: 70, v23: 40} },
+    { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {agg: 65, def: 20, v23: 60} },
+    { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {agg: 25, def: 40, v23: 20} },
+    { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {agg: 10, def: 80, v23: 65} },
+    { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {agg: 60, def: 60, v23: 55} },
+    { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {agg: 40, def: 40, v23: 40} },
+    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Removed by 💧.", ai: {agg: 80, def: 15, v23: 75} },
+	{ id: 42, name: "Mirror Image", cost: 6, type: "Keep", desc: "On your turn, discard this card to buy any card from the card row for free.", ai: {agg: 25, def: 25, v23: 55} },
+    { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {agg: 40, def: 40, v23: 50} },
+    { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {agg: 25, def: 65, v23: 50} },
+    { id: 45, name: "Power Boost", cost: 3, type: "Keep", desc: "When you gain any ⚡ from dice, gain 1 extra ⚡.", ai: {agg: 50, def: 30, v23: 40} },
+    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card.", ai: {agg: 70, def: 40, v23: 55} },
+    { id: 47, name: "Fading Reality", cost: 4, type: "Keep", desc: "You can always reroll any 👁️ you have.", ai: {agg: 25, def: 30, v23: 20} },
+    { id: 48, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and deepen their submission by 2.", ai: {agg: 65, def: 20, v23: 40} },
+    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {agg: 50, def: 10, v23: 30} }
+];
+
+let deck = [];
+let market = [];
+let discardPile = [];
+let gameState = {
+    gameMode: "solo",
+    p1: { name: "", transformTarget: "", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+    p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+    submission: 0, activePlayer: 1, round: 1, phase: "waiting",
+    dice: Array(6).fill({ face: "-", kept: false }),
+    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
+	log: [] // Store log messages here
+};
+
+let onlineRoomId = "";
+let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
+let isSyncingFromFirebase = false;
+
+let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
+let lucidityResolve = null;
+
+window.onload = () => {
+    const populate = (id, arr, addRandom = false) => {
+        const select = document.getElementById(id);
+        select.innerHTML = "";
+        if(addRandom) select.innerHTML += `<option value="Random">Random</option>`;
+        arr.forEach(item => select.innerHTML += `<option value="${item}">${item}</option>`);
+    };
+
+    populate("p1-name", NAMES);
+    populate("cpu-name", NAMES, true);
+
+    if (typeof generateDeck === 'function') generateDeck();
+	deck = prepareDebugDeck(deck);
+
+    // Initial trigger to cross-link labels and options
+    onP1NameChange();
+    onCpuNameChange();
+};
+
+function onP1NameChange() {
+    updateSetupImages();
+    
+    const p1Raw = document.getElementById("p1-name").value;
+    const p1Clean = p1Raw.split(" ")[0];
+    
+    // Update P2/CPU's transform label
+    const cpuLabel = document.getElementById("cpu-transform-label");
+    if (cpuLabel) cpuLabel.textContent = `Transform ${p1Clean} into:`;
+
+    // Populate CPU's target transformation choices based on P1's character
+    populateTransformDropdown("cpu-transform-type", p1Raw);
+}
+
+function onCpuNameChange() {
+    updateSetupImages();
+    
+    const cpuRaw = document.getElementById("cpu-name").value;
+    const cpuClean = cpuRaw === "Random" ? "Opponent" : cpuRaw.split(" ")[0];
+    
+    // Update P1's transform label
+    const p1Label = document.getElementById("p1-transform-label");
+    if (p1Label) p1Label.textContent = `Transform ${cpuClean} into:`;
+
+    // Populate P1's target transformation choices based on CPU's character
+    populateTransformDropdown("p1-transform-type", cpuRaw);
+}
+
+function populateTransformDropdown(selectId, opposingCharName) {
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+
+    selectEl.innerHTML = "";
+
+    const mode = document.getElementById("game-mode-option")?.value;
+
+    // Use full transform list for Online mode, "Random", or unmapped characters
+    if (mode === "online" || opposingCharName === "Random" || !CHARACTER_MANIFEST[opposingCharName]) {
+        TRANSFORMS.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
+        return;
+    }
+
+    // Use specific transform list mapped to the opposing character
+    const available = CHARACTER_MANIFEST[opposingCharName];
+    available.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
+}
+
+function toggleGameMode() {
+    let mode = document.getElementById("game-mode-option").value;
+    document.getElementById("cpu-diff-wrap").style.display = mode === "solo" ? "flex" : "none";
+    document.getElementById("online-room-wrap").style.display = mode === "online" ? "flex" : "none";
+    
+    const p1Col = document.getElementById("p1-setup-col");
+    const p2Col = document.getElementById("p2-setup-col");
+    const p1Header = document.getElementById("p1-header-label");
+
+    if (mode === "online") {
+        if (p2Col) p2Col.style.display = "none";
+        if (p1Col) p1Col.style.gridColumn = "span 2";
+        if (p1Header) p1Header.innerText = "Your Settings";
+    } else {
+        if (p2Col) p2Col.style.display = "flex";
+        if (p1Col) p1Col.style.gridColumn = "span 1";
+        if (p1Header) p1Header.innerText = "Player 1";
+    }
+
+    if (mode === "solo") {
+        document.getElementById("p2-header-label").innerText = "CPU";
+    } else if (mode === "online") {
+        document.getElementById("p2-header-label").innerText = "Online Opponent";
+    } else {
+        document.getElementById("p2-header-label").innerText = "Player 2";
+    }
+}
+
+function prepareDebugDeck(deck) {
+    if (!cardDebugOn || !debugCards || debugCards.length === 0) {
+        return deck;
+    }
+
+    const forcedCards = [];
+
+    // Extract selected cards from the main deck to prevent duplicates
+    debugCards.forEach(id => {
+        const index = deck.findIndex(card => (typeof card === 'object' ? card.id : card) === id);
+        if (index !== -1) {
+            forcedCards.push(deck.splice(index, 1)[0]);
+        }
+    });
+
+    // Place forced cards at the draw position:
+    // If your deal logic uses deck.pop() (draws from the end):
+    return [...deck, ...forcedCards];
+
+    // Note: If your deal logic uses deck.shift() (draws from the top), use:
+    // return [...forcedCards, ...deck];
+}
+
+function addLog(msg) {
+    if (!gameState) return;
+
+    // Ensure array exists
+    if (!gameState.log) gameState.log = [];
+
+    // Optional timestamp or formatting
+    gameState.log.push(msg);
+
+    // Keep the log to a reasonable size (e.g., last 50 entries)
+    if (gameState.log.length > 50) {
+        gameState.log.shift();
+    }
+
+    // Sync to Firebase and update local UI
+    syncToFirebase();
+    updateUI();
+}
+
+function renderLog() {
+    const logBox = document.getElementById("game-log"); // Replace with your HTML log container ID
+    if (!logBox || !gameState) return;
+
+    let logs = gameState.log || [];
+    if (!Array.isArray(logs)) {
+        logs = Object.values(logs);
+    }
+
+    logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function setOnlineRole(role) {
+    const roleSelect = document.getElementById("online-role-option");
+    const btnHost = document.getElementById("btn-role-host");
+    const btnGuest = document.getElementById("btn-role-guest");
+    const statusMsg = document.getElementById("host-status-msg");
+
+    if (role === 'host') {
+        roleSelect.value = "1";
+        btnHost.style.background = "var(--accent)";
+        btnGuest.style.background = "#444";
+        statusMsg.style.color = "#4cc9f0";
+        statusMsg.innerText = "Host mode active (Player 1). Share this Room Code with your opponent.";
+    } else {
+        roleSelect.value = "2";
+        btnGuest.style.background = "var(--accent)";
+        btnHost.style.background = "#444";
+        statusMsg.style.color = "#ff9f1c";
+        statusMsg.innerText = "Guest mode active (Player 2). Enter the host's Room Code above.";
+    }
+}
+
+function generateHostRoom() {
+    const randomCode = "ROOM-" + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById("online-room-code").value = randomCode;
+    setOnlineRole('host');
+}
+
+function updateSetupImages() {
+    let p1Name = document.getElementById("p1-name").value.split(" ")[0];
+    let cpuName = document.getElementById("cpu-name").value;
+    
+    let p1ImgPath = `images/avatars/${p1Name}/${p1Name}_baseline.jpg`;
+    document.getElementById("setup-p1-image").innerHTML = `<img src="${p1ImgPath}" onclick="openImageModal('${p1ImgPath}')" onerror="this.outerHTML='Image Req:<br>${p1Name}_baseline.jpg'"/>`;
+
+    if (cpuName === "Random") {
+        document.getElementById("setup-cpu-image").innerHTML = `<h2>?</h2>`;
+    } else {
+        let cpuTargetName = cpuName.split(" ")[0];
+        let cpuImgPath = `images/avatars/${cpuTargetName}/${cpuTargetName}_baseline.jpg`;
+        document.getElementById("setup-cpu-image").innerHTML = `<img src="${cpuImgPath}" onclick="openImageModal('${cpuImgPath}')" onerror="this.outerHTML='Image Req:<br>${cpuTargetName}_baseline.jpg'"/>`;
+    }
+}
+
+function initializeGame() {
+    const gameMode = document.getElementById("game-mode-option").value;
+    const showDiceText = document.getElementById("dice-text-option").value === "on";
+    const showEnergyActions = false;
+	//document.getElementById("energy-actions-option").value === "on";
+
+    document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
+    document.getElementById("settings-modal").style.display = "none";
+
+    if (gameMode === "online") {
+        onlineRoomId = document.getElementById("online-room-code").value.trim().toUpperCase() || "ROOM123";
+        onlineLocalRole = parseInt(document.getElementById("online-role-option").value, 10);
+
+        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
+        document.getElementById("btn-end-turn-2").style.display = "block";
+        document.getElementById("p1-last-keep-section").style.display = "block";
+
+        let localName = document.getElementById("p1-name").value.trim().split(" ")[0] || (onlineLocalRole === 1 ? "Host" : "Guest");
+        let localTarget = document.getElementById("p1-transform-type").value;
+
+        if (onlineLocalRole === 1) {
+            // --- HOST (PLAYER 1) ---
+            gameState.gameMode = "online";
+            gameState.showDiceText = showDiceText;
+            gameState.showEnergyActions = showEnergyActions;
+
+            gameState.p1.name = localName;
+            gameState.p2.transformTarget = localTarget; // Host sets the target transformation for Player 2
+
+            gameState.p2.name = "Waiting...";
+            gameState.p1.transformTarget = TRANSFORMS[0]; // Placeholder until Guest sets Player 1's target transformation
+
+            gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
+            if (gameState.activePlayer === 1) gameState.p2.energy = 1; 
+            else gameState.p1.energy = 1;
+
+            refillMarket();
+            startTurn(); 
+            syncToFirebase();
+            listenToFirebase(onlineRoomId);
+
+        } else {
+            // --- GUEST (PLAYER 2) ---
+            window.pendingGuestName = localName;
+            window.pendingGuestTarget = localTarget;
+
+            listenToFirebase(onlineRoomId);
+
+            if (window.db && window.dbUpdate && window.dbRef) {
+                let updates = {};
+                updates["games/" + onlineRoomId + "/gameState/p2/name"] = localName;
+                updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
+                window.dbUpdate(window.dbRef(window.db), updates);
+            }
+        }
+        return;
+    }
+
+    // --- LOCAL / VS-CPU MODES ---
+    let p1N = document.getElementById("p1-name").value.trim();
+    let cpuN = document.getElementById("cpu-name").value.trim();
+    let cpuNFinal = cpuN === "Random" ? NAMES.filter(n => n !== p1N)[Math.floor(Math.random() * (NAMES.length - 1))] : cpuN;
+
+    if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
+
+    let p1T = document.getElementById("p1-transform-type").value;
+    let cpuT = document.getElementById("cpu-transform-type").value;
+
+    gameState.gameMode = gameMode;
+    gameState.showDiceText = showDiceText;
+    gameState.showEnergyActions = showEnergyActions;
+
+    gameState.p1.name = p1N.split(" ")[0]; 
+    gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+    gameState.p2.name = cpuNFinal.split(" ")[0]; 
+    gameState.p2.transformTarget = p1T;
+
+    if (gameMode === "pvp") {
+        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
+        document.getElementById("btn-end-turn-2").style.display = "block";
+        document.getElementById("p1-last-keep-section").style.display = "block";
+    } else {
+        document.getElementById("p1-last-keep-section").style.display = "none";
+        gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
+    }
+
+    gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
+    if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
+    
+    refillMarket(); 
+    startTurn();
+    updateUI();
+
+}
+
+
+// FIREBASE GAME STATE SYNCHRONIZATION (STEP 4)
+function syncToFirebase() {
+    if (gameState.gameMode !== "online" || !onlineRoomId || isSyncingFromFirebase || !window.db) return;
+    const payload = {
+        gameState: gameState,
+        market: market,
+        deck: deck,
+        discardPile: discardPile,
+        lastUpdated: Date.now()
+    };
+    window.dbSet(window.dbRef(window.db, "games/" + onlineRoomId), payload);
+}
+
+function listenToFirebaseOld(roomId) {
+    if (!window.db) return;
+    window.dbOnValue(window.dbRef(window.db, "games/" + roomId), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        isSyncingFromFirebase = true;
+        if (data.gameState)
+		{
+			Object.assign(gameState, data.gameState);
+			if (gameState.p1) {
+				if (!gameState.p1.lastRoll) gameState.p1.lastRoll = [];
+				if (!gameState.p1.inventory) gameState.p1.inventory = [];
+			}
+			if (gameState.p2) {
+				if (!gameState.p2.lastRoll) gameState.p2.lastRoll = [];
+				if (!gameState.p2.inventory) gameState.p2.inventory = [];
+			}
+			if (!gameState.log) gameState.log = [];
+			if (!Array.isArray(gameState.log)) {
+                gameState.log = Object.values(gameState.log);
+            }
+			// 2. Safely apply Guest name once room state is loaded
+            if (onlineLocalRole === 2 && window.pendingGuestName) {
+                gameState.p2.name = window.pendingGuestName;
+                window.pendingGuestName = null; // Prevent re-triggering
+                syncToFirebase();
+            }
+			
+			
+		}
+        if (data.market) market = data.market;
+        if (data.deck) deck = data.deck;
+        if (data.discardPile) discardPile = data.discardPile;
+        isSyncingFromFirebase = false;
+        updateUI();
+    });
+}
+
+function listenToFirebase(roomId) {
+    if (!window.db || !window.dbRef || !window.dbOnValue) return;
+
+    const roomRef = window.dbRef(window.db, "games/" + roomId);
+    
+    window.dbOnValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data || !data.gameState) return;
+
+        isSyncingFromFirebase = true;
+        try {
+            gameState = data.gameState;
+            if (data.market) market = data.market;
+            if (data.deck) deck = data.deck;
+            if (data.discardPile) discardPile = data.discardPile;
+
+            // Sync Guest selections to Firebase if Host state overwrites with placeholders
+            if (onlineLocalRole === 2) {
+                let needsUpdate = false;
+                if (window.pendingGuestName) {
+                    gameState.p2.name = window.pendingGuestName;
+                    needsUpdate = true;
+                }
+                if (window.pendingGuestTarget) {
+                    gameState.p1.transformTarget = window.pendingGuestTarget;
+                    needsUpdate = true;
+                }
+                if (needsUpdate && window.dbUpdate) {
+                    let updates = {};
+                    updates["games/" + onlineRoomId + "/gameState/p2/name"] = gameState.p2.name;
+                    updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = gameState.p1.transformTarget;
+                    window.dbUpdate(window.dbRef(window.db), updates);
+                }
+            }
+
+            // Sanitize incoming inventory and roll arrays
+            ['p1', 'p2'].forEach(p => {
+                if (gameState[p]) {
+                    gameState[p].inventory = gameState[p].inventory ? (Array.isArray(gameState[p].inventory) ? gameState[p].inventory : Object.values(gameState[p].inventory)) : [];
+                    gameState[p].lastRoll = gameState[p].lastRoll || [];
+                    gameState[p].lastKeep = gameState[p].lastKeep || [];
+                }
+            });
+
+            if (!gameState.log) gameState.log = [];
+            if (!Array.isArray(gameState.log)) gameState.log = Object.values(gameState.log);
+
+            updateUI();
+        } catch (err) {
+            console.error("Error in listenToFirebase:", err);
+        } finally {
+            isSyncingFromFirebase = false;
+        }
+    });
+}
+
+const logEl = document.getElementById("game-log");
+function log(msg, bold = false) {
+	if (!gameState) return;
+	if (!gameState.log) gameState.log = [];
+	if (!Array.isArray(gameState.log)) {
+        gameState.log = Object.values(gameState.log);
+    }
+
+    gameState.log.push(msg);
+
+    if (gameState.log.length > 50) {
+        gameState.log.shift();
+    }
+
+    renderLog();
+	
+    logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+
+function showPopup(title, body) {
+    document.getElementById("popup-title").innerText = title;
+    document.getElementById("popup-body").innerHTML = body;
+    document.getElementById("game-popup").style.display = "flex";
+}
+function getCardRef(playerId, cardId) {
+    if (playerId === 0 || !gameState) return null;
+    
+    const player = playerId === 1 ? gameState.p1 : gameState.p2;
+    let inv = player?.inventory || [];
+
+    // Convert Firebase object back into an Array if needed
+    if (!Array.isArray(inv)) {
+        inv = Object.values(inv);
+    }
+
+    return inv.find(c => c && c.id === cardId) || null; 
+}
+
+function hasCard(playerId, cardId) {
+    return !!getCardRef(playerId, cardId);
+}
+
+// ============================================================
+// CPU AI DIFFICULTY SYSTEM
+// ============================================================
+const CPU_DIFFICULTY_NAMES = { random: "Beginner", smart: "Easy", aggressive: "Normal", v23low: "Hard", defensive: "Expert" };
+function getCpuDifficulty() { return gameState.p2.difficulty || "random"; }
+function getCpuDifficultyName() { return CPU_DIFFICULTY_NAMES[getCpuDifficulty()] || "Beginner"; }
+function cpuCountFace(face) { return gameState.dice.filter(d => d.face === face).length; }
+
+function cpuKeepDie(face, difficulty, counts) {
+    if (difficulty === "random") return Math.random() > 0.5;
+    if (difficulty === "smart") return (face === "⛓️ SUBMISSION" || face === "⚡ ENERGY" || (face === "👁️ TRANSFORM" && counts.transform >= 2));
+    if (difficulty === "aggressive") {
+		if (["👁️ TRANSFORM", "⛓️ SUBMISSION", "⚡ ENERGY"].includes(face)) return true;
+        if (face === "💧 LUCIDITY") return gameState.p2.trance >= 3 || gameState.p2.arousal >= 3 || gameState.p2.vulnerability >= 1;
+        if (face === "🌀 SPIRAL") return gameState.p1.trance >= 3;
+        return false;
+    }
+    if (difficulty === "v23low") {
+        if (["👁️ TRANSFORM", "⚡ ENERGY"].includes(face)) return true;
+        if (face === "⛓️ SUBMISSION") return counts.submission >= 4 || (counts.submission >= 3 && gameState.p2.transform >= 7 && gameState.p1.transform >= 7);
+        if (face === "💧 LUCIDITY") return (gameState.p2.trance >= 4 || gameState.p2.arousal >= 4 || gameState.p2.vulnerability >= 1);
+        return false;
+    }
+    if (difficulty === "defensive") {
+        if (face === "💧 LUCIDITY") return (gameState.p2.trance >= 2 || gameState.p2.arousal >= 2 || gameState.p2.vulnerability >= 1);
+        if (face === "⚡ ENERGY") return true;
+        if (face === "👁️ TRANSFORM") return counts.transform >= 2 || gameState.p1.transform >= 6;
+        if (face === "⛓️ SUBMISSION") return counts.submission >= 2 && gameState.p1.transform >= 5;
+        if (face === "🌀 SPIRAL") return gameState.p1.trance >= 3;
+        if (face === "🔥 AROUSAL") return gameState.p1.arousal >= 3;
+        return false;
+    }
+    return false;
+}
+
+function cpuChooseDiceToKeep() {
+    const difficulty = getCpuDifficulty();
+    const counts = { spiral: cpuCountFace("🌀 SPIRAL"), lucidity: cpuCountFace("💧 LUCIDITY"), energy: cpuCountFace("⚡ ENERGY"), submission: cpuCountFace("⛓️ SUBMISSION"), arousal: cpuCountFace("🔥 AROUSAL"), transform: cpuCountFace("👁️ TRANSFORM") };
+    gameState.dice.forEach(die => { if (!die.kept) die.kept = cpuKeepDie(die.face, difficulty, counts); });
+}
+
+function cpuShouldUseRapidPulse() {
+    const p = gameState.p2;
+    if (!hasCard(2, 12) || p.energy < 2 || p.shieldActive) return false;
+    switch (getCpuDifficulty()) {
+        case "random": return Math.random() > 0.75;
+        case "smart": return p.trance >= 3 || p.arousal >= 3;
+        case "aggressive": return p.trance >= 4 || p.arousal >= 4;
+        case "v23low": return p.trance >= 4 || p.arousal >= 4 || p.vulnerability >= 1;
+        case "defensive": return p.trance >= 2 || p.arousal >= 2 || p.vulnerability >= 1;
+        default: return false;
+    }
+}
+
+function cpuShouldUseFadingReality(tCount) {
+    if (!hasCard(2, 47)) return false;
+    if (gameState.dice.findIndex(d => d.face === "👁️ TRANSFORM" && !d.kept) === -1) return false;
+    switch (getCpuDifficulty()) {
+        case "random": return Math.random() > 0.75;
+        case "smart": case "v23low": case "defensive": return tCount < 2;
+        case "aggressive": return tCount < 3;
+        default: return false;
+    }
+}
+
+function cpuShouldUseAbsoluteFocus(keptCount) {
+    const card = getCardRef(2, 20);
+    if (!card || !card.charges || card.charges <= 0) return false;
+    return getCpuDifficulty() === "random" ? Math.random() > 0.8 : keptCount < 4;
+}
+
+function cpuCardPurchaseScore(card) {
+    const difficulty = getCpuDifficulty();
+    if (difficulty === "random") return Math.random() * 100;
+    if (difficulty === "smart") return 50;
+	
+	const p2 = gameState.p2; // CPU player
+	const p1 = gameState.p1; // human player
+	
+	// 1. Fetch base rating for active archetype (defaulting to 30 if unrated)
+    const baseRatings = card.ai || {};
+    let score = baseRatings[difficulty] ?? 30;
+
+    let score = 0;
+    const aggCards = [0, 2, 3, 4, 6, 8, 10, 11, 13, 22, 23, 24, 31, 34, 36, 39, 40, 46, 48, 49];
+    const defCards = [5, 9, 12, 20, 26, 27, 29, 38, 41, 42, 43, 44, 45, 47];
+	
+	// old 2. Cost-efficiency adjustment (cheaper cards get a small baseline bump)
+    //score += Math.max(0, (8 - card.cost) * 2);
+	// 2. If we 
+	
+	
+	// 3. Dynamic Situational Adjustments
+    
+    // Defensive Emergency: Boost defense/cleansing if CPU is under heavy Trance/Arousal/Vulnerability
+    const inDanger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
+    if (inDanger) {
+        // Cards that clear debuffs or shield (e.g., Deep Safeties, Rapid Pulse, Flow Reversal)
+        if ([9, 12, 33, 44].includes(card.id)) {
+            score += (difficulty === "defensive") ? 35 : 20;
+        }
+    }
+
+   // Lethal / Pressure Opportunity: Opponent is high on transform or submission track
+    const opponentInDanger = p1.transform >= 6 || gameState.submission <= -3;
+    if (opponentInDanger) {
+        // High-impact offensive cards (e.g., Whispered Command, Shattered Ego, Subconscious Prompt)
+        if ([2, 4, 10, 24, 30, 39, 41].includes(card.id)) {
+            score += (difficulty === "aggressive" || difficulty === "v23low") ? 30 : 15;
+        }
+    }
+
+    // Synergy Check: Extra Dice / Economy engine cards retain high priority if CPU has surplus energy
+    if ([7, 17, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) {
+        score += 15;
+    }
+	
+	log(`CPU Score for card ${card.id} ${card.name} is ${score}.`); updateUI();
+	
+	
+    //return score + Math.max(0, 10 - card.cost);
+	return score;
+}
+
+function cpuShouldBuyCard(card, effectiveCost) {
+    const p = gameState.p2;
+	const difficulty = getCpuDifficulty();
+    if (effectiveCost > p.energy && !gameState.freeBuyActive) return false;
+    if (difficulty === "random") return Math.random() > 0.5;
+    if (difficulty === "smart") return true;
+
+    const score = cpuCardPurchaseScore(card);
+	// was 45
+    //if (difficulty === "aggressive" || difficulty === "v23low") return score >= 30;
+    //if (difficulty === "defensive") return score >= 50;
+    //return false;
+	
+	
+	// Dynamic purchase thresholds
+    // Defensive CPUs require a score of 35+ (down from 50), Aggressive/Hard require 25+
+    const minThreshold = (difficulty === "defensive") ? 35 : 25;
+	return score >= minThreshold;
+}
+
+function cpuShouldSellWakingTrance(maxCost) {
+    const p = gameState.p2;
+    if (!hasCard(2, 26)) return false;
+    switch (getCpuDifficulty()) {
+        case "random": return Math.random() > 0.75;
+        case "defensive": return p.energy < maxCost && p.energy + 2 >= maxCost && p.energy < 5;
+        default: return p.energy < maxCost && p.energy + 2 >= maxCost;
+    }
+}
+
+function cpuShouldUseMirrorImage(maxCost) {
+    if (!hasCard(2, 42) || market.length === 0) return false;
+    switch (getCpuDifficulty()) {
+        case "random": return Math.random() > 0.75;
+        case "defensive": return maxCost >= 6;
+        default: return maxCost >= 5;
+    }
+}
+
+function cpuShouldUseWipe() {
+    const p = gameState.p2;
+    const difficulty = getCpuDifficulty();
+
+    // Wipe costs 2 Energy and is only useful if the deck can
+    // actually provide replacement cards.
+    if (p.energy < 2) return false;
+    if (deck.length <= 0) return false;
+    if (market.length <= 0) return false;
+
+    // Don't wipe a market when the CPU can already buy something.
+    // This calculation includes Hypnotic Focus and Compliant Mind.
+    const hasAffordableCard = market.some(card => {
+        const cost = getCardPurchaseCost(card, 2);
+        return cost <= p.energy;
+    });
+
+    if (hasAffordableCard) return false;
+
+    switch (difficulty) {
+        case "random": return Math.random() > 0.65;
+        case "smart": return true;
+        case "aggressive": return p.energy >= 4;
+        case "v23low": return p.energy >= 5;
+        case "defensive": return p.energy >= 6;
+        default: return false;
+    }
+}
+
+function cpuShouldBuyTransformWithEnergy() {
+    const p = gameState.p2; const difficulty = getCpuDifficulty();
+    if (p.energy < 5) return false;
+    if (difficulty === "random") return Math.random() > 0.8;
+    if (difficulty === "smart") return true;
+    if (difficulty === "aggressive") return p.transform >= 4 || gameState.p1.transform >= 5;
+    if (difficulty === "v23low") return p.transform >= 7 || (gameState.p1.transform >= 7 && p.energy >= 7) || p.energy >= 9;
+    if (difficulty === "defensive") return p.energy >= 10 || (p.transform >= 7 && p.energy >= 7);
+    return false;
+}
+
+function cpuShouldBuySubmissionWithEnergy() {
+    const p = gameState.p2; const difficulty = getCpuDifficulty();
+    if (p.energy < 6) return false;
+    if (difficulty === "v23low") return p.energy >= 7 && p.transform >= 7 && gameState.p1.transform >= 8 && gameState.submission > -5;
+    if (difficulty === "aggressive") return p.energy >= 6 && p.transform >= 5 && gameState.p1.transform >= 5;
+    if (difficulty === "defensive") return p.energy >= 8 && p.transform >= 6 && gameState.p1.transform >= 7 && gameState.submission > -5;
+    if (difficulty === "smart") return true;
+    if (difficulty === "random") return Math.random() > 0.8;
+    return false;
+}
+
+function isLocalPlayerTurn() {
+    if (!gameState) return false;
+
+    const activeP = Number(gameState.activePlayer);
+
+    if (gameState.gameMode === "online") {
+        return activeP === Number(onlineLocalRole);
+    }
+
+    // Offline modes: local PvP allows both players; vs-CPU only allows Player 1
+    return activeP === 1 || gameState.gameMode === "pvp";
+}
+
+function updateUI() {
+    if (!gameState || gameState.gameEnded) return;
+    
+    ['p1', 'p2'].forEach((p) => {
+        let pObj = gameState[p];
+        if (!pObj) return;
+
+        document.getElementById(`${p}-trance`).innerText = pObj.trance;
+        document.getElementById(`${p}-arousal`).innerText = pObj.arousal;
+        document.getElementById(`${p}-transform`).innerText = pObj.transform;
+        document.getElementById(`${p}-energy`).innerText = pObj.energy;
+        document.getElementById(`${p}-vuln`).innerText = pObj.vulnerability;
+        document.getElementById(`${p}-vuln-container`).style.display = pObj.vulnerability > 0 ? "flex" : "none";
+
+        let filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(11, pObj.transform)}.jpg`;
+        let imgPath = `images/avatars/${pObj.name}/${filename}`;
+        let container = document.getElementById(`${p}-image`);
+        if (container) {
+            const img = new Image(); 
+            img.src = imgPath;
+            img.onload = () => container.innerHTML = `<img src="${imgPath}" onclick="openImageModal('${imgPath}')" />`;
+            img.onerror = () => container.innerHTML = `Image Req:<br/>${filename}`;
+        }
+    });
+
+    const p1LastRoll = gameState.p1?.lastRoll || [];
+    const p2LastRoll = gameState.p2?.lastRoll || [];
+    document.getElementById("p1-last-roll").innerText = p1LastRoll.length > 0 ? p1LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
+    document.getElementById("cpu-last-roll").innerText = p2LastRoll.length > 0 ? p2LastRoll.map(f => f.split(" ")[0]).join(" ") : "--";
+
+    const track = document.getElementById("submission-track");
+    if (track) {
+        track.innerHTML = "";
+        let activeIndex = Math.max(0, Math.min(10, gameState.submission + 5)); 
+        for(let i = 0; i < 11; i++) {
+            let cls = 'node';
+            if (i === activeIndex) {
+                if (i === 0) cls += ' active-left-end';
+                else if (i === 10) cls += ' active-right-end';
+                else cls += ' active';
+            }
+            let nDiv = document.createElement("div");
+            nDiv.className = cls;
+            track.appendChild(nDiv);
+        }
+    }
+
+    const activePlayerNum = Number(gameState.activePlayer);
+    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+    let isHumanTurn = isLocalPlayerTurn();
+    let isP1 = activePlayerNum === 1;
+
+    const p1NameEl = document.getElementById("ui-p1-name");
+    const p2NameEl = document.getElementById("ui-cpu-name");
+
+    if (p1NameEl && gameState.p1) {
+        p1NameEl.innerText = gameState.p1.name || "Player 1";
+        p1NameEl.classList.remove("active-player-glow");
+        if (isP1) p1NameEl.classList.add("active-player-glow");
+    }
+
+    if (p2NameEl && gameState.p2) {
+        if (gameState.gameMode === "vs-cpu") {
+            p2NameEl.innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
+        } else {
+            p2NameEl.innerText = gameState.p2.name || "Player 2";
+        }
+        p2NameEl.classList.remove("active-player-glow");
+        if (!isP1) p2NameEl.classList.add("active-player-glow");
+    }
+
+    const trackLabels = document.getElementById("track-labels");
+    if (trackLabels && gameState.p1 && gameState.p2) {
+        trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${gameState.p2.name} Will Obey</span>`;
+    }
+
+    let dirArrowsLeft = isP1 ? "◄◄ " : "";
+    let dirArrowsRight = !isP1 ? " ►►" : "";
+    let turnIndicator = document.getElementById("turn-indicator");
+    if (turnIndicator && activeP) {
+        turnIndicator.innerText = `${dirArrowsLeft}${activeP.name}'s Turn${dirArrowsRight}`;
+        turnIndicator.style.color = isP1 ? "var(--player)" : "var(--cpu)";
+    }
+    
+    document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
+    
+    document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
+    
+    // UI Button Toggles P1
+    document.getElementById("btn-buy-arousal-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 3 || gameState.phase !== "shop";
+    document.getElementById("btn-buy-transform-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 5 || gameState.phase !== "shop";
+    document.getElementById("btn-buy-submission-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 6 || gameState.phase !== "shop";
+    
+    let btnEnd1 = document.getElementById("btn-end-turn-1");
+    btnEnd1.disabled = !isHumanTurn || !isP1 || gameState.phase !== "shop";
+    btnEnd1.style.background = btnEnd1.disabled ? '' : 'var(--player)';
+
+    // UI Button Toggles P2
+    if (gameState.gameMode === "pvp" || gameState.gameMode === "online") {
+        let isP2 = activePlayerNum === 2;
+        document.getElementById("btn-buy-arousal-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 3 || gameState.phase !== "shop";
+        document.getElementById("btn-buy-transform-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 5 || gameState.phase !== "shop";
+        document.getElementById("btn-buy-submission-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 6 || gameState.phase !== "shop";
+        
+        let btnEnd2 = document.getElementById("btn-end-turn-2");
+        btnEnd2.disabled = !isHumanTurn || !isP2 || gameState.phase !== "shop";
+        btnEnd2.style.background = btnEnd2.disabled ? '' : 'var(--cpu)';
+    }
+
+    renderDiceAndActions(isHumanTurn); 
+    renderMarket(); 
+    renderInventory(1); 
+    renderInventory(2); 
+    renderLog();
+    checkWinCondition();
+}
+
+function renderDiceAndActions(isHumanTurn) {
+    const dc = document.getElementById("dice-container"); dc.innerHTML = "";
+    gameState.dice.forEach((die, index) => {
+        const div = document.createElement("div"); div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}`;
+        if (die.face === "-") div.innerText = "?";
+        else { div.innerText = gameState.showDiceText ? die.face : die.face.split(" ")[0]; if (!gameState.showDiceText) div.style.fontSize = "2.5em"; }
+        if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => { die.kept = !die.kept; syncToFirebase(); updateUI(); };
+        dc.appendChild(div);
+    });
+
+    const ag = document.getElementById("actions-grid"); ag.innerHTML = "";
+    let isInitRoll = gameState.dice[0].face === "-";
+    let activeColor = gameState.activePlayer === 1 ? 'var(--player)' : 'var(--cpu)';
+
+    let rollBtnDisabled = !isHumanTurn || (!isInitRoll && gameState.rerollsLeft <= 0) || gameState.phase !== "rolling";
+    ag.innerHTML += `<button onclick="rollDiceAction()" id="btn-roll" ${rollBtnDisabled ? 'disabled' : ''} style="${rollBtnDisabled ? '' : 'background: ' + activeColor + ';'}">${isInitRoll ? "Roll Dice" : "Roll Unkept Dice"}</button>`;
+    
+    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    if (isHumanTurn && hasCard(gameState.activePlayer, 16) && gameState.phase === 'rolling' && !isInitRoll && gameState.rerollsLeft <= 0 && activeP.energy >= 1) {
+        ag.innerHTML += `<button onclick="buyReroll(1, 16, ${gameState.activePlayer})" style="background:#f4a261; color:#000; font-weight:bold;">Use Hypnotic Suggestion (1⚡)</button>`;
+    }
+    
+    let resolveDisabled = !isHumanTurn || isInitRoll || gameState.phase !== "rolling";
+    ag.innerHTML += `<button onclick="resolveDice()" id="btn-resolve" ${resolveDisabled ? 'disabled' : ''} style="${resolveDisabled ? '' : 'background: ' + activeColor + ';'}">Resolve Dice</button>`;
+}
+
+function renderMarket() {
+    const mc = document.getElementById("market-container"); mc.innerHTML = "";
+    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    let isHumanTurn = isLocalPlayerTurn();
+
+    market.forEach((card, index) => {
+        let displayCost = card.cost;
+        if (hasCard(gameState.activePlayer, 29)) displayCost = Math.max(0, displayCost - 1);
+        if (hasCard(gameState.activePlayer, 28) && !activeP.boughtCardThisTurn) displayCost = Math.max(0, displayCost - 2);
+        if (gameState.freeBuyActive) displayCost = 0;
+        
+        let btnDisabled = !isHumanTurn || activeP.energy < displayCost || gameState.phase !== "shop" ? "disabled" : "";
+        mc.innerHTML += `
+            <div class="card">
+                <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
+                <div class="card-type">${card.type}</div>
+                <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
+                <button ${btnDisabled} onclick="buyCard(${index})">Purchase</button>
+            </div>`;
+    });
+}
+
+function renderInventory(playerId) {
+    let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    let invDiv = document.getElementById(`p${playerId}-inventory`); invDiv.innerHTML = "";
+    let isHuman = isLocalPlayerTurn();
+    let isTurn = gameState.activePlayer === playerId;
+
+    p.inventory.forEach((card, idx) => {
+        let html = `<div class="inv-card"><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
+        if (isHuman && isTurn) {
+            if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
+            if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
+            if (card.id === 26) html += `<button onclick="sellCard(${idx}, ${playerId})" style="background:#e76f51;">Sell (+2⚡)</button>`;
+            if (card.id === 33 && gameState.phase === 'shop' && p.energy >= 2) html += `<button onclick="useQuietMind(${playerId})" style="background:#2a9d8f;">Quiet Mind (-2⚡)</button>`;
+            if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
+            if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.dice.some(d => d.face === "👁️ TRANSFORM")) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll a Transform Die</button>`;
+            if (card.id === 49 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
+        }
+        html += `</div>`; invDiv.innerHTML += html;
+    });
+}
+
+function buyReroll(energyCost, cardId, pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    if (p.energy >= energyCost && hasCard(pId, cardId)) { p.energy -= energyCost; gameState.rerollsLeft += 1; log(`Bought reroll for ${energyCost}⚡.`); syncToFirebase(); updateUI(); }
+}
+function useAbsoluteFocus(idx, pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    let card = p.inventory[idx];
+
+    if (card && card.charges > 0) {
+        card.charges -= 1;
+        gameState.rerollsLeft += 1;
+        log(`Used Absolute Focus charge. (${card.charges} left)`);
+
+        if (card.charges <= 0) {
+            const discarded = p.inventory.splice(idx, 1)[0];
+            discardCard(discarded);
+            log("Absolute Focus depleted and discarded.");
+        }
+        syncToFirebase();
+        updateUI();
+    }
+}
+function useQuietMind(pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    if(p.energy >= 2 && (p.trance > 0 || p.arousal > 0)) {
+        p.energy -= 2;
+        if(p.trance > 0 && p.arousal > 0) {
+            let choice = prompt("Quiet Mind: Reduce Trance (1) or Arousal (2)?", "1");
+            if(choice === "2") p.arousal--; else p.trance--;
+        } else if (p.trance > 0) p.trance--; else p.arousal--;
+        log(`${p.name} used Quiet Mind to reduce state.`); syncToFirebase(); updateUI();
+    }
+}
+function sellCard(invIndex, pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    let card = p.inventory.splice(invIndex, 1)[0];
+    if (!card) return;
+    p.energy += 2;
+    discardCard(card);
+    log(`Sold ${card.name} for 2 Energy.`); syncToFirebase(); updateUI();
+}
+function discardForFreeBuy(invIndex, pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    let card = p.inventory.splice(invIndex, 1)[0];
+    if (!card) return;
+    discardCard(card);
+    gameState.freeBuyActive = true;
+    log(`${p.name} discarded Mirror Image! Next buy is free.`); syncToFirebase(); updateUI();
+}
+function useRapidPulse(pId) { let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } }
+function useFadingReality(pId) { 
+    let idx = gameState.dice.findIndex(d => d.face === "👁️ TRANSFORM");
+    if(idx !== -1) { gameState.dice[idx].face = FACES[Math.floor(Math.random() * FACES.length)]; gameState.dice[idx].kept = false; log("Fading Reality: Rerolled a Transform die."); syncToFirebase(); updateUI(); }
+}
+function useSimmeringArousal(pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    let idx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL" && !d.kept);
+    if(idx !== -1) { gameState.dice[idx].face = "🔥 AROUSAL"; p.simmeringUsed = true; log("Simmering Arousal: Changed a die to Arousal."); syncToFirebase(); updateUI(); }
+}
+
+function checkTranceSetback(oppP, activePlayerId) {
+    while (oppP.trance >= 5) {
+        oppP.trance -= 5; log(`SETBACK! ${oppP.name} Trance maxed.`);
+        if (activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online") {
+            let choice = prompt(`${oppP.name} Setback! Choose 1: \n1 = Push Submission 2\n2 = Opponent Arousal +2`, "1");
+            if (choice === "2") { oppP.arousal = Math.min(5, oppP.arousal + 2); log(`Setback applied: Arousal +2.`); } 
+            else pushSubmission(activePlayerId === 1 ? 2 : -2, activePlayerId);
+        } else { pushSubmission(-2, 2); log(`CPU Setback applied: Submission -2.`); }
+    }
+}
+
+function increaseArousal(target, amount, playerId) {
+	let pObj = typeof target === "object" ? target : gameState["p" + target];
+	if (!pObj) return;
+    let oldArousal = pObj.arousal;
+    pObj.arousal = Math.min(5, pObj.arousal + amount);
+    if (pObj.arousal > oldArousal && hasCard(playerId, 32)) { pObj.energy += 1; log(`Guided Heat triggered: +1 Energy from arousal increase.`); }
+}
+
+function applyTransform(targetPlayerId, amount, sourcePlayerId) {
+    let target = targetPlayerId === 1 ? gameState.p1 : gameState.p2;
+    target.transform += amount;
+    
+    // Only apply Vulnerability if the source is an actual opponent
+    if (sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41)) { 
+        target.vulnerability += amount; 
+        log(`Powerful Transform applied ${amount} Vulnerability to ${target.name}.`); 
+    }
+}
+
+function executeInstant(card, playerId) {
+    let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    let opp = playerId === 1 ? gameState.p2 : gameState.p1;
+    let oppId = playerId === 1 ? 2 : 1;
+
+    if (card.id === 1) { gameState.extraTurn = true; log(`${p.name} plays Sudden Flash! Taking an extra turn!`); } 
+    else if (card.id === 4) { applyTransform(oppId, 1, playerId); p.trance = 0; log(`Whispered Command! Opponent Transform +1, Trance reduced to 0.`); } 
+    else if (card.id === 5) rollVirtualDice(playerId, 2, card.name);
+    else if (card.id === 6) { increaseArousal(opp, 2, oppId); log(`Velvet Voice! Opponent Arousal +2.`); } 
+    else if (card.id === 8 || card.id === 48) { opp.trance += 2; pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`${card.name}! Opponent Trance +2, Sub pushed 2.`); checkTranceSetback(opp, playerId); } 
+    else if (card.id === 10 || card.id === 39) { pushSubmission(playerId === 1 ? 4 : -4, playerId); log(`${card.name}! Sub pushed 4.`); } 
+    else if (card.id === 11) { pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`Sluggish Mind! Sub pushed 2.`); } 
+    else if (card.id === 14) { opp.trance += 2; log(`Spiral Descent! Opponent Trance +2.`); checkTranceSetback(opp, playerId); } 
+    else if (card.id === 18) { pushSubmission(playerId === 1 ? 2 : -2, playerId); opp.trance += 1; log("Pulsing Light! Sub +2, Trance +1."); checkTranceSetback(opp, playerId); }
+    else if (card.id === 19) { p.energy += 9; log("Primal Surge! +9 Energy."); }
+    else if (card.id === 21) rollVirtualDice(playerId, 1, card.name);
+    else if (card.id === 25) { pushSubmission(playerId === 1 ? -2 : 2, playerId); applyTransform(oppId, 1, playerId); log("Pendulum Swing! Deepen own sub by 2, Transform opponent 1."); }
+    else if (card.id === 30) { pushSubmission(playerId === 1 ? -4 : 4, playerId); applyTransform(oppId, 2, playerId); log("Shattered Ego! Deepen own sub by 4, Transform opponent 2."); }
+    else if (card.id === 37) { 
+        p.trance = 0; let drain = Math.floor(opp.energy / 2); opp.energy = Math.max(0, opp.energy - drain); 
+        log(`Swinging Pendulum! Own Trance to 0, drained ${drain} Energy from opponent.`); 
+    }
+    else if (card.id === 40) { applyTransform(1, 1, 0); applyTransform(2, 1, 0); log("Global Change! Both players transform +1."); }
+    else if (card.id === 44) { p.transform = Math.max(0, p.transform - 1); log("Flow Reversal! Own Transform reduced by 1."); }
+    syncToFirebase();
+    updateUI();
+}
+
+async function rollVirtualDice(playerId, count, sourceName) {
+    let results = [];
+    let counts = { "🌀 SPIRAL": 0, "💧 LUCIDITY": 0, "⚡ ENERGY": 0, "⛓️ SUBMISSION": 0, "🔥 AROUSAL": 0, "👁️ TRANSFORM": 0 };
+
+    // Virtual dice are an independent roll.
+    // Their individual effects resolve normally, but they do NOT
+    // merge with the main roll for combination/set calculations.
+    for (let i = 0; i < count; i++) {
+        let face = FACES[Math.floor(Math.random() * FACES.length)];
+        results.push(face);
+        counts[face]++;
+    }
+
+    if (isLocalPlayerTurn()) {
+        showPopup(`${sourceName} Results`, results.join("<br><br>"));
+    }
+
+    log(`${sourceName} rolled: ${results.map(r => r.split(" ")[0]).join(", ")}`);
+
+    let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    let opp = playerId === 1 ? gameState.p2 : gameState.p1;
+    let oppId = playerId === 1 ? 2 : 1;
+
+    // ------------------------------------------------------------
+    // ENERGY
+    // Each virtual Energy die grants Energy normally.
+    // Power Boost applies because these are still dice.
+    // ------------------------------------------------------------
+    if (counts["⚡ ENERGY"] > 0) {
+        let gain = counts["⚡ ENERGY"];
+        if (hasCard(playerId, 45)) { gain += 1; log("Power Boost granted +1 extra Energy from virtual dice!"); }
+        p.energy += gain; log(`Virtual dice granted +${gain} Energy.`);
+    }
+
+    // ------------------------------------------------------------
+    // SPIRAL
+    // Each virtual Spiral deepens opponent Trance.
+    // Deep Gaze applies normally.
+    // ------------------------------------------------------------
+    if (counts["🌀 SPIRAL"] > 0) {
+        if (opp.shieldActive) { log("Rapid Pulse shielded virtual Spiral Trance!"); } 
+        else {
+            let tPush = counts["🌀 SPIRAL"];
+            if (hasCard(playerId, 0)) { tPush += 1; log("Deep Gaze deepened virtual Spiral Trance by 1 more!"); }
+            opp.trance += tPush; log(`Virtual Spiral: Opp Trance +${tPush}`); checkTranceSetback(opp, playerId);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // LUCIDITY
+    // Virtual Lucidity resolves exactly like normal Lucidity.
+    // Deep Safeties applies.
+    // ------------------------------------------------------------
+    let lCount = counts["💧 LUCIDITY"];
+    if (hasCard(playerId, 9) && lCount > 0) { lCount += 1; log("Deep Safeties boosted virtual Lucidity!"); }
+
+    if (lCount > 0) {
+        if (p.trance === 0 && p.arousal === 0 && p.vulnerability === 0) {
+            log("Virtual Lucidity rolled, but stats are already 0.");
+        } else if (isLocalPlayerTurn()) {
+            let showVuln = hasCard(oppId, 41) || p.vulnerability > 0;
+            let allocations = await showLucidityDialog(lCount, p, showVuln);
+
+            if (allocations.trance > 0) p.trance = Math.max(0, p.trance - allocations.trance);
+            if (allocations.arousal > 0) p.arousal = Math.max(0, p.arousal - allocations.arousal);
+            if (allocations.vuln > 0) p.vulnerability = Math.max(0, p.vulnerability - allocations.vuln);
+
+            log(`Virtual Lucidity applied: Trance -${allocations.trance}, Arousal -${allocations.arousal}, Vuln -${allocations.vuln}`);
+        } else {
+            let rem = lCount;
+            let vRem = Math.min(p.vulnerability, rem); p.vulnerability -= vRem; rem -= vRem;
+            let aRem = Math.min(p.arousal, rem); p.arousal -= aRem; rem -= aRem;
+            let tRem = Math.min(p.trance, rem); p.trance -= tRem;
+            log("Virtual Lucidity resolved.");
+        }
+    }
+
+    // ------------------------------------------------------------
+    // AROUSAL
+    // Virtual Arousal contributes exactly as normal Arousal dice.
+    // Stoking Fires applies.
+    // Guided Heat is automatically handled by increaseArousal().
+    // ------------------------------------------------------------
+    let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
+    if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; log("Stoking Fires boosted virtual Arousal!"); }
+
+    if (arousalEffect > 0) {
+        if (opp.shieldActive) log("Rapid Pulse shielded virtual Arousal!");
+        else { increaseArousal(opp, arousalEffect, playerId); log(`Virtual Arousal: Opp Arousal +${arousalEffect}`); }
+    }
+
+    // ------------------------------------------------------------
+    // SUBMISSION
+    // Virtual Submission dice are individual effects.
+    // They do NOT combine with Submission dice from the main roll.
+    //
+    // This deliberately does NOT require 3 virtual Submission dice
+    // to create a 3-of-a-kind combination.
+    // ------------------------------------------------------------
+    if (counts["⛓️ SUBMISSION"] > 0) {
+        let submissionPush = playerId === 1 ? counts["⛓️ SUBMISSION"] : -counts["⛓️ SUBMISSION"];
+        pushSubmission(submissionPush, playerId);
+        log(`Virtual Submission pushed the track by ${submissionPush}.`);
+    }
+
+    // ------------------------------------------------------------
+    // TRANSFORM
+    // Virtual Transform dice apply their individual Transform effect.
+    // They do NOT combine with Transform dice from the main roll.
+    // ------------------------------------------------------------
+    if (counts["👁️ TRANSFORM"] > 0) {
+        applyTransform(oppId, counts["👁️ TRANSFORM"], playerId);
+        log(`Virtual Transform: Opp Transform +${counts["👁️ TRANSFORM"]}.`);
+    }
+
+    syncToFirebase();
+    updateUI();
+}
+
+function startTurn() {
+    if (gameState.activePlayer === 1) log(`=== ROUND ${gameState.round} ===`, true);
+    
+    gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false;
+    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    activeP.shieldActive = false; activeP.simmeringUsed = false;
+    activeP.lastRoll = [];
+    
+    if (activeP.arousal <= 2) gameState.rerollsLeft = 2; else if (activeP.arousal <= 4) gameState.rerollsLeft = 1; else gameState.rerollsLeft = 0;
+    if (hasCard(gameState.activePlayer, 43)) { gameState.rerollsLeft += 1; log("Mental Awakening granted +1 reroll."); }
+
+    gameState.phase = "rolling";
+	const activePObj = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+	const anchorBonus = (activePObj.inventory || []).filter(c => c && (c.id === 7 || c.id === 17)).length;
+	let diceCount = 6 + anchorBonus;
+    if (activeP.vulnerability > 0) {
+        diceCount = Math.max(1, diceCount - activeP.vulnerability);
+		if (diceCount < 3) diceCount = 3;
+        log(`Vulnerability restricts ${activeP.name} to ${diceCount} dice.`);
+    }
+    if (gameState.somnambulismTurn) { diceCount = Math.max(1, diceCount - 1); gameState.somnambulismTurn = false; }
+    
+    gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
+    log(`--- ${activeP.name}'s Turn ---`);
+    
+    if (hasCard(gameState.activePlayer, 15)) { pushSubmission(gameState.activePlayer === 1 ? 1 : -1, gameState.activePlayer); log(`${activeP.name}'s Altered State pushed sub 1.`); }
+
+    syncToFirebase();
+    updateUI(); 
+    if (gameState.activePlayer === 2 && gameState.gameMode === "solo") setTimeout(executeCPUTurn, 1000);
+}
+
+function rollDiceAction() {
+    let isInitRoll = gameState.dice[0].face === "-";
+    if (!isInitRoll && gameState.rerollsLeft <= 0) return;
+    gameState.dice = gameState.dice.map(d => d.kept ? d : { face: FACES[Math.floor(Math.random() * FACES.length)], kept: false });
+    if (!isInitRoll) gameState.rerollsLeft--;
+    syncToFirebase();
+    updateUI();
+}
+
+// LUCIDITY MODAL LOGIC
+function showLucidityDialog(points, playerObj, showVuln) {
+    return new Promise((resolve) => {
+        lucidityResolve = resolve;
+        lucidityState.total = points;
+        lucidityState.available = points;
+        lucidityState.allocations = { trance: 0, arousal: 0, vuln: 0 };
+        lucidityState.maxes = { trance: playerObj.trance, arousal: playerObj.arousal, vuln: playerObj.vulnerability };
+
+        document.getElementById("lucidity-max-trance").innerText = playerObj.trance;
+        document.getElementById("lucidity-max-arousal").innerText = playerObj.arousal;
+        document.getElementById("lucidity-max-vuln").innerText = playerObj.vulnerability;
+        document.getElementById("lucidity-row-vuln").style.display = showVuln || playerObj.vulnerability > 0 ? "flex" : "none";
+
+        updateLucidityDialogUI();
+        document.getElementById("lucidity-modal").style.display = "flex";
+    });
+}
+
+function adjLucidity(type, delta) {
+    let current = lucidityState.allocations[type];
+    let max = lucidityState.maxes[type];
+
+    if (delta > 0 && lucidityState.available > 0 && current < max) { lucidityState.allocations[type]++; lucidityState.available--; } 
+    else if (delta < 0 && current > 0) { lucidityState.allocations[type]--; lucidityState.available++; }
+    updateLucidityDialogUI();
+}
+
+function updateLucidityDialogUI() {
+    document.getElementById("lucidity-points-left").innerText = lucidityState.available;
+    document.getElementById("lucidity-val-trance").innerText = lucidityState.allocations.trance;
+    document.getElementById("lucidity-val-arousal").innerText = lucidityState.allocations.arousal;
+    document.getElementById("lucidity-val-vuln").innerText = lucidityState.allocations.vuln;
+}
+
+function confirmLucidity() { document.getElementById("lucidity-modal").style.display = "none"; if (lucidityResolve) lucidityResolve(lucidityState.allocations); }
+
+async function resolveDice() {
+    // In online mode, only the active local player executes dice resolution
+    if (gameState.gameMode === "online" && !isLocalPlayerTurn()) return;
+
+    gameState.phase = "shop";
+    
+    const activePlayerNum = Number(gameState.activePlayer);
+    let oppId = activePlayerNum === 1 ? 2 : 1;
+    let isHumanTurn = isLocalPlayerTurn();
+
+    // Bind initial live player references
+    let activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+    let oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
+
+    // Baseline property guards
+    activeP.trance = activeP.trance || 0;
+    activeP.arousal = activeP.arousal || 0;
+    activeP.vulnerability = activeP.vulnerability || 0;
+    activeP.energy = activeP.energy || 0;
+    oppP.trance = oppP.trance || 0;
+    oppP.arousal = oppP.arousal || 0;
+
+    // Save BOTH lastRoll and lastKeep
+    const currentDiceFaces = gameState.dice.map(d => d.face);
+    activeP.lastRoll = [...currentDiceFaces];
+    activeP.lastKeep = [...currentDiceFaces];
+
+    // Count dice faces
+    let counts = { SPIRAL: 0, LUCIDITY: 0, ENERGY: 0, SUBMISSION: 0, AROUSAL: 0, TRANSFORM: 0 };
+    gameState.dice.forEach(d => { 
+        if (!d || d.face === "-") return;
+        let f = String(d.face).toUpperCase();
+        if (f.includes("SPIRAL") || f.includes("TRANCE")) counts.SPIRAL++;
+        else if (f.includes("LUCIDITY")) counts.LUCIDITY++;
+        else if (f.includes("ENERGY")) counts.ENERGY++;
+        else if (f.includes("SUBMISSION")) counts.SUBMISSION++;
+        else if (f.includes("AROUSAL")) counts.AROUSAL++;
+        else if (f.includes("TRANSFORM")) counts.TRANSFORM++;
+    });
+
+    // 1. Energy
+    if (counts.ENERGY > 0) { 
+        let gain = counts.ENERGY;
+        if (hasCard(activePlayerNum, 45)) { gain += 1; log("Power Boost granted +1 extra Energy!"); }
+        activeP.energy += gain; 
+        log(`+${gain} Energy.`); 
+    }
+    
+    // 2. Spirals (Pushes Trance to Opponent)
+    if (counts.SPIRAL > 0) { 
+        if (oppP.shieldActive) {
+            log("Rapid Pulse shielded Trance!"); 
+        } else { 
+            let tPush = counts.SPIRAL;
+            if (hasCard(activePlayerNum, 0)) { tPush += 1; log("Deep Gaze deepened Trance by 1 more!"); }
+            oppP.trance += tPush; 
+            log(`Opp Trance +${tPush}`); 
+            if (typeof checkTranceSetback === "function") checkTranceSetback(oppP, activePlayerNum); 
+        } 
+    }
+
+    // 3. Lucidity
+    let lCount = counts.LUCIDITY;
+    if (hasCard(activePlayerNum, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
+    if (lCount > 0) {
+        if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
+            log(`Lucidity rolled, but stats are 0.`);
+        } else if (isHumanTurn) {
+            let showVuln = hasCard(oppId, 41) || activeP.vulnerability > 0;
+            
+            // Execution pauses here while player uses dialog
+            let allocations = await showLucidityDialog(lCount, activeP, showVuln);
+            
+            // RE-BIND activeP & oppP to live gameState after await
+            activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
+            oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
+
+            if (allocations) {
+                let tSub = Number(allocations.trance || 0);
+                let aSub = Number(allocations.arousal || 0);
+                let vSub = Number(allocations.vuln || 0);
+
+                if (tSub > 0) activeP.trance = Math.max(0, activeP.trance - tSub);
+                if (aSub > 0) activeP.arousal = Math.max(0, activeP.arousal - aSub);
+                if (vSub > 0) activeP.vulnerability = Math.max(0, activeP.vulnerability - vSub);
+                log(`Lucidity applied: Trance -${tSub}, Arousal -${aSub}, Vuln -${vSub}`);
+            }
+        } else {
+            let rem = lCount;
+            let vRem = Math.min(activeP.vulnerability, rem); activeP.vulnerability -= vRem; rem -= vRem;
+            let aRem = Math.min(activeP.arousal, rem); activeP.arousal -= aRem; rem -= aRem;
+            let tRem = Math.min(activeP.trance, rem); activeP.trance -= tRem;
+            log(`Lucidity resolved.`);
+        }
+    }
+
+    // 4. Arousal
+    let arousalEffect = Math.floor(counts.AROUSAL / 2);
+    if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
+    if (arousalEffect > 0) { 
+        if (!oppP.shieldActive) { 
+            if (typeof increaseArousal === "function") {
+                increaseArousal(oppP, arousalEffect, oppId);
+            } else {
+                oppP.arousal = (oppP.arousal || 0) + arousalEffect;
+            }
+            log(`Opp Arousal +${arousalEffect}`); 
+        } 
+    }
+
+    // 5. Submission
+    if (counts.SUBMISSION >= 3) {
+        let effect = 1 + (counts.SUBMISSION - 3); 
+        pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); 
+        log(`Sub track pushed.`);
+        if (hasCard(activePlayerNum, 23)) { 
+            if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId); 
+            else oppP.arousal = (oppP.arousal || 0) + 1;
+            log("Submissive Flush triggered: Opp Arousal +1."); 
+        }
+        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
+    }
+
+    // 6. Transform
+    if (counts.TRANSFORM >= 3) {
+        let effect = 1 + (counts.TRANSFORM - 3); 
+        applyTransform(oppId, effect, activePlayerNum); 
+        log(`Opp Transform +${effect}`);
+        if (hasCard(activePlayerNum, 2)) { applyTransform(oppId, 1, activePlayerNum); log(`Dream State actively boosted Transform damage by 1!`); }
+        if (hasCard(activePlayerNum, 22)) { pushSubmission(activePlayerNum === 1 ? 1 : -1, activePlayerNum); log("Mental Shackles triggered: Sub pushed +1."); }
+    }
+
+    // 7. Trigger Word Check
+    if (hasCard(activePlayerNum, 3) && counts.SUBMISSION > 0 && counts.TRANSFORM > 0 && counts.AROUSAL > 0 && counts.SPIRAL > 0 && counts.LUCIDITY > 0 && counts.ENERGY > 0) {
+        applyTransform(oppId, 5, activePlayerNum); 
+        log(`Trigger Word activated! Opponent takes +5 Transform!`);
+    }
+
+    // Final sync to push changes to Firebase and both screens
+    syncToFirebase();
+    updateUI();
+}
+
+function pushSubmission(amount, sourcePlayer = null) {
+    if (amount === 0) return;
+    if (Math.abs(amount) === 1 && sourcePlayer !== null) {
+        let oppId = sourcePlayer === 1 ? 2 : 1;
+        if (hasCard(oppId, 35)) { log("Mesmerizing Rhythm blocked exactly 1 point of push!"); return; }
+    }
+    
+    // Card 36 Check: Only push further if pushing TOWARDS opponent
+    if (sourcePlayer !== null && hasCard(sourcePlayer, 36)) {
+        if ((sourcePlayer === 1 && amount > 0) || (sourcePlayer === 2 && amount < 0)) {
+            amount += (sourcePlayer === 1 ? 1 : -1); log("Deeper Trance enhanced submission push!");
+        }
+    }
+
+    let newSub = gameState.submission + amount;
+    if (newSub > 5) { let overflow = newSub - 5; gameState.submission = 5; applyTransform(2, overflow, 0); log(`Sub overflow! Player 2 takes ${overflow} Transform.`); } 
+    else if (newSub < -5) { let overflow = Math.abs(newSub - (-5)); gameState.submission = -5; applyTransform(1, overflow, 0); log(`Sub overflow! P1 takes ${overflow} Transform.`); } 
+    else gameState.submission = newSub;
+}
+
+function generateDeck() {
+    deck = [...KNOWN_CARDS];
+
+    // Fresh game: nothing is in the discard pile yet.
+    discardPile = [];
+
+    // Fisher-Yates shuffle.
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+}
+
+function reshuffleDiscardIntoDeck() {
+    if (deck.length > 0 || discardPile.length === 0) return false;
+    deck = discardPile.splice(0);
+
+    // Fisher-Yates shuffle the recycled cards.
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    log(`Discard pile reshuffled into a new draw deck (${deck.length} cards).`);
+    return true;
+}
+
+function drawCardFromDeck() {
+    // Whenever the draw deck is empty, recycle the discard pile.
+    reshuffleDiscardIntoDeck();
+    if (deck.length === 0) return null;
+    return deck.pop();
+}
+
+function discardCard(card) {
+    if (!card) return;
+
+    // Store a copy so later changes to an inventory card cannot
+    // accidentally modify the discarded version.
+    discardPile.push(JSON.parse(JSON.stringify(card)));
+}
+
+function discardCards(cards) {
+    if (!Array.isArray(cards)) return;
+    cards.forEach(card => discardCard(card));
+}
+
+function refillMarket() {
+    while (market.length < 3) {
+        const card = drawCardFromDeck();
+
+        if (!card) {
+            // This can only happen if every remaining card is either
+            // in the market or currently held by a player.
+            break;
+        }
+
+        market.push(card);
+    }
+}
+
+function wipeMarket() {
+    let p = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+
+    if (p.energy >= 2) {
+        p.energy -= 2;
+
+        // Wiped market cards are discarded and become recyclable.
+        discardCards(market);
+        market = [];
+        refillMarket();
+        syncToFirebase();
+        updateUI();
+        log("Market wiped.");
+    }
+}
+
+function getCardPurchaseCost(card, playerId = gameState.activePlayer) {
+    if (!card) return Infinity;
+
+    let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    let cost = card.cost;
+
+    // Compliant Mind: all card purchases cost 1 less Energy.
+    if (hasCard(playerId, 29)) cost = Math.max(0, cost - 1);
+    if (hasCard(playerId, 28) && !p.boughtCardThisTurn) cost = Math.max(0, cost - 2);
+    if (playerId === gameState.activePlayer && gameState.freeBuyActive) cost = 0;
+
+    return cost;
+}
+
+function buyCard(index) {
+    let card = market[index];
+    if (!card) return;
+
+    let playerId = gameState.activePlayer;
+    let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    let cost = getCardPurchaseCost(card, playerId);
+
+    if (p.energy >= cost) {
+        p.energy -= cost;
+        p.boughtCardThisTurn = true;
+
+        if (gameState.freeBuyActive) {
+            gameState.freeBuyActive = false;
+        }
+
+        log(`Bought card: ${card.name}`);
+
+        if (hasCard(playerId, 46)) {
+            pushSubmission(playerId === 1 ? 1 : -1, playerId);
+            log("Bondage triggered! Sub deepened upon buying card.");
+        }
+
+        if (card.type === "Keep") {
+            // Keep cards leave the draw/discard system while active.
+            p.inventory.push(JSON.parse(JSON.stringify(card)));
+        } else {
+            // Instant cards are used immediately, then discarded.
+            executeInstant(card, playerId);
+            discardCard(card);
+        }
+
+        market.splice(index, 1);
+        refillMarket();
+        syncToFirebase();
+        updateUI();
+    }
+}
+
+function buyAction(type, pId) {
+    let p = pId === 1 ? gameState.p1 : gameState.p2;
+    let oppId = pId === 1 ? 2 : 1;
+    if (type === 'arousal' && p.energy >= 3) { p.energy -= 3; p.arousal = Math.max(0, p.arousal - 1); }
+    if (type === 'transform' && p.energy >= 5) { p.energy -= 5; applyTransform(oppId, 1, pId); }
+    if (type === 'submission' && p.energy >= 6) { p.energy -= 6; pushSubmission(pId === 1 ? 2 : -2, pId); }
+    log(`${p.name} bought Action: ${type}`); syncToFirebase(); updateUI();
+}
+
+function endTurn() {
+    let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    let oppP = gameState.activePlayer === 1 ? gameState.p2 : gameState.p1;
+
+    if (gameState.activePlayer === 1 && gameState.submission === -5) {
+        applyTransform(1, 1, 0);
+        log("P1 takes 1 Transform from Obeying!");
+    }
+
+    if (gameState.activePlayer === 2 && gameState.submission === 5) {
+        applyTransform(2, 1, 0);
+        log("Player 2 takes 1 Transform from Obeying!");
+    }
+
+    if (hasCard(gameState.activePlayer, 27) && activeP.energy === 0) {
+        activeP.energy += 1;
+        log("Endless Staircase granted 1 Energy.");
+    }
+
+    if (hasCard(gameState.activePlayer, 31)) {
+        let tPush = Math.floor(activeP.energy / 6) * 2;
+        if (tPush > 0) {
+            oppP.trance += tPush;
+            log(`Falling Sensation: Opp Trance +${tPush}`);
+            checkTranceSetback(oppP, gameState.activePlayer);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // COGNITIVE OVERRIDE
+    //
+    // At the end of your turn, if the submission marker is already
+    // on YOUR side of neutral, push it one additional point toward
+    // the opponent's side.
+    //
+    // P1 side = submission < 0
+    // P2 side = submission > 0
+    //
+    // If the marker is exactly at neutral (0), or on the opponent's
+    // side, Cognitive Override does nothing.
+    // ------------------------------------------------------------
+    if (hasCard(gameState.activePlayer, 34)) {
+        let onOwnSide =
+            (gameState.activePlayer === 1 && gameState.submission < 0) ||
+            (gameState.activePlayer === 2 && gameState.submission > 0);
+
+        if (onOwnSide) {
+            let direction = gameState.activePlayer === 1 ? 1 : -1;
+            pushSubmission(direction, gameState.activePlayer);
+            log("Cognitive Override pushed Sub +1.");
+        }
+    }
+
+    if (checkWinCondition()) return;
+
+    if (gameState.extraTurn || gameState.somnambulismTurn) {
+        gameState.extraTurn = false;
+        log("Taking extra turn!");
+        syncToFirebase();
+        updateUI();
+        startTurn();
+        return;
+    }
+
+    if (gameState.activePlayer === 2) {
+        gameState.round++;
+    }
+
+    gameState.activePlayer = gameState.activePlayer === 1 ? 2 : 1;
+
+    syncToFirebase();
+    updateUI();
+    startTurn();
+}
+
+function executeCPUTurn() {
+    if (gameState.gameMode !== "solo") return;
+
+    rollDiceAction();
+    updateUI();
+
+    let idx12 = gameState.p2.inventory.findIndex(c => c.id === 12);
+
+    if (
+        idx12 !== -1 &&
+        gameState.p2.energy >= 2 &&
+        !gameState.p2.shieldActive &&
+        cpuShouldUseRapidPulse()
+    ) {
+        gameState.p2.energy -= 2;
+        gameState.p2.shieldActive = true;
+        log("CPU used Rapid Pulse! Shielded incoming Trance and Arousal!");
+    }
+
+    let rInterval = setInterval(() => {
+        let idx47 = gameState.p2.inventory.findIndex(c => c.id === 47);
+
+        if (idx47 !== -1) {
+            let tCount = gameState.dice.filter(
+                d => d.face === "👁️ TRANSFORM"
+            ).length;
+
+            if (cpuShouldUseFadingReality(tCount)) {
+                let dIdx = gameState.dice.findIndex(
+                    d => d.face === "👁️ TRANSFORM" && !d.kept
+                );
+
+                if (dIdx !== -1) {
+                    gameState.dice[dIdx].face = FACES[Math.floor(Math.random() * FACES.length)];
+                    gameState.dice[dIdx].kept = false;
+
+                    log("CPU used Fading Reality: Rerolled a Transform die.");
+                    updateUI();
+                }
+            }
+        }
+
+        if (gameState.rerollsLeft > 0) {
+            cpuChooseDiceToKeep();
+            rollDiceAction();
+        } else {
+            let keptCount = gameState.dice.filter(d => d.kept).length;
+            let idx20 = gameState.p2.inventory.findIndex(c => c.id === 20);
+
+            if (
+                idx20 !== -1 &&
+                gameState.p2.inventory[idx20].charges > 0 &&
+                cpuShouldUseAbsoluteFocus(keptCount)
+            ) {
+                let card = gameState.p2.inventory[idx20];
+
+                card.charges -= 1;
+                gameState.rerollsLeft += 1;
+
+                log(`CPU used Absolute Focus charge. (${card.charges} left)`);
+
+                if (card.charges <= 0) {
+                    const discarded = gameState.p2.inventory.splice(idx20, 1)[0];
+                    discardCard(discarded);
+                    log("Absolute Focus depleted and discarded.");
+                }
+
+                updateUI();
+                return;
+            }
+
+            clearInterval(rInterval);
+
+            setTimeout(() => {
+
+                // --------------------------------------------------------
+                // SIMMERING AROUSAL
+                //
+                // A die being kept does NOT prevent the CPU from changing
+                // it to Arousal. Changing a die's face is not a reroll,
+                // so its kept state is preserved.
+                // --------------------------------------------------------
+                let idx49 = gameState.p2.inventory.findIndex(c => c.id === 49);
+
+                if (idx49 !== -1 && !gameState.p2.simmeringUsed) {
+                    let dIdx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL");
+
+                    if (dIdx !== -1) {
+                        gameState.dice[dIdx].face = "🔥 AROUSAL";
+                        gameState.p2.simmeringUsed = true;
+                        log("CPU used Simmering Arousal: Changed a die to Arousal.");
+                        updateUI();
+                    }
+                }
+
+                resolveDice();
+
+                let idx26 = gameState.p2.inventory.findIndex(c => c.id === 26);
+                if (idx26 !== -1) {
+                    let maxCost = market.length > 0 ? Math.max(...market.map(c => c.cost)) : 0;
+                    if (cpuShouldSellWakingTrance(maxCost)) {
+                        let card = gameState.p2.inventory.splice(idx26, 1)[0];
+                        if (card) {
+                            gameState.p2.energy += 2;
+                            discardCard(card);
+                            log(`CPU sold ${card.name} for +2 Energy.`);
+                        }
+                    }
+                }
+
+                // --------------------------------------------------------
+                // MIRROR IMAGE
+                // --------------------------------------------------------
+                let idx42 = gameState.p2.inventory.findIndex(c => c.id === 42);
+                if (idx42 !== -1 && market.length > 0) {
+                    let maxCost = Math.max(...market.map(c => c.cost));
+                    if (cpuShouldUseMirrorImage(maxCost)) {
+                        const discarded = gameState.p2.inventory.splice(idx42, 1)[0];
+                        if (discarded) discardCard(discarded);
+                        gameState.freeBuyActive = true;
+                        log("CPU discarded Mirror Image! Next buy is free.");
+                    }
+                }
+
+                // --------------------------------------------------------
+                // OPTIONAL CPU WIPE
+                //
+                // Only use Wipe if there is currently no affordable card
+                // and the deck can actually refresh the market.
+                //
+                // Mirror Image is considered first because it can make
+                // the existing market free.
+                // --------------------------------------------------------
+                if (cpuShouldUseWipe()) {
+                    let energyBefore = gameState.p2.energy;
+                    wipeMarket();
+                    log(`CPU used Wipe: refreshed market (${energyBefore} → ${gameState.p2.energy}).`);
+                }
+
+                // --------------------------------------------------------
+                // CARD PURCHASES
+                //
+                // getCardPurchaseCost() now includes:
+                //   - Compliant Mind
+                //   - first-purchase Hypnotic Focus
+                //   - Mirror Image free purchase
+                //
+                // Therefore the CPU now understands the same purchase
+                // rules as the human player.
+                // --------------------------------------------------------
+                let boughtSomething = true;
+                while (boughtSomething) {
+                    boughtSomething = false;
+                    let bestIndex = -1;
+                    let bestScore = -Infinity;
+
+                    for (let i = 0; i < market.length; i++) {
+                        let card = market[i];
+                        if (!card) continue;
+                        let effectiveCost = getCardPurchaseCost(card, 2);
+
+                        if (effectiveCost <= gameState.p2.energy || gameState.freeBuyActive) {
+                            if (cpuShouldBuyCard(card, effectiveCost)) {
+                                let score = cpuCardPurchaseScore(card);
+                                if (effectiveCost <= gameState.p2.energy) score += 5;
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    bestIndex = i;
+                                }
+                            }
+                        }
+                    }
+
+                    if (bestIndex !== -1) {
+                        buyCard(bestIndex);
+                        boughtSomething = true;
+					} else if (!gameState.showEnergyActions) {
+                        // High Energy Wipe Check
+                        let diff = getCpuDifficulty();
+                        let wipeThreshold = Infinity;
+                        
+                        if (diff === "aggressive") wipeThreshold = 8;
+                        else if (diff === "v23low") wipeThreshold = 9;
+                        else if (diff === "defensive") wipeThreshold = 10;
+                        
+                        if (gameState.p2.energy >= wipeThreshold && deck.length > 0 && market.length > 0) {
+                            let energyBefore = gameState.p2.energy;
+                            wipeMarket();
+                            log(`CPU used Wipe (Excess Energy): refreshed market (${energyBefore} → ${gameState.p2.energy}).`);
+                            boughtSomething = true; // Iterate loop again to evaluate the newly wiped market
+                        }
+
+
+                    }
+                }
+
+                // --------------------------------------------------------
+                // ENERGY ACTIONS
+                // --------------------------------------------------------
+                while (gameState.showEnergyActions == true && cpuShouldBuyTransformWithEnergy()) {
+                    buyAction('transform', 2);
+                }
+                while (gameState.showEnergyActions == true && cpuShouldBuySubmissionWithEnergy()) {
+                    buyAction('submission', 2);
+                }
+                endTurn();
+            }, 1000);
+        }
+    }, 1000);
+}
+
+function checkWinCondition() {
+	if (gameState.gameEnded) return true;
+
+    // ------------------------------------------------------------
+    // NEW IDENTITY
+    //
+    // A player who reaches 10+ Transform gets a chance to use
+    // New Identity before victory is declared.
+    // ------------------------------------------------------------
+    [1, 2].forEach(pId => {
+        let p = pId === 1 ? gameState.p1 : gameState.p2;
+
+        if (p.transform >= 10 && hasCard(pId, 38)) {
+            // Discard the entire active hand/inventory when
+            // New Identity fires.
+            const discardedCards = p.inventory.slice();
+            discardCards(discardedCards);
+
+            p.inventory = [];
+
+            p.transform = 5;
+            p.arousal = 5;
+
+            log(
+                `NEW IDENTITY triggered for ${p.name}! ` +
+                `Transformation reverted to 5, Cards wiped, Arousal maxed!`,
+                true
+            );
+        }
+    });
+
+    const p1Transformed = gameState.p1.transform >= 10;
+    const p2Transformed = gameState.p2.transform >= 10;
+
+    if (!p1Transformed && !p2Transformed) {
+        return false;
+    }
+
+    // ------------------------------------------------------------
+    // VICTORY
+    //
+    // Transform 10 means that player has been fully transformed.
+    // Therefore, the player who caused the opponent to reach 10
+    // is the winner.
+    //
+    // If both players reach 10 during the same active turn/effect,
+    // the active player wins the tie.
+    // ------------------------------------------------------------
+    let winnerId;
+
+    if (p1Transformed && p2Transformed) {
+        // Simultaneous transformation:
+        // active player wins the tie.
+        winnerId = gameState.activePlayer;
+
+        log(
+            `Both players reached 10+ Transform! ` +
+            `${winnerId === 1 ? gameState.p1.name : gameState.p2.name} ` +
+            `wins as the active player.`
+        );
+    } else if (p1Transformed) {
+        // P1 was fully transformed, so P2 caused the final transform.
+        winnerId = 2;
+
+        log(
+            `${gameState.p1.name} reached 10+ Transform. ` +
+            `${gameState.p2.name} wins!`
+        );
+    } else {
+        // P2 was fully transformed, so P1 caused the final transform.
+        winnerId = 1;
+
+        log(
+            `${gameState.p2.name} reached 10+ Transform. ` +
+            `${gameState.p1.name} wins!`
+        );
+    }
+
+    gameState.gameEnded = true;
+
+    const p1Wins = winnerId === 1;
+    const winner = winnerId === 1 ? gameState.p1 : gameState.p2;
+	
+	// Sync game state to cloud upon victory
+    if (typeof syncToFirebase === "function") {
+        syncToFirebase();
+    }
+
+	// ------------------------------------------------------------
+    // UI MODAL & AVATAR RENDERING
+    // ------------------------------------------------------------
+    document.getElementById("go-title").innerText =
+        `${winner.name} Wins!`;
+
+    // ------------------------------------------------------------
+    // PLAYER 1
+    // ------------------------------------------------------------
+    document.getElementById("go-p1-name").innerText =
+        gameState.p1.name;
+
+    document.getElementById("go-p1-status").innerText =
+        p1Wins ? "WINNER" : "TRANSFORMED";
+
+    // IMPORTANT:
+    // Show the player's ACTUAL transformation level.
+    // Cap only the image stage at 11 because 11 is the maximum
+    // available transformation image.
+    const p1FinalT = Math.min(11, gameState.p1.transform);
+
+    const p1Path =
+        `images/avatars/${gameState.p1.name}/` +
+        `${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
+
+    document.getElementById("go-p1-image").innerHTML =
+        `<img src="${p1Path}" ` +
+        `onclick="openImageModal('${p1Path}')" ` +
+        `onerror="this.outerHTML='Image Req:<br>` +
+        `${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
+
+    document
+        .getElementById("go-p1-panel")
+        .classList.remove("winner-highlight");
+
+    if (p1Wins) {
+        document
+            .getElementById("go-p1-panel")
+            .classList.add("winner-highlight");
+    }
+
+    // ------------------------------------------------------------
+    // PLAYER 2
+    // ------------------------------------------------------------
+    document.getElementById("go-p2-name").innerText =
+        gameState.p2.name;
+
+    document.getElementById("go-p2-status").innerText =
+        !p1Wins ? "WINNER" : "TRANSFORMED";
+
+    // Again, use the ACTUAL Transform level.
+    const p2FinalT = Math.min(11, gameState.p2.transform);
+
+    const p2Path =
+        `images/avatars/${gameState.p2.name}/` +
+        `${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
+
+    document.getElementById("go-p2-image").innerHTML =
+        `<img src="${p2Path}" ` +
+        `onclick="openImageModal('${p2Path}')" ` +
+        `onerror="this.outerHTML='Image Req:<br>` +
+        `${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
+
+    document
+        .getElementById("go-p2-panel")
+        .classList.remove("winner-highlight");
+
+    if (!p1Wins) {
+        document
+            .getElementById("go-p2-panel")
+            .classList.add("winner-highlight");
+    }
+
+    document.getElementById("game-over-modal").style.display = "flex";
+    return true;
+}
+
+function openImageModal(imgSrc) {
+    if (!imgSrc) return;
+    const modal = document.getElementById("image-modal");
+    modal.style.display = "flex"; document.getElementById("image-modal-img").src = imgSrc;
+}
+
+function closeImageModal(event) {
+    if (!event || event.target.id === "image-modal" || event.target.tagName === "SPAN") {
+        document.getElementById("image-modal").style.display = "none";
+    }
+}
+
+
+// ============================================================
+// HELP / RULES / GUIDED TUTORIAL SYSTEM
+// ============================================================
+
+const HELP_CONTENT = {
+    quick: `
+        <div class="help-section">
+            <h3>Objective</h3>
+            <p><strong>Completely transform your opponent before they transform you to win.</strong> There are 10 stages of transformation: when your move pushes the opponent to 10+, you win.</p>
+        </div>
+        <div class="help-section">
+            <h3>Your Turn</h3>
+            <div class="help-grid">
+                <div class="help-box"><strong>1. Roll</strong><br>Roll all available dice.</div>
+                <div class="help-box"><strong>2. Keep</strong><br>Click dice to lock the ones you want to keep.</div>
+                <div class="help-box"><strong>3. Reroll</strong><br>Roll the unkept dice again while you have rerolls remaining.</div>
+                <div class="help-box"><strong>4. Resolve</strong><br>Resolve the final dice to apply their effects.</div>
+                <div class="help-box"><strong>5. Shop</strong><br>Spend Energy on cards and/or clear the card market. You may buy multiple cards if you can afford them.</div>
+                <div class="help-box"><strong>6. End Turn</strong><br>Finish the shop phase and pass play to the other player unless an effect grants another turn.</div>
+            </div>
+        </div>
+		<div class="help-section">
+			<h3>Online Play Setup</h3>
+			<p>Hypnotic Duel supports two-player online play using Firebase. One player is the <strong>Host</strong> and the other is the <strong>Guest</strong>.</p>
+
+			<h4>Host</h4>
+			<ol>
+				<li>In the setup screen, select <strong>2 Player Online (Firebase)</strong> as the Game Mode.</li>
+				<li>In the <strong>Online Setup</strong> menu, select <strong>Host Online Game</strong>.</li>
+				<li>Click <strong>Generate</strong> to create a Room Code.</li>
+				<li>Give the Room Code to the other player.</li>
+				<li>Choose your player name, transformation target, and other game options.</li>
+				<li>Click <strong>Start Game</strong> to create and start the online game.</li>
+			</ol>
+
+			<h4>Guest</h4>
+			<ol>
+				<li>In the setup screen, select <strong>2 Player Online (Firebase)</strong> as the Game Mode.</li>
+				<li>In the <strong>Online Setup</strong> menu, select <strong>Join Online Game</strong>.</li>
+				<li>Enter the <strong>Room Code</strong> provided by the Host.</li>
+				<li>Choose your player name, transformation target, and other game options.</li>
+				<li>Click <strong>Start Game</strong>.</li>
+			</ol>
+
+			<p>Once both players have started, the game connects them through the shared Room Code. Game state, dice rolls, cards, resources, and turns are shared between the Host and Guest.</p>
+
+			<div class="help-box">
+				<strong>Important:</strong> The Host should generate the Room Code first and give it to the Guest before the Guest attempts to join.
+			</div>
+		</div>
+        <div class="help-section">
+            <h3>The Six Dice</h3>
+            <p>🌀 Trance &nbsp; 💧 Lucidity &nbsp; ⚡ Energy &nbsp; ⛓️ Submission &nbsp; 🔥 Arousal &nbsp; 👁️ Transform</p>
+            <p>Most dice have an individual effect. Matching 3 or more of ⛓️ or 👁️ can create a stronger combination effect.</p>
+        </div>
+        <div class="help-section">
+            <h3>First Strategy Tip</h3>
+            <p>Energy buys cards, while Transform is how you actually finish the opponent. Early in a game, decide whether your roll is better used for Energy, pressure, or building a useful combination.</p>
+        </div>
+        <div class="help-section" style="text-align:center;">
+            <button onclick="startGuidedTutorial(false)" style="max-width:320px; margin:auto;">Start Guided Tutorial</button>
+        </div>
+    `,
+    rules: `
+        <div class="help-section">
+            <h3>Game Objective</h3>
+            <p>Each player is trying to <strong>Completely transform the opponent to a target</strong>. The player whose opponent is completely transformed through the 10 stages of transformation first is the winner. If both players are completely transformed during the same active turn/effect, the active player wins the tie.</p>
+        </div>
+        <div class="help-section">
+            <h3>Turn Structure</h3>
+            <ol>
+                <li><strong>Rolling phase:</strong> roll, lock useful dice, and reroll unkept dice.</li>
+                <li><strong>Resolve:</strong> apply the final roll's individual effects and combinations.</li>
+                <li><strong>Shop phase:</strong> buy cards or clear the market.</li>
+                <li><strong>End Turn:</strong> end-of-turn effects resolve before the next player's turn.</li>
+            </ol>
+        </div>
+        <div class="help-section">
+            <h3>Submission Track</h3>
+            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions.</p>
+            <p>At Submission 3 or more, a roll of ⛓️ produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of push.</p>
+        </div>
+        <div class="help-section">
+            <h3>Trance</h3>
+            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You get to choose whether they are more submissive (+2) or more aroused (+2). Then they wake up with 0 Trance again.</p>
+        </div>
+        <div class="help-section">
+            <h3>Arousal & Rerolls</h3>
+            <p>Two 🔥 dice produce 1 Arousal, four produce 2, and five or six still cap Arousal at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. Some cards add rerolls or other modifiers.</p>
+        </div>
+        <div class="help-section">
+            <h3>Transform</h3>
+            <p>Three 👁️ dice produce 1 Transformation of the opponent, with each additional 👁️ adding another point. Cards can increase the number of Transformations. Transforming the opponent to 10+ ends the game in your favor.</p>
+        </div>
+        <div class="help-section">
+            <h3>Energy</h3>
+            <p>Each ⚡ die gives 1 Energy. Energy is spent on cards and being able to wipe the cards in the market and refill it. The card <i>Power Boost</i> can increase Energy gained from dice.</p>
+        </div>
+        <div class="help-section">
+            <h3>Lucidity</h3>
+            <p>💧 Lucidity lets you reduce your own Trance, Arousal, and—when applicable—Vulnerability. Human players distribute Lucidity manually in the allocation dialog.</p>
+        </div>
+        <div class="help-section">
+            <h3>Vulnerability</h3>
+            <p>If the card <i>Powerful Transform</i> is in play, Vulnerability reduces the number of dice the opposing player can roll, to a minimum of three. 💧 Lucidity can remove Vulnerability.</p>
+        </div>
+    `,
+    dice: `
+        <div class="help-section">
+            <h3>Dice Reference</h3>
+            <div class="help-grid">
+                <div class="help-box"><div class="help-die">🌀 SPIRAL</div>Deepens the opponent's Trance. Deep Gaze increases the effect.</div>
+                <div class="help-box"><div class="help-die">💧 LUCIDITY</div>Reduce your own Trance, Arousal, and applicable Vulnerability.</div>
+                <div class="help-box"><div class="help-die">⚡ ENERGY</div>Gain Energy. Power Boost can add extra Energy.</div>
+                <div class="help-box"><div class="help-die">⛓️ SUBMISSION</div>Three or more push the Submission track. Three ⛓️ also trigger effects from cards such as Somnambulism.</div>
+                <div class="help-box"><div class="help-die">🔥 AROUSAL</div>Every two 🔥 contribute 1 Arousal, with card effects able to modify the result.</div>
+                <div class="help-box"><div class="help-die">👁️ TRANSFORM</div>Three or more deal Transform damage to the opponent.</div>
+            </div>
+        </div>
+        <div class="help-section">
+            <h3>Keeping Dice</h3>
+            <p>Click a rolled die to lock it. Locked dice stay in place while unkept dice are rerolled. Click a kept die again to unlock it.</p>
+        </div>
+        <div class="help-section">
+            <h3>Combinations vs. Individual Effects</h3>
+            <p>Some effects are based on individual dice while others require a set of matching faces. For example, a virtual die can resolve its own individual effect, but it does not merge into the main roll when calculating a 3-die or larger combination.</p>
+        </div>
+        <div class="help-section">
+            <h3>Virtual Dice</h3>
+            <p>Cards that create virtual dice resolve each virtual die as though that face had been rolled for its individual effect. Virtual dice do <strong>not</strong> combine with the main roll for set calculations.</p>
+            <p>Examples: virtual 🌀 can trigger Spiral/Deep Gaze; virtual 💧 can resolve Lucidity/Deep Safeties; virtual ⚡ grants Energy/Power Boost. Virtual ⛓️ and 👁️ do not combine with the main roll.</p>
+        </div>
+    `,
+    cards: `
+        <div class="help-section">
+            <h3>Cards & Market</h3>
+            <p><strong>Keep</strong> cards stay active after purchase. <strong>Instant</strong> cards resolve immediately and are discarded afterward.</p>
+            <p>The market contains three cards. Whenever a card is purchased, that market slot is immediately refilled when possible. There is no hand/inventory limit.</p>
+            <input id="help-card-search" class="help-card-search" type="search" placeholder="Search cards by name or effect..." oninput="renderHelpCards(this.value)">
+            <div id="help-card-list" class="help-card-list"></div>
+        </div>
+        <div class="help-section">
+            <h3>Buying Cards</h3>
+            <p>You may buy multiple cards during your shop phase if you have enough Energy. Hypnotic Focus reduces the cost of only your first purchase that turn; later purchases use their normal modified cost.</p>
+            <p><strong>Wipe Row</strong> costs 2 Energy, discards the current market cards, and replaces the row with new cards when available.</p>
+        </div>
+    `,
+    advanced: `
+        <div class="help-section">
+            <h3>Extra Turns</h3>
+            <p>Some effects grant another turn. Somnambulism automatically grants another turn after rolling ⛓️⛓️⛓️, with one fewer die on that extra turn.</p>
+        </div>
+        <div class="help-section">
+            <h3>End-of-Turn Effects</h3>
+            <p>Some Keep cards trigger at the end of your turn. This includes effects that interact with Submission, Energy, or the opponent's Trance.</p>
+        </div>
+        <div class="help-section">
+            <h3>Special Dice Manipulation</h3>
+            <p>Simmering Arousal can change one die to 🔥 during the roll phase. The normal interface lets you lock dice you want to preserve; Simmering changes the first eligible non-🔥 die.</p>
+        </div>
+        <div class="help-section">
+            <h3>Defensive Tools</h3>
+            <p>Rapid Pulse can spend 2 Energy during the roll phase to shield you from incoming Trance and Arousal for a turn. Other cards provide rerolls, healing, extra dice, or ways to manipulate the market.</p>
+        </div>
+        <div class="help-section">
+            <h3>New Identity</h3>
+            <p>If a transformed player has New Identity when they reach 10+ Transform, the card can prevent the immediate victory by reverting that player to Transform 5, setting Arousal to 5, and discarding their active cards.</p>
+        </div>
+        <div class="help-section">
+            <h3>Game Modes</h3>
+            <p><strong>1 Player vs CPU:</strong> play against the selected AI difficulty.</p>
+            <p><strong>2 Player Local:</strong> two people share the same browser.</p>
+            <p><strong>2 Player Online:</strong> use the Firebase room system to play remotely.</p>
+        </div>
+        <div class="help-section">
+            <h3>AI Difficulties</h3>
+            <p>Beginner is more random. Easy uses basic strategy. Normal is more aggressive. Hard uses a stronger strategic profile. Expert emphasizes defensive play.</p>
+        </div>
+    `
+};
+
+function openHelpModal(tab = 'quick') {
+    const modal = document.getElementById('help-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    showHelpTab(tab);
+}
+
+function closeHelpModal() {
+    const modal = document.getElementById('help-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function showHelpTab(tab) {
+    const content = document.getElementById('help-content');
+    if (!content) return;
+    content.innerHTML = HELP_CONTENT[tab] || HELP_CONTENT.quick;
+    document.querySelectorAll('#help-tabs .help-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    if (tab === 'cards') renderHelpCards('');
+}
+
+function renderHelpCards(filter = '') {
+    const list = document.getElementById('help-card-list');
+    if (!list) return;
+    const q = String(filter || '').trim().toLowerCase();
+    const cards = KNOWN_CARDS.filter(card =>
+        !q || `${card.name} ${card.type} ${card.desc}`.toLowerCase().includes(q)
+    );
+    list.innerHTML = cards.map(card => `
+        <div class="help-card-entry">
+            <div><strong>${card.name}</strong> <span class="help-card-meta">${card.type} · ${card.cost}⚡</span></div>
+            <div style="margin-top:5px;">${card.desc}</div>
+        </div>
+    `).join('') || '<div class="help-box">No cards match that search.</div>';
+}
+
+const GUIDED_TUTORIAL_STEPS = [
+    {
+        title: 'Welcome to Hypnotic Duel',
+        body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. You will make a few harmless practice actions so you can see how the controls work.</p>',
+        target: null, position: 'bottom', actionGate: 'none'
+    },
+    {
+        title: '1. Make Your First Roll',
+        body: '<p>The center of the board is your roll area. There are six possible faces: 🌀 Trance, 💧 Lucidity, ⚡ Energy, ⛓️ Submission, 🔥 Arousal, and 👁️ Transform.</p><p>Click <strong>Roll Dice</strong> to make your first roll. Then click <strong>Next</strong>.</p>',
+        target: '#btn-roll', position: 'top', actionGate: 'roll'
+    },
+    {
+        title: '2. Lock and Unlock Dice',
+        body: '<p>Now practice controlling your roll. Click two or three dice to <strong>lock</strong> them. Locked dice will stay in place when you reroll.</p><p>Then click one of those dice again to <strong>unlock</strong> it. Leave at least one die unlocked for the next step.</p>',
+        target: '#dice-container', position: 'top', actionGate: 'dice'
+    },
+    {
+        title: '3. Reroll the Unlocked Dice',
+        body: '<p>Only unlocked dice are rerolled. Click <strong>Roll Unkept Dice</strong> once and watch the unlocked dice change while your locked dice stay put.</p><p>Your available rerolls are shown above the dice.</p>',
+        target: '#btn-roll', position: 'top', actionGate: 'reroll'
+    },
+    {
+        title: '4. Resolve the Roll',
+        body: '<p>When you are satisfied with a roll, click <strong>Resolve Dice</strong>. This applies the individual die effects and checks for powerful combinations such as 3+ Submission or 3+ Transform.</p><p>During this tutorial step, the other dice action is temporarily disabled so you can focus on Resolve.</p>',
+        target: '#btn-resolve', position: 'top', actionGate: 'resolve'
+    },
+    {
+        title: '5. Build Your Resources',
+        body: '<p>After the roll resolves, your resources change. ⚡ Energy buys cards. 🌀 Trance pressures your opponent. 💧 Lucidity protects you. ⛓️ Submission moves the Submission track. 🔥 Arousal affects your rerolls. 👁️ Transform is your main offensive path to victory.</p>',
+        target: '#p1-energy', position: 'top', actionGate: 'none'
+    },
+    {
+        title: '6. Buy Cards',
+        body: '<p>The three cards in the <strong>Market</strong> are available during the Shop phase. You may buy multiple cards if you have enough Energy; each purchase immediately refills that market slot.</p><p><strong>Keep</strong> cards remain active and appear in your Active Cards area. <strong>Instant</strong> cards resolve immediately and are then discarded.</p>',
+        target: '#market-container', position: 'bottom', actionGate: 'none'
+    },
+    {
+        title: '7. The Submission Track',
+        body: '<p>The Submission track runs from -5 to +5. Positive values favor Player 1; negative values favor Player 2.</p><p>Strong Submission effects push the track. If you push beyond an endpoint, the overflow becomes Transform damage against the player on that side.</p>',
+        target: '#submission-track', position: 'bottom', actionGate: 'none'
+    },
+    {
+        title: '8. Watch Your Active Cards',
+        body: '<p>Your active <strong>Keep</strong> cards appear in the Active Cards area. Some add dice, rerolls, defensive effects, or stronger dice results. Others provide special abilities during particular phases.</p>',
+        target: '#p1-inventory', position: 'top', actionGate: 'none'
+    },
+    {
+        title: '9. Finish the Turn',
+        body: '<p>When you are finished shopping and using available actions, click <strong>End Turn</strong>. End-of-turn effects resolve, then play passes to the other player unless an effect grants another turn.</p>',
+        target: '#btn-end-turn-1', position: 'top', actionGate: 'none'
+    },
+    {
+        title: '10. Win the Duel',
+        body: '<p>Keep applying pressure until you Transform your opponent to <strong>10 or more</strong>.</p><p>Cards, dice combinations, Submission overflow, Energy actions, and other effects can all contribute to the final push.</p><p>You are ready to play!</p>',
+        target: null, position: 'top', actionGate: 'none'
+    }
+];
+
+let guidedTutorialStep = 0;
+let guidedTutorialActive = false;
+let guidedTutorialStartedFromSetup = false;
+
+function clearTutorialHighlight() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+}
+
+function resetTutorialGameState() {
+    gameState = {
+        gameMode: 'solo',
+        p1: { name: '', transformTarget: '', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+        p2: { name: '', transformTarget: '', difficulty: 'smart', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+        submission: 0, activePlayer: 1, round: 1, phase: 'waiting',
+        dice: Array(6).fill({ face: '-', kept: false }),
+        rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
+        log: []
+    };
+    onlineRoomId = '';
+    onlineLocalRole = 1;
+    isSyncingFromFirebase = false;
+    market = [];
+    generateDeck();
+}
+
+function startTutorialDemoGame() {
+    resetTutorialGameState();
+
+    const p1Select = document.getElementById('p1-name');
+    const cpuSelect = document.getElementById('cpu-name');
+    const p1TargetSelect = document.getElementById('p1-transform-type');
+    const cpuTargetSelect = document.getElementById('cpu-transform-type');
+
+    const p1Raw = p1Select ? p1Select.value.trim() : 'Player 1';
+    const cpuRaw = cpuSelect ? cpuSelect.value.trim() : 'CPU';
+    const p1Name = p1Raw.split(' ')[0] || 'Player';
+    let cpuName = cpuRaw === 'Random' ? 'CPU' : (cpuRaw.split(' ')[0] || 'CPU');
+    if (cpuName === p1Name) cpuName = 'CPU';
+
+    const p1Target = cpuTargetSelect && cpuTargetSelect.value !== 'Random'
+        ? cpuTargetSelect.value
+        : TRANSFORMS[0];
+    const cpuTarget = p1TargetSelect && p1TargetSelect.value
+        ? p1TargetSelect.value
+        : TRANSFORMS[0];
+
+    gameState.gameMode = 'solo';
+    gameState.showDiceText = document.getElementById('dice-text-option')?.value !== 'off';
+    gameState.showEnergyActions = false;
+    gameState.p1.name = p1Name;
+    gameState.p1.transformTarget = p1Target;
+    gameState.p2.name = cpuName;
+    gameState.p2.transformTarget = cpuTarget;
+    gameState.p2.difficulty = 'random';
+
+    // The tutorial always starts with the human in control so its interactive
+    // dice examples cannot be interrupted by a CPU turn.
+    gameState.activePlayer = 1;
+    gameState.p2.energy = 1;
+
+    document.getElementById('energy-actions-panel-1').style.display = 'none';
+    document.getElementById('energy-actions-panel-2').style.display = 'none';
+    document.getElementById('btn-end-turn-2').style.display = 'none';
+    document.getElementById('p1-last-keep-section').style.display = 'none';
+
+    const setup = document.getElementById('settings-modal');
+    if (setup) setup.style.display = 'none';
+
+    refillMarket();
+    startTurn();
+    updateUI();
+}
+
+function applyTutorialActionGate() {
+    if (!guidedTutorialActive) return;
+
+    const gate = GUIDED_TUTORIAL_STEPS[guidedTutorialStep]?.actionGate || 'none';
+    const roll = document.getElementById('btn-roll');
+    const resolve = document.getElementById('btn-resolve');
+
+    if (roll) {
+        if (gate === 'none') {
+            // Leave the normal game controls untouched outside the hands-on steps.
+        } else if (gate === 'roll' || gate === 'reroll') {
+            roll.disabled = false;
+        } else {
+            roll.disabled = true;
+        }
+    }
+
+    if (resolve) {
+        if (gate === 'resolve') {
+            resolve.disabled = false;
+        } else if (gate !== 'none') {
+            resolve.disabled = true;
+        }
+    }
+}
+
+function renderTutorialStep() {
+    const step = GUIDED_TUTORIAL_STEPS[guidedTutorialStep];
+    if (!step) return;
+    clearTutorialHighlight();
+
+    const title = document.getElementById('tutorial-title');
+    const body = document.getElementById('tutorial-body');
+    const progress = document.getElementById('tutorial-progress');
+    const back = document.getElementById('tutorial-back');
+    const next = document.getElementById('tutorial-next');
+    const panel = document.querySelector('.tutorial-panel');
+
+    if (title) title.innerText = step.title;
+    if (body) body.innerHTML = step.body;
+    if (progress) progress.innerText = `Guided Tutorial · ${guidedTutorialStep + 1} of ${GUIDED_TUTORIAL_STEPS.length}`;
+    if (back) back.disabled = guidedTutorialStep === 0;
+    if (next) next.innerText = guidedTutorialStep === GUIDED_TUTORIAL_STEPS.length - 1 ? 'Finish' : 'Next';
+    if (panel) panel.classList.toggle('tutorial-top', step.position === 'top');
+
+    if (step.target) {
+        const target = document.querySelector(step.target);
+        if (target) {
+            target.classList.add('tutorial-highlight');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    applyTutorialActionGate();
+}
+
+function prepareGuidedTutorial() {
+    // Starting from setup means this is a temporary tutorial demo, not a real
+    // game. Enter a fresh board immediately and return to setup when finished.
+    closeHelpModal();
+    guidedTutorialStartedFromSetup = true;
+    startTutorialDemoGame();
+    startGuidedTutorial(true);
+}
+
+function startGuidedTutorial(fromSetup = false) {
+    guidedTutorialActive = true;
+    guidedTutorialStartedFromSetup = !!fromSetup;
+    guidedTutorialStep = 0;
+    closeHelpModal();
+
+    const setup = document.getElementById('settings-modal');
+    if (setup) setup.style.display = 'none';
+
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    requestAnimationFrame(() => renderTutorialStep());
+}
+
+function tutorialNext() {
+    if (!guidedTutorialActive) return;
+    if (guidedTutorialStep >= GUIDED_TUTORIAL_STEPS.length - 1) {
+        endGuidedTutorial();
+        return;
+    }
+    guidedTutorialStep++;
+    renderTutorialStep();
+}
+
+function tutorialBack() {
+    if (!guidedTutorialActive || guidedTutorialStep <= 0) return;
+    guidedTutorialStep--;
+    renderTutorialStep();
+}
+
+function endGuidedTutorial() {
+    const returnToSetup = guidedTutorialStartedFromSetup;
+    guidedTutorialActive = false;
+    guidedTutorialStartedFromSetup = false;
+    clearTutorialHighlight();
+
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    if (returnToSetup) {
+        // A tutorial started from setup is deliberately disposable. Reloading
+        // guarantees a completely clean game and restores the setup dialog.
+        location.reload();
+    } else {
+        updateUI();
+    }
+}
+
+</script>
+
+
+<!-- HELP / RULES MODAL -->
+<div id="help-modal" class="modal-overlay" style="display:none; z-index:450;">
+    <div class="modal-content help-modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <h1 style="margin:0;">How to Play</h1>
+            <button class="help-btn" onclick="closeHelpModal()" style="margin:0;">Close</button>
+        </div>
+        <div class="help-tabs" id="help-tabs">
+            <button class="help-tab" data-tab="quick" onclick="showHelpTab('quick')">Quick Start</button>
+            <button class="help-tab" data-tab="rules" onclick="showHelpTab('rules')">Rules</button>
+            <button class="help-tab" data-tab="dice" onclick="showHelpTab('dice')">Dice</button>
+            <button class="help-tab" data-tab="cards" onclick="showHelpTab('cards')">Cards</button>
+            <button class="help-tab" data-tab="advanced" onclick="showHelpTab('advanced')">Advanced</button>
+        </div>
+        <div id="help-content" class="help-scroll"></div>
+    </div>
+</div>
+
+<!-- GUIDED TUTORIAL -->
+<div id="tutorial-overlay" class="modal-overlay tutorial-overlay" style="display:none;">
+    <div class="tutorial-panel">
+        <button class="tutorial-dismiss" onclick="endGuidedTutorial()">✕</button>
+        <div class="tutorial-progress" id="tutorial-progress"></div>
+        <h2 id="tutorial-title">Guided Tutorial</h2>
+        <div id="tutorial-body" style="font-size:1.05em; line-height:1.55;"></div>
+        <div class="tutorial-actions">
+            <button id="tutorial-back" onclick="tutorialBack()" style="background:#555;">Back</button>
+            <button id="tutorial-next" onclick="tutorialNext()" style="background:var(--accent);">Next</button>
+        </div>
+    </div>
+</div>
+
+<div id="image-modal" class="modal-overlay" onclick="closeImageModal(event)" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; cursor:pointer;">
+    <div style="position:relative; max-width:90vw; max-height:90vh;">
+        <img id="image-modal-img" src="" style="max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow:0 0 20px rgba(255,255,255,0.2);" />
+        <span onclick="closeImageModal()" style="position:absolute; top:-15px; right:-15px; background:#fff; color:#000; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; cursor:pointer;">&times;</span>
+    </div>
+</div>
+</body>
+</html>
