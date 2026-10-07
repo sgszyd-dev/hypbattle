@@ -556,14 +556,14 @@ const CHARACTER_MANIFEST = {
     "Damian (M)": [],
     "Seraphina (F)": [],
     "Leo (M)": [],
-    "Fable (F)": ["Cat", "Bunny", "Cow","Otter"]
+    "Fable (F)": ["Cat", "Bunny", "Cow","Otter","Werewolf"]
 	};
 
 
 
 // --- DEBUG CONFIGURATION ---
 const cardDebugOn = false;
-const debugCards = [41, 17, 3]; // Set the 3 card IDs you want dealt first
+const debugCards = [5, 50, 51]; // Set the 3 card IDs you want dealt first
 
 // remove virtual dice: 5, 21
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
@@ -574,7 +574,7 @@ const KNOWN_CARDS = [
 	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {aggressive: 75, defensive: 10, v23low: 60} },
 	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {aggressive: 40, defensive: 10, v23low: 30} },
 	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {aggressive: 65, defensive: 30, v23low: 60} },
-    { id: 5, name: "Mental Block", cost: 3, type: "Instant", desc: "Roll 2 virtual dice. Results are applied immediately in a popup dialog.", ai: {aggressive: 50, defensive: 50, v23low: 40} },
+    { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {aggressive: 35, defensive: 15, v23low: 55} },
 	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {aggressive: 70, defensive: 10, v23low: 50} },
 	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {aggressive: 80, defensive: 80, v23low: 90} },
 	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {aggressive: 75, defensive: 15, v23low: 65} },
@@ -590,7 +590,7 @@ const KNOWN_CARDS = [
     { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {aggressive: 60, defensive: 20, v23low: 30} },
     { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {aggressive: 20, defensive: 20, v23low: 20} },
     { id: 20, name: "Absolute Focus", cost: 4, type: "Keep", desc: "Starts with 3 charges. Spend a charge for an extra reroll. Discard when spent.", charges: 3, ai: {aggressive: 50, defensive: 50, v23low: 50} },
-    { id: 21, name: "Guided Vision", cost: 2, type: "Instant", desc: "Roll 1 virtual die. Result is applied immediately in a popup dialog.", ai: {aggressive: 10, defensive: 10, v23low: 10} },
+    { id: 21, name: "Switch Play", cost: 6, type: "Keep", desc: "When the opponent adds any amount of 🌀 to you, add 1 🌀back to them.", ai: {aggressive: 15, defensive: 60, v23low: 55} },
     { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {aggressive: 65, defensive: 15, v23low: 55} },
     { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {aggressive: 60, defensive: 15, v23low: 45} },
     { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {aggressive: 55, defensive: 45, v23low: 45} },
@@ -615,10 +615,13 @@ const KNOWN_CARDS = [
     { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {aggressive: 40, defensive: 40, v23low: 50} },
     { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {aggressive: 25, defensive: 65, v23low: 50} },
     { id: 45, name: "Power Boost", cost: 3, type: "Keep", desc: "When you gain any ⚡ from dice, gain 1 extra ⚡.", ai: {aggressive: 50, defensive: 30, v23low: 40} },
-    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card.", ai: {aggressive: 70, defensive: 40, v23low: 55} },
+    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card from the market.", ai: {aggressive: 70, defensive: 40, v23low: 55} },
     { id: 47, name: "Fading Reality", cost: 4, type: "Keep", desc: "You can always reroll any 👁️ you have.", ai: {aggressive: 25, defensive: 30, v23low: 20} },
     { id: 48, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and deepen their submission by 2.", ai: {aggressive: 65, defensive: 20, v23low: 40} },
-    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {aggressive: 50, defensive: 10, v23low: 30} }
+    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {aggressive: 50, defensive: 10, v23low: 30} },
+	{ id: 50, name: "Mutual Heat", cost: 6, type: "Keep", desc: "When the opponent adds any amount of arousal to you, increase their arousal by 1.", ai: { aggressive: 15, defensive: 65, v23low: 55 } },
+	{ id: 51, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: { aggressive: 25, defensive: 65, v23low: 50 } }
+	//{ id: 51, name: "Flow Reversal", cost: 6, type: "Keep", desc: "At the start of your turn, transfer 1 level of Transform from yourself to the opponent.", ai: { aggressive: 20, defensive: 80, v23low: 50 } }
 ];
 
 // Emergency Submission Cards list
@@ -1135,6 +1138,37 @@ function cpuChooseDiceToKeep() {
 	});
 }
 
+function cpuShouldUseQuietMind() {
+    const p = gameState.p2;
+    if (!hasCard(2, 33) || p.energy < 2) return false;
+    if (p.trance <= 0 && p.arousal <= 0) return false;
+
+    switch (getCpuDifficulty()) {
+        case "defensive":  return true;
+        case "aggressive": return false;
+        case "random":     return Math.random() > 0.5;
+        default:           return p.arousal > 2 || p.trance >= 4; // smart + hard
+    }
+}
+
+function cpuUseQuietMind() {
+    const p = gameState.p2;
+    if (!cpuShouldUseQuietMind()) return false;
+    p.energy -= 2;
+    let lowered = "Trance";
+    if (p.trance > 0 && p.arousal > 0) {
+        if (p.arousal > p.trance) { p.arousal--; lowered = "Arousal"; }
+        else p.trance--;
+    } else if (p.arousal > 0) {
+        p.arousal--;
+        lowered = "Arousal";
+    } else {
+        p.trance--;
+    }
+    log(`CPU used Quiet Mind (-2⚡) to lower ${lowered}.`);
+    return true;
+}
+
 function cpuShouldUseRapidPulse() {
     const p = gameState.p2;
     if (!hasCard(2, 12) || p.energy < 2 || p.shieldActive) return false;
@@ -1163,6 +1197,22 @@ function cpuShouldUseAbsoluteFocus(keptCount) {
     const card = getCardRef(2, 20);
     if (!card || !card.charges || card.charges <= 0) return false;
     return getCpuDifficulty() === "random" ? Math.random() > 0.8 : keptCount < 4;
+}
+
+// FIX ME!!!
+function cpuShouldUseHypnoticSuggestion(keptCount) {
+    const p = gameState.p2;
+    if (!hasCard(2, 16) || p.energy < 1 || gameState.rerollsLeft > 0) return false;
+    if (!gameState.dice.length || gameState.dice[0].face === "-") return false;
+
+    switch (getCpuDifficulty()) {
+        case "random":     return Math.random() > 0.55;
+        case "smart":      return keptCount < 3 && p.energy >= 2;
+        case "aggressive": return keptCount < 4 && p.energy >= 3;
+        case "v23low":     return keptCount < 4 && p.energy > 1;
+        case "defensive":  return keptCount < 3 && p.energy >= 2 && (p.trance >= 2 || p.arousal >= 2 || p.vulnerability > 0);
+        default:           return false;
+    }
 }
 
 
@@ -1209,7 +1259,7 @@ function cpuCardPurchaseScore(card) {
     const inDanger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
     if (inDanger) {
         // Cards that clear debuffs or shield (e.g., Deep Safeties, Rapid Pulse, Flow Reversal)
-        if ([9, 12, 33, 44].includes(card.id)) {
+        if ([9, 12, 33, 44, 51].includes(card.id)) {
             score += (difficulty === "defensive") ? 35 : 20;
         }
     }
@@ -1254,8 +1304,8 @@ function passesCardSpecificConditions(card) {
         if (!pushesP1To10 && !cpuLowerTransform) return false;
     }
 
-    // (3) Card 44: Only buy if CPU transform level > 0
-    if (card.id === 44) {
+    // (3) Cards 44, 51: Only buy if CPU transform level > 0
+    if (card.id === 44 || card.id === 51) {
         if (p2.transform <= 0) return false;
     }
 
@@ -1295,6 +1345,52 @@ function cpuShouldBuyCard(card, effectiveCost) {
     // Defensive CPUs require a score of 35+ (down from 50), Aggressive/Hard require 25+
     const minThreshold = (difficulty === "defensive") ? 35 : 25;
 	return score >= minThreshold;
+}
+
+/**
+ * Buys a card directly from the opponent's inventory using Card 5 (Hypnotic Dominance).
+ * @param {number} buyerNum - 1 for P1, 2 for CPU/P2
+ * @param {number} opponentCardIndex - Index of the card in the opponent's inventory array
+ */
+function buyCardFromOpponent(buyerNum, opponentCardIndex) {
+	if (gameState.phase !== "shop" || Number(gameState.activePlayer) !== buyerNum) {
+		log("Hypnotic Dominance can only be used on your own shop phase.");
+		return false;
+	}
+	
+    const buyer = buyerNum === 1 ? gameState.p1 : gameState.p2;
+    const seller = buyerNum === 1 ? gameState.p2 : gameState.p1;
+
+    // 1. Verify buyer owns Card 5 (Hypnotic Dominance)
+    const hasDominance = buyer.inventory.some(c => c.id === 5);
+    if (!hasDominance) {
+        log(`Player ${buyerNum} cannot buy from opponent without Hypnotic Dominance.`);
+        return false;
+    }
+
+    // 2. Validate target card
+    const targetCard = seller.inventory[opponentCardIndex];
+    if (!targetCard) return false;
+
+    const cost = targetCard.cost;
+
+    // 3. Check energy
+    if (buyer.energy < cost) {
+        log(`Player ${buyerNum} does not have enough ⚡ (${cost}) to buy ${targetCard.name} from opponent.`);
+        return false;
+    }
+
+    // 4. Transfer energy and card
+    buyer.energy -= cost;
+    seller.energy += cost;
+
+    const [stolenCard] = seller.inventory.splice(opponentCardIndex, 1);
+    buyer.inventory.push(stolenCard);
+
+    log(`Player ${buyerNum} used Hypnotic Dominance to buy ${stolenCard.name} from opponent for ${cost} ⚡!`);
+	syncToFirebase();
+    updateUI();
+    return true;
 }
 
 function cpuShouldSellWakingTrance(maxCost) {
@@ -1551,22 +1647,35 @@ function renderMarket() {
 
 function renderInventory(playerId) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
-    let invDiv = document.getElementById(`p${playerId}-inventory`); invDiv.innerHTML = "";
+    let invDiv = document.getElementById(`p${playerId}-inventory`);
+    invDiv.innerHTML = "";
     let isHuman = isLocalPlayerTurn();
     let isTurn = gameState.activePlayer === playerId;
+
+    const buyerId = Number(gameState.activePlayer);
+    const buyer = buyerId === 1 ? gameState.p1 : gameState.p2;
+    const canSteal = isLocalPlayerTurn()
+        && gameState.phase === "shop"
+        && playerId !== buyerId
+        && hasCard(buyerId, 5);
 
     p.inventory.forEach((card, idx) => {
         let html = `<div class="inv-card"><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
         if (isHuman && isTurn) {
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
-            if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
+            if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
             if (card.id === 26) html += `<button onclick="sellCard(${idx}, ${playerId})" style="background:#e76f51;">Sell (+2⚡)</button>`;
             if (card.id === 33 && gameState.phase === 'shop' && p.energy >= 2) html += `<button onclick="useQuietMind(${playerId})" style="background:#2a9d8f;">Quiet Mind (-2⚡)</button>`;
             if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
-            if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.dice.some(d => d.face === "👁️ TRANSFORM")) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll a Transform Die</button>`;
+            if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
             if (card.id === 49 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
         }
-        html += `</div>`; invDiv.innerHTML += html;
+        if (canSteal) {
+            const afford = buyer.energy >= card.cost;
+            html += `<button ${afford ? "" : "disabled"} onclick="buyCardFromOpponent(${buyerId}, ${idx})" style="background:#2a9d8f;">Buy for ${card.cost}⚡</button>`;
+        }
+        html += `</div>`;
+        invDiv.innerHTML += html;
     });
 }
 
@@ -1620,14 +1729,58 @@ function discardForFreeBuy(invIndex, pId) {
     log(`${p.name} discarded Mirror Image! Next buy is free.`); syncToFirebase(); updateUI();
 }
 function useRapidPulse(pId) { let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } }
-function useFadingReality(pId) { 
-    let idx = gameState.dice.findIndex(d => d.face === "👁️ TRANSFORM");
-    if(idx !== -1) { gameState.dice[idx].face = FACES[Math.floor(Math.random() * FACES.length)]; gameState.dice[idx].kept = false; log("Fading Reality: Rerolled a Transform die."); syncToFirebase(); updateUI(); }
+
+function useFadingReality(pId) {
+    let changed = 0;
+    gameState.dice.forEach(d => {
+        if (d.face === "👁️ TRANSFORM" && !d.kept) {
+            d.face = FACES[Math.floor(Math.random() * FACES.length)];
+            d.kept = false;
+            changed++;
+        }
+    });
+    if (changed > 0) {
+        log(`Fading Reality: rerolled ${changed} unlocked Transform die${changed === 1 ? "" : "s"}.`);
+        syncToFirebase();
+        updateUI();
+    }
 }
+
 function useSimmeringArousal(pId) {
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     let idx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL" && !d.kept);
     if(idx !== -1) { gameState.dice[idx].face = "🔥 AROUSAL"; p.simmeringUsed = true; log("Simmering Arousal: Changed a die to Arousal."); syncToFirebase(); updateUI(); }
+}
+
+function increaseTrance(targetObj, amount, sourcePlayerId) {
+    if (!targetObj || !(amount > 0)) return false;
+    const targetId = targetObj === gameState.p1 ? 1 : 2;
+
+    if (targetObj.shieldActive) {
+        log(`Rapid Pulse shielded Trance against ${targetObj.name}.`);
+        return false;
+    }
+
+    const before = targetObj.trance;
+    targetObj.trance += amount;
+    if (targetObj.trance <= before) return false;
+
+    checkTranceSetback(targetObj, sourcePlayerId);
+
+    if (sourcePlayerId && sourcePlayerId !== targetId && sourcePlayerId !== 0
+        && !increaseTrance.reflecting && hasCard(targetId, 21)) {
+        increaseTrance.reflecting = true;
+        const src = gameState["p" + sourcePlayerId];
+        if (src.shieldActive) {
+            log(`Switch Play: ${src.name}'s Rapid Pulse stopped the reflected 🌀.`);
+        } else {
+            log(`Switch Play: ${targetObj.name} reflects 1 🌀 to ${src.name}.`);
+            src.trance += 1;
+            checkTranceSetback(src, targetId);
+        }
+        increaseTrance.reflecting = false;
+    }
+    return true;
 }
 
 function checkTranceSetback(oppP, activePlayerId) {
@@ -1635,18 +1788,42 @@ function checkTranceSetback(oppP, activePlayerId) {
         oppP.trance -= 5; log(`SETBACK! ${oppP.name} Trance maxed.`);
         if (activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online") {
             let choice = prompt(`${oppP.name} Setback! Choose 1: \n1 = Push Submission 2\n2 = Opponent Arousal +2`, "1");
-            if (choice === "2") { oppP.arousal = Math.min(5, oppP.arousal + 2); log(`Setback applied: Arousal +2.`); } 
+            if (choice === "2") { 
+				//oppP.arousal = Math.min(5, oppP.arousal + 2); 
+				increaseArousal(oppP, 2, oppP == gameState.p1 ? 1 : 2, activePlayerId);
+				log(`Setback applied: Arousal +2.`); 
+			} 
             else pushSubmission(activePlayerId === 1 ? 2 : -2, activePlayerId);
         } else { pushSubmission(-2, 2); log(`CPU Setback applied: Submission -2.`); }
     }
 }
 
-function increaseArousal(target, amount, playerId) {
-	let pObj = typeof target === "object" ? target : gameState["p" + target];
-	if (!pObj) return;
-    let oldArousal = pObj.arousal;
+function increaseArousal(target, amount, recipientId, sourceId) {
+    const pObj = typeof target === "object" ? target : gameState["p" + target];
+    if (!pObj || !(amount > 0)) return;
+    if (recipientId == null) recipientId = pObj === gameState.p1 ? 1 : 2;
+
+    const before = pObj.arousal;
     pObj.arousal = Math.min(5, pObj.arousal + amount);
-    if (pObj.arousal > oldArousal && hasCard(playerId, 32)) { pObj.energy += 1; log(`Guided Heat triggered: +1 Energy from arousal increase.`); }
+    if (pObj.arousal > before && hasCard(recipientId, 32)) {
+        pObj.energy += 1;
+        log(`Guided Heat triggered: +1 Energy from arousal increase.`);
+    }
+
+    // One bounce. The reflected point must not trigger Mutual Heat again.
+	if (pObj.arousal > oldArousal && sourceId && sourceId !== playerId && sourceId !== 0
+		&& !increaseArousal.reflecting && hasCard(playerId, 50)) {
+		increaseArousal.reflecting = true;
+		const src = gameState["p" + sourceId];
+		const srcBefore = src.arousal;
+		src.arousal = Math.min(5, src.arousal + 1);
+		log(`Mutual Heat: ${pObj.name} reflects 1 🔥 to ${src.name}.`);
+		if (src.arousal > srcBefore && hasCard(sourceId, 32)) {
+			src.energy += 1;
+			log(`Guided Heat triggered: +1 Energy from arousal increase.`);
+		}
+		increaseArousal.reflecting = false;
+	}
 }
 
 function applyTransform(targetPlayerId, amount, sourcePlayerId) {
@@ -1667,15 +1844,22 @@ function executeInstant(card, playerId) {
 
     if (card.id === 1) { gameState.extraTurn = true; log(`${p.name} plays Sudden Flash! Taking an extra turn!`); } 
     else if (card.id === 4) { applyTransform(oppId, 1, playerId); p.trance = 0; log(`Whispered Command! Opponent Transform +1, Trance reduced to 0.`); } 
-    else if (card.id === 5) rollVirtualDice(playerId, 2, card.name);
-    else if (card.id === 6) { increaseArousal(opp, 2, oppId); log(`Velvet Voice! Opponent Arousal +2.`); } 
-    else if (card.id === 8 || card.id === 48) { opp.trance += 2; pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`${card.name}! Opponent Trance +2, Sub pushed 2.`); checkTranceSetback(opp, playerId); } 
+	// remove virtual dice
+    //else if (card.id === 5) rollVirtualDice(playerId, 2, card.name);
+    else if (card.id === 6) { increaseArousal(opp, 2, oppId, playerId); log(`Velvet Voice! Opponent Arousal +2.`); } 
+    else if (card.id === 8 || card.id === 48) { increaseTrance(opp, 2, playerId);
+    pushSubmission(playerId === 1 ? 2 : -2, playerId);
+    log(`${card.name}! Opponent Trance +2, Sub pushed 2.`); } 
     else if (card.id === 10 || card.id === 39) { pushSubmission(playerId === 1 ? 4 : -4, playerId); log(`${card.name}! Sub pushed 4.`); } 
     else if (card.id === 11) { pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`Sluggish Mind! Sub pushed 2.`); } 
-    else if (card.id === 14) { opp.trance += 2; log(`Spiral Descent! Opponent Trance +2.`); checkTranceSetback(opp, playerId); } 
-    else if (card.id === 18) { pushSubmission(playerId === 1 ? 2 : -2, playerId); opp.trance += 1; log("Pulsing Light! Sub +2, Trance +1."); checkTranceSetback(opp, playerId); }
+    else if (card.id === 14) { increaseTrance(opp, 2, playerId);
+    log(`Spiral Descent! Opponent Trance +2.`); } 
+    else if (card.id === 18) { pushSubmission(playerId === 1 ? 2 : -2, playerId);
+    increaseTrance(opp, 1, playerId);
+    log("Pulsing Light! Sub +2, Trance +1."); }
     else if (card.id === 19) { p.energy += 9; log("Primal Surge! +9 Energy."); }
-    else if (card.id === 21) rollVirtualDice(playerId, 1, card.name);
+	// remove virtual dice
+    //else if (card.id === 21) rollVirtualDice(playerId, 1, card.name);
     else if (card.id === 25) { pushSubmission(playerId === 1 ? -2 : 2, playerId); applyTransform(oppId, 1, playerId); log("Pendulum Swing! Deepen own sub by 2, Transform opponent 1."); }
     else if (card.id === 30) { pushSubmission(playerId === 1 ? -4 : 4, playerId); applyTransform(oppId, 2, playerId); log("Shattered Ego! Deepen own sub by 4, Transform opponent 2."); }
     else if (card.id === 37) { 
@@ -1683,11 +1867,20 @@ function executeInstant(card, playerId) {
         log(`Swinging Pendulum! Own Trance to 0, drained ${drain} Energy from opponent.`); 
     }
     else if (card.id === 40) { applyTransform(1, 1, 0); applyTransform(2, 1, 0); log("Global Change! Both players transform +1."); }
-    else if (card.id === 44) { p.transform = Math.max(0, p.transform - 1); log("Flow Reversal! Own Transform reduced by 1."); }
+    else if (card.id === 44 || card.id === 51) {
+		if (p.transform === 0) {
+			log("Flow Reversal blocked (Transformation is already 0).");
+		}
+		else {
+			p.transform = Math.max(0, p.transform - 1);
+			log("Flow Reversal! Own Transform reduced by 1."); 
+		}
+	}
     syncToFirebase();
     updateUI();
 }
 
+// deprecated -- should never be called now
 async function rollVirtualDice(playerId, count, sourceName) {
     let results = [];
     let counts = { "🌀 SPIRAL": 0, "💧 LUCIDITY": 0, "⚡ ENERGY": 0, "⛓️ SUBMISSION": 0, "🔥 AROUSAL": 0, "👁️ TRANSFORM": 0 };
@@ -1728,13 +1921,13 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // Deep Gaze applies normally.
     // ------------------------------------------------------------
     if (counts["🌀 SPIRAL"] > 0) {
-        if (opp.shieldActive) { log("Rapid Pulse shielded virtual Spiral Trance!"); } 
-        else {
-            let tPush = counts["🌀 SPIRAL"];
-            if (hasCard(playerId, 0)) { tPush += 1; log("Deep Gaze deepened virtual Spiral Trance by 1 more!"); }
-            opp.trance += tPush; log(`Virtual Spiral: Opp Trance +${tPush}`); checkTranceSetback(opp, playerId);
-        }
-    }
+		let tPush = counts["🌀 SPIRAL"];
+		if (!opp.shieldActive && hasCard(playerId, 0)) {
+			tPush += 1;
+			log("Deep Gaze deepened virtual Spiral Trance by 1 more!");
+		}
+		if (increaseTrance(opp, tPush, playerId)) log(`Virtual Spiral: Opp Trance +${tPush}`);
+	}
 
     // ------------------------------------------------------------
     // LUCIDITY
@@ -1776,7 +1969,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
 
     if (arousalEffect > 0) {
         if (opp.shieldActive) log("Rapid Pulse shielded virtual Arousal!");
-        else { increaseArousal(opp, arousalEffect, playerId); log(`Virtual Arousal: Opp Arousal +${arousalEffect}`); }
+        else { increaseArousal(opp, arousalEffect, oppId, playerId); log(`Virtual Arousal: Opp Arousal +${arousalEffect}`); }
     }
 
     // ------------------------------------------------------------
@@ -1934,17 +2127,14 @@ async function resolveDice() {
     }
     
     // 2. Spirals (Pushes Trance to Opponent)
-    if (counts.SPIRAL > 0) { 
-        if (oppP.shieldActive) {
-            log("Rapid Pulse shielded Trance!"); 
-        } else { 
-            let tPush = counts.SPIRAL;
-            if (hasCard(activePlayerNum, 0)) { tPush += 1; log("Deep Gaze deepened Trance by 1 more!"); }
-            oppP.trance += tPush; 
-            log(`Opp Trance +${tPush}`); 
-            if (typeof checkTranceSetback === "function") checkTranceSetback(oppP, activePlayerNum); 
-        } 
-    }
+    if (counts.SPIRAL > 0) {
+		let tPush = counts.SPIRAL;
+		if (!oppP.shieldActive && hasCard(activePlayerNum, 0)) {
+			tPush += 1;
+			log("Deep Gaze deepened Trance by 1 more!");
+		}
+		if (increaseTrance(oppP, tPush, activePlayerNum)) log(`Opp Trance +${tPush}`);
+	}
 
     // 3. Lucidity
     let lCount = counts.LUCIDITY;
@@ -1987,7 +2177,7 @@ async function resolveDice() {
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
             if (typeof increaseArousal === "function") {
-                increaseArousal(oppP, arousalEffect, oppId);
+                increaseArousal(oppP, arousalEffect, oppId, activePlayerNum);
             } else {
                 oppP.arousal = (oppP.arousal || 0) + arousalEffect;
             }
@@ -2001,7 +2191,7 @@ async function resolveDice() {
         pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); 
         log(`Sub track pushed.`);
         if (hasCard(activePlayerNum, 23)) { 
-            if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId); 
+            if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId, activePlayerNum); 
             else oppP.arousal = (oppP.arousal || 0) + 1;
             log("Submissive Flush triggered: Opp Arousal +1."); 
         }
@@ -2206,13 +2396,12 @@ function endTurn() {
     }
 
     if (hasCard(gameState.activePlayer, 31)) {
-        let tPush = Math.floor(activeP.energy / 6) * 2;
-        if (tPush > 0) {
-            oppP.trance += tPush;
-            log(`Falling Sensation: Opp Trance +${tPush}`);
-            checkTranceSetback(oppP, gameState.activePlayer);
-        }
-    }
+		let tPush = Math.floor(activeP.energy / 6) * 2;
+		if (tPush > 0) {
+			log(`Falling Sensation: Opp Trance +${tPush}`);
+			increaseTrance(oppP, tPush, gameState.activePlayer);
+		}
+	}
 
     // ------------------------------------------------------------
     // COGNITIVE OVERRIDE
@@ -2288,25 +2477,18 @@ function executeCPUTurn() {
                 d => d.face === "👁️ TRANSFORM"
             ).length;
 
-            if (cpuShouldUseFadingReality(tCount)) {
-                let dIdx = gameState.dice.findIndex(
-                    d => d.face === "👁️ TRANSFORM" && !d.kept
-                );
-
-                if (dIdx !== -1) {
-                    gameState.dice[dIdx].face = FACES[Math.floor(Math.random() * FACES.length)];
-                    gameState.dice[dIdx].kept = false;
-
-                    log("CPU used Fading Reality: Rerolled a Transform die.");
-                    updateUI();
-                }
-            }
+            
         }
 
         if (gameState.rerollsLeft > 0) {
             cpuChooseDiceToKeep();
             rollDiceAction();
         } else {
+			let transformCount = gameState.dice.filter(d => d.face === "👁️ TRANSFORM").length;
+			if (cpuShouldUseFadingReality(transformCount)) {
+				useFadingReality(2);
+			}
+		
             let keptCount = gameState.dice.filter(d => d.kept).length;
             let idx20 = gameState.p2.inventory.findIndex(c => c.id === 20);
 
@@ -2331,6 +2513,11 @@ function executeCPUTurn() {
                 updateUI();
                 return;
             }
+			
+			if (cpuShouldUseHypnoticSuggestion(keptCount)) {
+				buyReroll(1, 16, 2);
+				return;
+			}
 
             clearInterval(rInterval);
 
@@ -2474,7 +2661,23 @@ function executeCPUTurn() {
                     boughtSomething = false;
                     let bestIndex = -1;
                     let bestScore = -Infinity;
-
+					
+					// see if we have Hypnotic Dominance/5 to steal a major card
+					if (gameState.p2.inventory.some(c => c.id === 5)) {
+						// see if there is a card we want to snipe
+						for (let i = 0; i < gameState.p1.inventory.length; i++) {
+							let card = gameState.p1.inventory[i];
+							if (!card) continue;
+        
+							let score = cpuCardPurchaseScore(card);
+							// If CPU really wants the card and has energy to pay P1
+							if (score >= 65 && gameState.p2.energy >= card.cost) {
+								buyCardFromOpponent(2, i);
+								break; 
+							}
+						}
+					}
+					
                     for (let i = 0; i < market.length; i++) {
                         let card = market[i];
                         if (!card) continue;
@@ -2514,6 +2717,11 @@ function executeCPUTurn() {
 
                     }
                 }
+				
+				while (cpuUseQuietMind())
+				{
+					// spend until don't want to spend
+				}
 
                 // --------------------------------------------------------
                 // ENERGY ACTIONS
