@@ -1163,9 +1163,9 @@ function cpuCardPurchaseScore(card) {
     const baseRatings = card.ai || {};
     let score = baseRatings[difficulty] ?? 30;
 
-    let score = 0;
-    const aggCards = [0, 2, 3, 4, 6, 8, 10, 11, 13, 22, 23, 24, 31, 34, 36, 39, 40, 46, 48, 49];
-    const defCards = [5, 9, 12, 20, 26, 27, 29, 38, 41, 42, 43, 44, 45, 47];
+    //let score = 0;
+    //const aggCards = [0, 2, 3, 4, 6, 8, 10, 11, 13, 22, 23, 24, 31, 34, 36, 39, 40, 46, 48, 49];
+    //const defCards = [5, 9, 12, 20, 26, 27, 29, 38, 41, 42, 43, 44, 45, 47];
 	
 	// old 2. Cost-efficiency adjustment (cheaper cards get a small baseline bump)
     //score += Math.max(0, (8 - card.cost) * 2);
