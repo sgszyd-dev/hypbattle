@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V7.1 (Two Player Support)</title>
+    <title>Hypnotic Duel - Beta V7.0 (Two Player Support)</title>
     <style>
         :root {
             --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
@@ -1204,7 +1204,43 @@ function cpuCardPurchaseScore(card) {
 	return score;
 }
 
+// Validates whether specific tactical conditions are met for individual cards.
+function passesCardSpecificConditions(card) {
+    const p1 = gameState.p1;
+    const p2 = gameState.p2;
+
+    // (1) Cards 25 and 30: Don't buy if submission is on the CPU side of the board
+    // Note: Assuming positive submission value indicates CPU side (adjust polarity if negative is CPU side in your setup)
+    if (card.id === 25 || card.id === 30) {
+        const submissionOnCpuSide = gameState.submission > 0;
+        if (submissionOnCpuSide) return false;
+    }
+
+    // (2) Card 40: Don't buy unless it pushes player to 10 transform level OR CPU has lower transform than opponent
+    if (card.id === 40) {
+        const pushesP1To10 = (p1.transform + 1) >= 10;
+        const cpuLowerTransform = p2.transform < p1.transform;
+        if (!pushesP1To10 && !cpuLowerTransform) return false;
+    }
+
+    // (3) Card 44: Only buy if CPU transform level > 0
+    if (card.id === 44) {
+        if (p2.transform <= 0) return false;
+    }
+
+    // (4) Card 4: Only buy if CPU trance > 0 OR player transform level > 7
+    if (card.id === 4) {
+        const cpuHasTrance = p2.trance > 0;
+        const p1HighTransform = p1.transform > 7;
+        if (!cpuHasTrance && !p1HighTransform) return false;
+    }
+
+    return true;
+}
+
 function cpuShouldBuyCard(card, effectiveCost) {
+	if (!passesCardSpecificConditions(card)) return false;
+	
     const p = gameState.p2;
 	const difficulty = getCpuDifficulty();
     if (effectiveCost > p.energy && !gameState.freeBuyActive) return false;
@@ -2280,6 +2316,60 @@ function executeCPUTurn() {
                 }
 
                 resolveDice();
+				
+				// --------------------------------------------------------
+                // TACTICAL MARKET PRIORITIZATION (CARDS RATED 70+)
+                // --------------------------------------------------------
+                let highValueTarget = null;
+                let maxTargetScore = 0;
+
+                for (let i = 0; i < market.length; i++) {
+                    let card = market[i];
+                    if (!card || !passesCardSpecificConditions(card)) continue;
+                    let score = cpuCardPurchaseScore(card);
+                    if (score >= 70 && score > maxTargetScore) {
+                        maxTargetScore = score;
+                        highValueTarget = card;
+                    }
+                }
+
+                if (highValueTarget) {
+                    let targetCost = getCardPurchaseCost(highValueTarget, 2);
+
+                    // 1. If CPU cannot afford high-value card, try generating energy/free buy
+                    if (targetCost > gameState.p2.energy && !gameState.freeBuyActive) {
+                        // Check for Waking Trance (Card 26) to sell for +2 energy
+                        let idx26 = gameState.p2.inventory.findIndex(c => c.id === 26);
+                        if (idx26 !== -1 && (gameState.p2.energy + 2) >= targetCost) {
+                            let card = gameState.p2.inventory.splice(idx26, 1)[0];
+                            if (card) {
+                                gameState.p2.energy += 2;
+                                discardCard(card);
+                                log(`CPU sold ${card.name} for +2 Energy to afford priority target (${highValueTarget.name})!`);
+                            }
+                        }
+
+                        // Check for Mirror Image (Card 42) to make buy free
+                        let idx42 = gameState.p2.inventory.findIndex(c => c.id === 42);
+                        if (targetCost > gameState.p2.energy && idx42 !== -1) {
+                            const discarded = gameState.p2.inventory.splice(idx42, 1)[0];
+                            if (discarded) discardCard(discarded);
+                            gameState.freeBuyActive = true;
+                            log(`CPU used Mirror Image to secure priority target (${highValueTarget.name})!`);
+                        }
+                    }
+
+                    // 2. Deny Opponent if CPU still can't afford target, but Player 1 can
+                    targetCost = getCardPurchaseCost(highValueTarget, 2);
+                    let canCpuAfford = (targetCost <= gameState.p2.energy) || gameState.freeBuyActive;
+                    let canPlayerAfford = gameState.p1.energy >= highValueTarget.cost;
+
+                    if (!canCpuAfford && canPlayerAfford && deck.length > 0) {
+                        let energyBefore = gameState.p2.energy;
+                        wipeMarket();
+                        log(`CPU wiped market to deny Player 1 high-value card (${highValueTarget.name})! (${energyBefore} → ${gameState.p2.energy})`);
+                    }
+                }
 
                 let idx26 = gameState.p2.inventory.findIndex(c => c.id === 26);
                 if (idx26 !== -1) {
