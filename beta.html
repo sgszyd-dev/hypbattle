@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V7.0 (Two Player Support)</title>
+    <title>Hypnotic Duel - Beta V8.0 (Two Player Support)</title>
     <style>
         :root {
             --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
@@ -317,7 +317,7 @@
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
                     <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
-                    <label id="p1-trasnform-label">Transform Opponent into:</label> <select id="p1-transform-type"></select>
+                    <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type"></select>
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
@@ -544,11 +544,11 @@
 <script>
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 const NAMES = ["Alex (M)", "Roz (F)", "Victor (M)", "Siobhán (F)", "Tex (M)", "Cassandra (F)", "Damian (M)", "Seraphina (F)", "Leo (M)", "Fable (F)"];
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee"];
 
 const CHARACTER_MANIFEST = {
     "Alex (M)": ["Bunny", "Pig","Dog"],
-    "Roz (F)": ["Werewolf","Cow"],
+    "Roz (F)": ["Werewolf","Cow","Eevee"],
     "Victor (M)": [],
     "Siobhán (F)": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex (M)": ["Cow", "Cat","Werewolf"],
@@ -1932,14 +1932,14 @@ function executeInstant(card, playerId) {
         }
     }
     else if (card.id === 51) {
-        if (p.transform <= 0) log("Transitive Energy blocked (no Transform to transfer).");
-        else {
-            p.transform -= 1;
-            opp.transform += 1;
-            log(`Transitive Energy: 1 Transform moved from ${p.name} to ${opp.name}.`);
-            checkWinCondition();
-        }
-    }
+		if (p.transform <= 0) log("Transitive Energy blocked (no Transform to transfer).");
+		else {
+			p.transform -= 1;
+			applyTransform(oppId, 1, playerId);
+			log(`Transitive Energy: 1 Transform moved from ${p.name} to ${opp.name}.`);
+			checkWinCondition();
+		}
+	}
     else if (card.id === 52) {
         const end = playerId === 1 ? 5 : -5;
         const onOppSide = playerId === 1 ? gameState.submission > 0 : gameState.submission < 0;
@@ -2283,7 +2283,8 @@ async function resolveDice() {
     }
 
     // 4. Arousal
-    let arousalEffect = Math.floor(counts.AROUSAL / 2);
+    //let arousalEffect = Math.floor(counts.AROUSAL / 2);
+	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
     if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
