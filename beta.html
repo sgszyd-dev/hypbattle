@@ -332,13 +332,19 @@
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
                     <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
-                    <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type"></select>
+                    <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type" onchange="onTransformSelectChange('p1-transform-type')"></select>
+                    <div id="p1-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
+                        <label>Lookup Transform:</label> <select id="p1-lookup" onchange="onLookupChange('p1')"></select>
+                    </div>
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
                     <div class="image-stub" id="setup-cpu-image" style="height: 180px; margin-bottom: 10px;"></div>
                     <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
-                    <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type"></select>
+                    <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type" onchange="onTransformSelectChange('cpu-transform-type')"></select>
+                    <div id="cpu-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
+                        <label>Lookup Transform:</label> <select id="cpu-lookup" onchange="onLookupChange('cpu')"></select>
+                    </div>
                     <div id="cpu-diff-wrap" style="display:flex; flex-direction:column; gap:10px;">
                         <label>Difficulty:</label>
                         <select id="cpu-difficulty">
@@ -374,6 +380,24 @@
                             <span id="host-status-msg" style="font-size: 0.85em; color: #4cc9f0;">Host mode active (Player 1). Share this Room Code with your opponent.</span>
                         </div>
 
+                        <!-- ONLINE LOBBY (shown after "Start Game" in online mode, until both players are Ready) -->
+                        <div id="online-lobby" style="display:none; flex-direction:column; gap:8px; margin-top:8px; border-top:1px solid #444; padding-top:10px;">
+                            <div id="lobby-room-line" style="font-weight:bold; color: var(--accent);"></div>
+                            <div style="display:flex; gap:12px; align-items:center;">
+                                <div class="image-stub" id="lobby-opp-image" style="height:120px; width:120px; flex:none;"></div>
+                                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                                    <div id="lobby-opp-name" style="font-weight:bold;">Waiting for an opponent...</div>
+                                    <div id="lobby-opp-status" style="font-size:0.85em; color:#aaa;"></div>
+                                    <div id="lobby-you-status" style="font-size:0.85em; color:#4cc9f0;"></div>
+                                    <div id="lobby-note" style="font-size:0.85em; color:#ff9f1c;"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" id="lobby-ready-btn" onclick="toggleLobbyReady()" style="flex:1; background:#2a9d8f;" disabled>Ready</button>
+                                <button type="button" onclick="leaveLobby()" style="flex:1; background:#444;">Leave Lobby</button>
+                            </div>
+                        </div>
+
                         <!-- Hidden select element for compatibility with initializeGame() -->
                         <select id="online-role-option" style="display: none;">
                             <option value="1" selected>Host (Player 1)</option>
@@ -390,7 +414,7 @@
                 <button type="button" class="help-btn" onclick="openHelpModal('quick')" style="flex:1;">? How to Play</button>
                 <button type="button" class="help-btn" onclick="prepareGuidedTutorial()" style="flex:1;">Guided Tutorial</button>
             </div>
-            <button class="start-btn" onclick="initializeGame()">Start Game</button>
+            <button class="start-btn" id="start-game-btn" onclick="onStartClicked()">Start Game</button>
         </div>
     </div>
 
@@ -570,8 +594,8 @@ const CHARACTERS = [
     { name: "Siobhán",   gender: "female" },
     { name: "Tex",       gender: "male" },
     { name: "Cassandra", gender: "female" },
-    { name: "Damian",    gender: "male" },
-    { name: "Seraphina", gender: "female" },
+    { name: "Zixuan",    gender: "male" },
+    { name: "Hyeri", 	 gender: "female" },
     { name: "Leo",       gender: "male" },
     { name: "Fable",     gender: "female" }
 ];
@@ -580,7 +604,7 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog"],
@@ -589,8 +613,8 @@ const CHARACTER_MANIFEST = {
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf"],
     "Cassandra": [],
-    "Damian": [],
-    "Seraphina": [],
+    "Zixuan": ["Dog","Fox"],
+    "Hyeri": ["Bunny","Squirrel"],
     "Leo": [],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf"]
 	};
@@ -694,6 +718,8 @@ window.onload = () => {
 
     populate("p1-name", NAMES);
     populate("cpu-name", NAMES, true);
+    populate("p1-lookup", TRANSFORMS);
+    populate("cpu-lookup", TRANSFORMS);
 
     if (typeof generateDeck === 'function') generateDeck();
 	deck = prepareDebugDeck(deck);
@@ -703,52 +729,107 @@ window.onload = () => {
     onCpuNameChange();
 };
 
-function onP1NameChange() {
-    updateSetupImages();
-    
-    const p1Raw = document.getElementById("p1-name").value;
-    const p1Clean = p1Raw.split(" ")[0];
-    
-    // Update P2/CPU's transform label
-    const cpuLabel = document.getElementById("cpu-transform-label");
-    if (cpuLabel) cpuLabel.textContent = `Transform ${p1Clean} into:`;
+// ---------- Lookup Transform ----------
+// Names and transform lists are crossed: Player 1's "Transform [CPU name] into" list comes from the CPU's character, and
+// the CPU's list comes from Player 1's character. Each side's Lookup dropdown mirrors that side's Transform dropdown.
+const SETUP_SIDES = {
+    p1:  { transform: "p1-transform-type",  lookup: "p1-lookup",  otherName: "cpu-name" },
+    cpu: { transform: "cpu-transform-type", lookup: "cpu-lookup", otherName: "p1-name" }
+};
+let setupWasOnline = false;
+function isOnlineSetup() { const m = document.getElementById("game-mode-option"); return !!m && m.value === "online"; }
+function fillSelect(selectEl, items, selected) {
+    selectEl.innerHTML = "";
+    items.forEach(item => selectEl.innerHTML += `<option value="${item}">${item}</option>`);
+    if (selected != null && items.includes(selected)) selectEl.value = selected;
+}
+function fullNameList(selectId) { return selectId === "cpu-name" ? ["Random"].concat(NAMES) : NAMES.slice(); }
+function restoreNameList(selectId) {          // undo a Lookup filter, keeping the current name selected
+    const sel = document.getElementById(selectId);
+    const cur = sel.value;
+    fillSelect(sel, fullNameList(selectId), cur);
+    delete sel.dataset.filteredBy;
+}
+function syncLookup(transformSelectId) {      // Lookup dropdown always shows what the Transform dropdown has
+    const side = transformSelectId === "p1-transform-type" ? "p1" : "cpu";
+    const look = document.getElementById(SETUP_SIDES[side].lookup), t = document.getElementById(transformSelectId);
+    if (look && t && t.value) look.value = t.value;
+}
+function onTransformSelectChange(transformSelectId) {
+    syncLookup(transformSelectId);
+    if (transformSelectId === "p1-transform-type" && lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }
+}
+function setTransformLabel(side, rawName) {
+    const label = document.getElementById(side === "p1" ? "p1-transform-label" : "cpu-transform-label");
+    if (!label) return;
+    if (isOnlineSetup()) {   // we don't know the opponent's name until they join the lobby
+        label.textContent = (side === "p1" && lobbyOpponentName) ? `Transform ${lobbyOpponentName} into:` : "Transform Opponent into:";
+        return;
+    }
+    const clean = rawName === "Random" ? "Opponent" : String(rawName).split(" ")[0];
+    label.textContent = `Transform ${clean} into:`;
+}
 
-    // Populate CPU's target transformation choices based on P1's character
-    populateTransformDropdown("cpu-transform-type", p1Raw);
+function onP1NameChange() {
+    const nameSel = document.getElementById("p1-name");
+    let pre = null;
+    if (nameSel.dataset.filteredBy) { pre = nameSel.dataset.filteredBy; restoreNameList("p1-name"); }   // picked from a Lookup-filtered list: keep that transform
+    updateSetupImages();
+    setTransformLabel("cpu", nameSel.value);
+    // the CPU's transform choices come from Player 1's character; a random one is chosen
+    populateTransformDropdown("cpu-transform-type", nameSel.value, pre);
+    if (lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }     // online lobby: tell the opponent which character we picked
 }
 
 function onCpuNameChange() {
+    const nameSel = document.getElementById("cpu-name");
+    let pre = null;
+    if (nameSel.dataset.filteredBy) { pre = nameSel.dataset.filteredBy; restoreNameList("cpu-name"); }
     updateSetupImages();
     updateMasterOptionLabel();
-    
-    const cpuRaw = document.getElementById("cpu-name").value;
-    const cpuClean = cpuRaw === "Random" ? "Opponent" : cpuRaw.split(" ")[0];
-    
-    // Update P1's transform label
-    const p1Label = document.getElementById("p1-transform-label");
-    if (p1Label) p1Label.textContent = `Transform ${cpuClean} into:`;
-
-    // Populate P1's target transformation choices based on CPU's character
-    populateTransformDropdown("p1-transform-type", cpuRaw);
+    setTransformLabel("p1", nameSel.value);
+    populateTransformDropdown("p1-transform-type", nameSel.value, pre);
 }
 
-function populateTransformDropdown(selectId, opposingCharName) {
+// The Lookup dropdown was changed: list only the characters that have that transformation, then fill the Transform dropdown for the chosen character
+function onLookupChange(side) {
+    if (isOnlineSetup()) return;
+    const cfg = SETUP_SIDES[side];
+    const t = document.getElementById(cfg.lookup).value;
+    const nameSel = document.getElementById(cfg.otherName);
+    const matches = NAMES.filter(n => (CHARACTER_MANIFEST[n] || []).includes(t));
+    if (!matches.length) { populateTransformDropdown(cfg.transform, nameSel.value, t); return; }   // nobody has it: leave the names alone
+    const items = (cfg.otherName === "cpu-name" ? ["Random"] : []).concat(matches);
+    const otherNameValue = document.getElementById(cfg.otherName === "cpu-name" ? "p1-name" : "cpu-name").value;
+    let pick = nameSel.value;
+    if (!items.includes(pick) || pick === otherNameValue) {      // keep the current name if it works, otherwise pick a random match (not the other player's)
+        const pool = matches.filter(n => n !== otherNameValue);
+        const src = pool.length ? pool : matches;
+        pick = src[Math.floor(Math.random() * src.length)];
+    }
+    fillSelect(nameSel, items, pick);
+    nameSel.dataset.filteredBy = t;
+    updateSetupImages();
+    if (cfg.otherName === "cpu-name") updateMasterOptionLabel();
+    setTransformLabel(side, nameSel.value);
+    populateTransformDropdown(cfg.transform, nameSel.value, t);
+}
+
+function populateTransformDropdown(selectId, opposingCharName, preselect) {
     const selectEl = document.getElementById(selectId);
     if (!selectEl) return;
-
-    selectEl.innerHTML = "";
-
-    const mode = document.getElementById("game-mode-option")?.value;
-
-    // Use full transform list for Online mode, "Random", or unmapped characters
-    if (mode === "online" || opposingCharName === "Random" || !CHARACTER_MANIFEST[opposingCharName]) {
-        TRANSFORMS.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
-        return;
-    }
-
-    // Use specific transform list mapped to the opposing character
-    const available = CHARACTER_MANIFEST[opposingCharName];
-    available.forEach(t => selectEl.innerHTML += `<option value="${t}">${t}</option>`);
+    const online = isOnlineSetup();
+    // Online: the opponent is unknown until they join the lobby, so offer every transformation until then
+    const charName = online ? (lobbyOpponentName || "Random") : opposingCharName;
+    const mapped = CHARACTER_MANIFEST[charName];
+    // Full list for "Random" / unknown, or characters with no transforms listed; otherwise that character's own transforms
+    const list = (charName === "Random" || !mapped || !mapped.length) ? TRANSFORMS.slice() : mapped.slice();
+    const prev = selectEl.value;
+    let chosen = (preselect && list.includes(preselect)) ? preselect : null;
+    if (!chosen && online && list.includes(prev)) chosen = prev;        // online: keep the player's pick while it is still valid
+    if (!chosen) chosen = list[Math.floor(Math.random() * list.length)];
+    fillSelect(selectEl, list, chosen);
+    syncLookup(selectId);
 }
 
 function toggleGameMode() {
@@ -777,6 +858,18 @@ function toggleGameMode() {
     } else {
         document.getElementById("p2-header-label").innerText = "Player 2";
     }
+
+    // Lookup Transform is hidden online (we don't know the opponent's character until we connect)
+    const online = mode === "online";
+    ["p1", "cpu"].forEach(side => { const w = document.getElementById(side + "-lookup-wrap"); if (w) w.style.display = online ? "none" : "flex"; });
+    if (online) {
+        setTransformLabel("p1", "Opponent");
+        populateTransformDropdown("p1-transform-type", "Random");    // every transformation in TRANSFORMS, current pick kept
+    } else if (setupWasOnline) {
+        onP1NameChange();
+        onCpuNameChange();
+    }
+    setupWasOnline = online;
 }
 
 function prepareDebugDeck(deck) {
@@ -834,6 +927,126 @@ function renderLog() {
     logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
     logBox.scrollTop = logBox.scrollHeight;
 }
+
+// ============================================================
+// ONLINE LOBBY
+// Both players pick a character and transformation, see each other's choice, and press Ready. The transform list narrows to the
+// opponent's character as soon as they join, so the two players always line up. Lobby data lives at games/<ROOM>/lobby/{host|guest}.
+// ============================================================
+let lobbyActive = false, lobbyReady = false, lobbyStarted = false, lobbyUnsub = null, lobbyRoom = "";
+let lobbyOpponentName = null, lobbyOpponentTarget = null, lobbyNote = "";
+window.lobbyConfirmed = null;
+
+function lobbyRole() { return parseInt(document.getElementById("online-role-option").value, 10) === 2 ? "guest" : "host"; }
+function lobbyOtherRole() { return lobbyRole() === "host" ? "guest" : "host"; }
+function lobbyPath(role) { return "games/" + lobbyRoom + "/lobby/" + role; }
+function lobbyMyName() { return (document.getElementById("p1-name").value || "").trim().split(" ")[0]; }
+function lobbyEntry() {
+    return { name: lobbyMyName(), target: document.getElementById("p1-transform-type").value, ready: lobbyReady, t: Date.now() };
+}
+function lobbyPushMyEntry() {
+    if (!lobbyActive || lobbyStarted || !window.db) return;
+    window.dbSet(window.dbRef(window.db, lobbyPath(lobbyRole())), lobbyEntry());
+}
+function onStartClicked() {
+    if (document.getElementById("game-mode-option").value === "online") joinLobby(); else initializeGame();
+}
+function lobbyControlsLocked(locked) {         // while in the lobby the room, role and mode can't change
+    ["game-mode-option", "online-room-code", "btn-role-host", "btn-role-guest"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = locked; });
+    const startBtn = document.getElementById("start-game-btn"); if (startBtn) startBtn.style.display = locked ? "none" : "block";
+    const lobby = document.getElementById("online-lobby"); if (lobby) lobby.style.display = locked ? "flex" : "none";
+}
+function joinLobby() {
+    if (!window.db || !window.dbRef || !window.dbSet || !window.dbOnValue || !window.dbUpdate) { alert("Online play is not available (could not reach the game server)."); return; }
+    if (lobbyActive) return;
+    lobbyRoom = document.getElementById("online-room-code").value.trim().toUpperCase() || "ROOM123";
+    document.getElementById("online-room-code").value = lobbyRoom;
+    lobbyActive = true; lobbyReady = false; lobbyStarted = false; lobbyOpponentName = null; lobbyOpponentTarget = null;
+    document.getElementById("lobby-room-line").innerText = `Lobby - Room ${lobbyRoom} (${lobbyRole() === "host" ? "Host" : "Guest"})`;
+    lobbyControlsLocked(true);
+    if (lobbyRole() === "host") {
+        // fresh room: clear any old game and any stale guest entry, then register ourselves
+        const updates = {};
+        ["gameState", "market", "deck", "discardPile"].forEach(k => { updates["games/" + lobbyRoom + "/" + k] = null; });
+        updates["games/" + lobbyRoom + "/lobby/guest"] = null;
+        updates[lobbyPath("host")] = lobbyEntry();
+        window.dbUpdate(window.dbRef(window.db), updates);
+    } else {
+        window.dbSet(window.dbRef(window.db, lobbyPath("guest")), lobbyEntry());
+    }
+    updateLobbyUI(null, null, "");
+    lobbyUnsub = window.dbOnValue(window.dbRef(window.db, "games/" + lobbyRoom), snap => onLobbyUpdate(snap.val()));
+}
+function onLobbyUpdate(room) {
+    if (!lobbyActive || lobbyStarted) return;
+    const lobby = (room && room.lobby) || {};
+    const me = lobby[lobbyRole()], opp = lobby[lobbyOtherRole()];
+    // a guest who joins a game that is already running (e.g. after a refresh) goes straight back in
+    if (room && room.gameState && lobbyRole() === "guest" && !opp) { startOnlineFromLobby(); return; }
+    if (!me) { lobbyPushMyEntry(); return; }                    // our entry was cleared (the host created the room after we joined): add it again
+    let note = "";
+    const oppName = opp ? opp.name : null;
+    if (oppName !== lobbyOpponentName) {                        // opponent joined, left, or changed character
+        const before = document.getElementById("p1-transform-type").value;
+        lobbyOpponentName = oppName;
+        populateTransformDropdown("p1-transform-type", "Random");   // narrows to the opponent's character (or full list if none)
+        setTransformLabel("p1", "Opponent");
+        const after = document.getElementById("p1-transform-type").value;
+        lobbyNote = (oppName && before !== after) ? `${before} isn't available for ${oppName}, switched to ${after}.` : "";
+        if (!oppName && lobbyReady) { lobbyReady = false; }     // opponent left: cancel our Ready
+        lobbyPushMyEntry();
+    }
+    lobbyOpponentTarget = opp ? opp.target : null;
+    updateLobbyUI(me, opp, "");
+    if (me.ready && opp && opp.ready) startOnlineFromLobby();
+}
+function updateLobbyUI(me, opp, note) {
+    const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+    const myName = lobbyMyName();
+    const sameName = !!(opp && opp.name === myName);
+    set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
+    set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${opp.target}` : "Share the room code so they can join.");
+    set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${document.getElementById("p1-transform-type").value}` : "");
+    let msg = note || lobbyNote || "";
+    if (sameName) msg = `You both picked ${myName}. One of you needs to choose a different character.`;
+    set("lobby-note", msg);
+    const img = document.getElementById("lobby-opp-image");
+    if (img) {
+        if (opp) { const p = `images/avatars/${opp.name}/${opp.name}_baseline.jpg`; img.innerHTML = `<img src="${p}" onclick="openImageModal('${p}')" onerror="this.outerHTML='Image Req:<br>${opp.name}_baseline.jpg'"/>`; }
+        else img.innerHTML = `<h2>?</h2>`;
+    }
+    const btn = document.getElementById("lobby-ready-btn");
+    if (btn) { btn.disabled = !opp || sameName; btn.innerText = lobbyReady ? "Cancel Ready" : "Ready"; }
+    ["p1-name", "p1-transform-type"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = lobbyReady; });   // locked while Ready
+}
+function toggleLobbyReady() {
+    if (!lobbyActive || !lobbyOpponentName) return;
+    lobbyReady = !lobbyReady;
+    lobbyPushMyEntry();
+}
+function leaveLobby() {
+    if (!lobbyActive) return;
+    if (lobbyUnsub) { try { lobbyUnsub(); } catch (e) {} lobbyUnsub = null; }
+    if (window.db && window.dbSet && !lobbyStarted) { try { window.dbSet(window.dbRef(window.db, lobbyPath(lobbyRole())), null); } catch (e) {} }
+    lobbyActive = false; lobbyReady = false; lobbyOpponentName = null; lobbyOpponentTarget = null;
+    lobbyControlsLocked(false);
+    ["p1-name", "p1-transform-type"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
+    populateTransformDropdown("p1-transform-type", "Random");
+    setTransformLabel("p1", "Opponent");
+}
+function startOnlineFromLobby() {
+    if (lobbyStarted) return;
+    lobbyStarted = true;
+    if (lobbyUnsub) { try { lobbyUnsub(); } catch (e) {} lobbyUnsub = null; }
+    window.lobbyConfirmed = { oppName: lobbyOpponentName, oppTarget: lobbyOpponentTarget };
+    lobbyActive = false;
+    lobbyControlsLocked(false);
+    ["p1-name", "p1-transform-type"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
+    initializeGame();
+}
+window.addEventListener("pagehide", () => {     // best effort: leave the lobby if the tab closes
+    if (lobbyActive && !lobbyStarted && window.db && window.dbSet) { try { window.dbSet(window.dbRef(window.db, lobbyPath(lobbyRole())), null); } catch (e) {} }
+});
 
 function setOnlineRole(role) {
     const roleSelect = document.getElementById("online-role-option");
@@ -897,6 +1110,7 @@ function initializeGame() {
 
         let localName = document.getElementById("p1-name").value.trim().split(" ")[0] || (onlineLocalRole === 1 ? "Host" : "Guest");
         let localTarget = document.getElementById("p1-transform-type").value;
+        const lc = window.lobbyConfirmed; window.lobbyConfirmed = null;
 
         if (onlineLocalRole === 1) {
             // --- HOST (PLAYER 1) ---
@@ -907,8 +1121,9 @@ function initializeGame() {
             gameState.p1.name = localName;
             gameState.p2.transformTarget = localTarget; // Host sets the target transformation for Player 2
 
-            gameState.p2.name = "Waiting...";
-            gameState.p1.transformTarget = TRANSFORMS[0]; // Placeholder until Guest sets Player 1's target transformation
+            // names and choices were already exchanged in the lobby; "Waiting..." only if the host starts without one
+            gameState.p2.name = (lc && lc.oppName) ? lc.oppName : "Waiting...";
+            gameState.p1.transformTarget = (lc && lc.oppTarget) ? lc.oppTarget : TRANSFORMS[0];
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; 
@@ -926,7 +1141,7 @@ function initializeGame() {
 
             listenToFirebase(onlineRoomId);
 
-            if (window.db && window.dbUpdate && window.dbRef) {
+            if (!(lc && lc.oppName) && window.db && window.dbUpdate && window.dbRef) {   // lobby players already told the host
                 let updates = {};
                 updates["games/" + onlineRoomId + "/gameState/p2/name"] = localName;
                 updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
@@ -939,7 +1154,13 @@ function initializeGame() {
     // --- LOCAL / VS-CPU MODES ---
     let p1N = document.getElementById("p1-name").value.trim();
     let cpuN = document.getElementById("cpu-name").value.trim();
-    let cpuNFinal = cpuN === "Random" ? NAMES.filter(n => n !== p1N)[Math.floor(Math.random() * (NAMES.length - 1))] : cpuN;
+    let cpuNFinal = cpuN;
+    if (cpuN === "Random") {
+        const wanted = document.getElementById("p1-transform-type").value;      // the transformation chosen for the CPU's character
+        let pool = NAMES.filter(n => n !== p1N && (CHARACTER_MANIFEST[n] || []).includes(wanted));
+        if (!pool.length) pool = NAMES.filter(n => n !== p1N);
+        cpuNFinal = pool[Math.floor(Math.random() * pool.length)];
+    }
 
     if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
 
@@ -1751,7 +1972,8 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     const evSU = cpuThresholdEV(counts.SU, n - counts.SU, rerollsAvail, bonusSU) * w.SU;
     const lead = evTR >= evSU ? "TR" : "SU", sec = lead === "TR" ? "SU" : "TR";
     if (counts[lead] > 0) keepFace(lead);
-    if (pinned) keepFace("SU");
+    // pinned: keep Submission dice to build a push back, but not a lone ⛓️ when we already hold a finished triple (it would lock every die)
+    if (pinned && (counts.SU >= 2 || counts[lead] < 3)) keepFace("SU");
     if (slip >= 2 && counts.SU >= 2) keepFace("SU");   // marker is sliding: build the push back
     if (counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) keepFace(sec);
 
