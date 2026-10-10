@@ -340,10 +340,10 @@
                         <select id="cpu-difficulty">
                             <option value="random">Beginner</option>
                             <option value="smart">Easy</option>
-                            <option value="aggressive" selected>Normal</option>
+                            <option value="aggressive">Normal</option>
                             <option value="v23low">Hard</option>
                             <option value="defensive">Expert</option>
-                            <option value="adaptive">Master</option>
+                            <option value="adaptive" selected>Master</option>
                         </select>
                     </div>
                 </div>
@@ -403,6 +403,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="start-btn" onclick="recDownload()" style="margin-top: 0; background: #2a9d8f !important;">💾 Download Game Log</button>
                 <button class="start-btn" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
                 <button class="start-btn" onclick="document.getElementById('game-over-modal').style.display='none'" style="margin-top: 0; background: #666 !important;">View Board</button>
             </div>
@@ -462,6 +463,7 @@
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
             <button class="help-btn" onclick="openHelpModal('quick')">? How to Play</button>
+            <button class="help-btn" onclick="recDownload()" title="Download recorded games (JSON) for AI analysis">💾 Download Game Logs</button>
             <button onclick="location.reload()" style="width: auto; background: #e63946; font-weight: bold; padding: 10px 20px;">Reset Game</button>
         </div>
     </div>
@@ -921,7 +923,7 @@ function initializeGame() {
     let p1T = document.getElementById("p1-transform-type").value;
     let cpuT = document.getElementById("cpu-transform-type").value;
 
-    cpuBrainReset(); choiceQueue = []; choiceActive = null; document.getElementById("choice-dialog").style.display = "none";
+    cpuBrainReset(); choiceQueue = []; choiceActive = null; endTurnAfterChoice = false; document.getElementById("choice-dialog").style.display = "none";
     gameState.gameMode = gameMode;
     gameState.showDiceText = showDiceText;
     gameState.showEnergyActions = showEnergyActions;
@@ -944,6 +946,7 @@ function initializeGame() {
     if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
     
     refillMarket(); 
+    if (gameState.gameMode === "solo") recStart(); else gameRec = null;
     startTurn();
     updateUI();
 
@@ -1058,7 +1061,163 @@ function listenToFirebase(roomId) {
 }
 
 const logEl = document.getElementById("game-log");
+// ============================================================
+// GAME RECORDER  (for analysing games and improving the AI)
+// ------------------------------------------------------------
+// Records every solo game: the full log (not just the last 50 lines), every roll with the dice you
+// kept, every purchase / action with before-and-after stats, a state snapshot at each turn start,
+// and the Master AI's plan. Games are saved in the browser (localStorage, newest REC_MAX_GAMES kept)
+// and exported with the "Download Game Logs" button.
+// ============================================================
+const REC_STORAGE_KEY = "hypduel_recordings_v1";
+const REC_MAX_GAMES = 10;
+const REC_MAX_CHARS = 3500000;      // stay well under the ~5 MB localStorage limit
+let gameRec = null;
+let recSaveTimer = null;
+
+function recMini() {      // compact stat line: [energy, trance, arousal, transform, vulnerability]
+    const a = p => [p.energy, p.trance, p.arousal, p.transform, p.vulnerability || 0];
+    return { sub: gameState.submission, p1: a(gameState.p1), p2: a(gameState.p2) };
+}
+function recSnap() {
+    const inv = p => (p.inventory || []).map(c => c.id);
+    return { sub: gameState.submission, round: gameState.round,
+             p1: recMini().p1, p2: recMini().p2, inv1: inv(gameState.p1), inv2: inv(gameState.p2),
+             market: market.map(c => c ? c.id : null), deck: deck.length };
+}
+function recFaces(dice) { return dice.map(d => (typeof cpuFaceKey === "function" ? cpuFaceKey(d.face) : d.face) || "-").join(" "); }
+function recEvent(type, data) {
+    if (!gameRec) return;
+    try { gameRec.events.push(Object.assign({ n: gameRec.events.length, r: gameState.round, who: gameState.activePlayer, type }, data || {})); } catch (e) {}
+}
+function recStart() {
+    gameRec = {
+        version: 1, id: Date.now(), startedAt: new Date().toISOString(),
+        mode: gameState.gameMode, cpuDifficulty: gameState.p2.difficulty,
+        players: { p1: { name: gameState.p1.name, target: gameState.p1.transformTarget },
+                   p2: { name: gameState.p2.name, target: gameState.p2.transformTarget } },
+        settings: { energyActions: gameState.showEnergyActions },
+        firstPlayer: gameState.activePlayer, outcome: null, events: []
+    };
+    recEvent("start", { snap: recSnap() });
+    recScheduleSave();
+}
+function recFinish(winner) {
+    if (!gameRec || gameRec.outcome) return;
+    gameRec.outcome = { winner, round: gameState.round, final: recSnap(), endedAt: new Date().toISOString() };
+    recEvent("end", { winner });
+    recSave();
+}
+function recLoadAll() { try { return JSON.parse(localStorage.getItem(REC_STORAGE_KEY) || "[]"); } catch (e) { return []; } }
+function recSave() {
+    if (!gameRec) return;
+    try {
+        let all = recLoadAll().filter(g => g.id !== gameRec.id);
+        all.push(gameRec);
+        while (all.length > REC_MAX_GAMES) all.shift();
+        let json = JSON.stringify(all);
+        while (json.length > REC_MAX_CHARS && all.length > 1) { all.shift(); json = JSON.stringify(all); }
+        localStorage.setItem(REC_STORAGE_KEY, json);
+    } catch (e) { /* storage full or disabled: the game stays in memory and can still be downloaded */ }
+}
+function recScheduleSave() {
+    if (recSaveTimer) return;
+    recSaveTimer = setTimeout(() => { recSaveTimer = null; recSave(); }, 2000);
+}
+function recTranscript(g) {
+    return g.events.filter(e => e.type === "log").map(e => `R${e.r} P${e.who}: ${e.msg}`);
+}
+function recExport() {
+    recSave();
+    const games = recLoadAll();
+    if (gameRec && !games.some(g => g.id === gameRec.id)) games.push(gameRec);
+    return {
+        exportedAt: new Date().toISOString(),
+        note: "faces: SP=Spiral LU=Lucidity EN=Energy SU=Submission AR=Arousal TR=Transform. Stat arrays are [energy, trance, arousal, transform, vulnerability]. sub > 0 means the marker is on Player 2/CPU's side. winner 1 = Player 1 (human), 2 = Player 2 (CPU). outcome null = game was abandoned.",
+        cardIndex: KNOWN_CARDS.map(c => ({ id: c.id, name: c.name, cost: c.cost, type: c.type })),
+        games: games.map(g => Object.assign({}, g, { transcript: recTranscript(g) }))
+    };
+}
+function recDownload() {
+    const data = recExport();
+    if (!data.games.length) { alert("No recorded games yet. Play a solo game first."); return; }
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hypnotic-duel-games-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function recClear() { try { localStorage.removeItem(REC_STORAGE_KEY); } catch (e) {} }
+
+// Wrap the game's own action functions so every call is recorded (behaviour is unchanged).
+function recWrap(name, describe, withDice) {
+    const orig = globalThis[name];
+    if (typeof orig !== "function") return;
+    globalThis[name] = function (...args) {
+        let pre = null, d = null;
+        if (gameRec) { try { pre = recMini(); d = describe ? describe(...args) : null; } catch (e) {} }
+        const result = orig.apply(this, args);
+        if (gameRec) {
+            try {
+                const ev = { fn: name, by: gameState.activePlayer, before: pre, after: recMini() };
+                if (d) ev.args = d;
+                if (withDice) ev.diceAfter = recFaces(gameState.dice);
+                recEvent("act", ev);
+            } catch (e) {}
+        }
+        return result;
+    };
+}
+function recInstall() {
+    const mk = i => { const c = market[i]; return c ? { id: c.id, card: c.name, cost: getCardPurchaseCost(c, gameState.activePlayer) } : null; };
+    recWrap("buyCard", i => Object.assign({ market: market.map(c => c ? c.id : null) }, mk(i)));
+    recWrap("buyAction", (type, pId) => ({ action: type, player: pId }));
+    recWrap("wipeMarket", () => ({ market: market.map(c => c ? c.id : null) }));
+    recWrap("sellCard", (i, pId) => { const p = pId === 1 ? gameState.p1 : gameState.p2; return { card: p.inventory[i] && p.inventory[i].name, player: pId }; });
+    recWrap("discardForFreeBuy", (i, pId) => { const p = pId === 1 ? gameState.p1 : gameState.p2; return { card: p.inventory[i] && p.inventory[i].name, player: pId }; });
+    recWrap("buyReroll", (cost, cardId, pId) => ({ cardId, player: pId }));
+    recWrap("useAbsoluteFocus", (i, pId) => ({ player: pId }));
+    recWrap("useQuietMind", pId => ({ player: pId }));
+    recWrap("useRapidPulse", pId => ({ player: pId }));
+    recWrap("useFadingReality", pId => ({ player: pId }));
+    recWrap("useSimmeringArousal", pId => ({ player: pId }));
+    recWrap("buyCardFromOpponent", (buyer, i) => ({ buyer, index: i }));
+    recWrap("confirmLucidity", () => ({ allocations: JSON.parse(JSON.stringify(lucidityState.allocations)), points: lucidityState.total }));
+    // each roll: which dice were KEPT going into it, and what came up
+    recWrap("rollDiceAction", () => ({ keptBefore: gameState.dice.map(d => (d.kept ? 1 : 0)).join(""), facesBefore: recFaces(gameState.dice), rerollsLeft: gameState.rerollsLeft }), true);
+    // end of dice phase: the final dice (not awaited so CPU timing is unchanged)
+    const origResolve = globalThis.resolveDice;
+    if (typeof origResolve === "function") {
+        globalThis.resolveDice = function (...args) {
+            if (gameRec) { try { recEvent("resolve", { dice: recFaces(gameState.dice), before: recMini() }); } catch (e) {} }
+            return origResolve.apply(this, args);
+        };
+    }
+    const origStart = globalThis.startTurn;
+    if (typeof origStart === "function") {
+        globalThis.startTurn = function (...args) {
+            const result = origStart.apply(this, args);
+            if (gameRec) { try { recEvent("turn_start", { snap: recSnap(), dice: gameState.dice.length, rerolls: gameState.rerollsLeft }); recScheduleSave(); } catch (e) {} }
+            return result;
+        };
+    }
+    const origEnd = globalThis.endTurn;
+    if (typeof origEnd === "function") {
+        globalThis.endTurn = function (...args) {
+            if (gameRec && !(typeof isChoicePending === "function" && isChoicePending())) { try { recEvent("turn_end", { snap: recSnap() }); } catch (e) {} }
+            return origEnd.apply(this, args);
+        };
+    }
+    if (typeof window !== "undefined" && window.addEventListener) {
+        window.addEventListener("pagehide", () => { recSave(); });
+        window.addEventListener("beforeunload", () => { recSave(); });
+    }
+}
+
+
 function log(msg, bold = false) {
+	try { recEvent("log", { msg: String(msg) }); } catch (e) {}
 	if (!gameState) return;
 	if (!gameState.log) gameState.log = [];
 	if (!Array.isArray(gameState.log)) {
@@ -1198,7 +1357,11 @@ function cpuShouldUseRapidPulse() {
         case "smart": return p.trance >= 3 || p.arousal >= 3;
         case "aggressive": return p.trance >= 4 || p.arousal >= 4;
         case "v23low": return p.trance >= 4 || p.arousal >= 4 || p.vulnerability >= 1;
-        case "adaptive": return (p.trance >= 3 || p.arousal >= 3 || p.vulnerability >= 1) && p.energy >= 4;
+        case "adaptive": {
+            const th = cpuObservedThreats();
+            if (p.arousal >= 3 && p.energy >= 2) return true;                 // protect the little rerolls we have left
+            return (p.trance >= 3 || p.vulnerability >= 1 || (p.arousal >= 2 && th.arousal >= 2.5) || (p.trance >= 2 && th.trance >= 2)) && p.energy >= 4;
+        }
         case "defensive": return p.trance >= 2 || p.arousal >= 2 || p.vulnerability >= 1;
         default: return false;
     }
@@ -1287,17 +1450,17 @@ const CPU_STRATEGIES = {
 const CPU_COUNTERS = {
     arousal:    [50, 32, 12, 33, 9],
     trance:     [21, 12, 9, 33, 37],
-    submission: [34, 53],
+    submission: [34, 53, 15],
     transform:  [44, 51, 38, 9],
     energy:     [37]
 };
 const CPU_ONE_POINT_PUSHERS = [15, 46, 22, 34];   // Mesmerizing Rhythm blocks pushes of exactly 1
 
 let cpuBrain = { plan: "none", planScores: {}, oppPlan: "none", oppScores: {}, history: [], oppHistory: [],
-                 wipes: 0, hunting: false, lastOppRound: -1 };
+                 wipes: 0, hunting: false, lastOppRound: -1, lastEnd: null, taken: [] };
 function cpuBrainReset() {
     cpuBrain = { plan: "none", planScores: {}, oppPlan: "none", oppScores: {}, history: [], oppHistory: [],
-                 wipes: 0, hunting: false, lastOppRound: -1 };
+                 wipes: 0, hunting: false, lastOppRound: -1, lastEnd: null, taken: [] };
 }
 function cpuIsAdaptive() { return getCpuDifficulty() === "adaptive"; }
 function cpuSay(msg) { if (CPU_DEBUG_LOG) log(`🧠 ${msg}`); }
@@ -1397,10 +1560,41 @@ function cpuBestStrategy(scores, current) {
     if (current && current !== "none" && scores[current] >= 1.5 && scores[current] >= bestV - 0.75) return current;  // hysteresis
     return best;
 }
+// What the human has actually been doing TO us (averaged over their last 3 turns), as threat scores per strategy.
+function cpuObservedThreats() {
+    const t = cpuBrain.taken || [];
+    if (!t.length) return { arousal: 0, trance: 0, submission: 0, transform: 0 };
+    const avg = k => t.reduce((sum, x) => sum + (x[k] || 0), 0) / t.length;
+    const me = gameState.p2;
+    return {
+        arousal:    avg("ar") * 2.5 + (me.arousal >= 3 ? 1.5 : 0),
+        trance:     avg("tr") * 1.5,
+        submission: avg("sub") * 1.5 + (gameState.submission >= 3 ? 2 : 0),
+        transform:  avg("tf") * 3 + avg("vu") * 2
+    };
+}
+// remember how our stats looked when we finished our turn; the difference next turn is the human's damage
+function cpuNoteEndOfTurn() {
+    const p = gameState.p2;
+    cpuBrain.lastEnd = { ar: p.arousal, tr: p.trance, sub: gameState.submission, tf: p.transform, vu: p.vulnerability || 0 };
+}
+function cpuNoteDamageTaken() {
+    const p = gameState.p2, e = cpuBrain.lastEnd;
+    if (!e || cpuBrain.lastDamageRound === gameState.round) return;      // ignore extra turns in the same round
+    cpuBrain.lastDamageRound = gameState.round;
+    cpuBrain.taken.push({
+        ar: Math.max(0, p.arousal - e.ar), tr: Math.max(0, p.trance - e.tr),
+        sub: Math.max(0, gameState.submission - e.sub),            // positive = toward the CPU's end
+        tf: Math.max(0, p.transform - e.tf), vu: Math.max(0, (p.vulnerability || 0) - e.vu)
+    });
+    if (cpuBrain.taken.length > 3) cpuBrain.taken.shift();
+}
 function cpuReplan() {
     cpuBrain.planScores = cpuStrategyScores(2);
     cpuBrain.plan = cpuBestStrategy(cpuBrain.planScores, cpuBrain.plan);
     cpuBrain.oppScores = cpuStrategyScores(1);
+    const threats = cpuObservedThreats();
+    Object.keys(threats).forEach(k => { cpuBrain.oppScores[k] = (cpuBrain.oppScores[k] || 0) + threats[k]; });
     cpuBrain.oppPlan = cpuBestStrategy(cpuBrain.oppScores, cpuBrain.oppPlan);
 }
 function cpuPlanLabel() { return cpuBrain.plan === "none" ? "No plan yet" : CPU_STRATEGIES[cpuBrain.plan].label; }
@@ -1408,6 +1602,7 @@ function cpuPlanLabel() { return cpuBrain.plan === "none" ? "No plan yet" : CPU_
 function cpuBrainBeginTurn() {
     cpuBrain.wipes = 0;
     cpuBrain.hunting = false;
+    cpuNoteDamageTaken();
     const lr = gameState.p1.lastRoll || [];
     if (lr.length && cpuBrain.lastOppRound !== gameState.round) {
         cpuBrain.oppHistory.push(cpuCountsFromFaces(lr));
@@ -1416,7 +1611,9 @@ function cpuBrainBeginTurn() {
     }
     cpuReplan();
     const opp = cpuBrain.oppPlan === "none" ? "nothing clear" : CPU_STRATEGIES[cpuBrain.oppPlan].label;
-    cpuSay(`Plan: ${cpuPlanLabel()}. Reading the human as: ${opp}.`);
+    const tk = cpuBrain.taken.length ? cpuBrain.taken[cpuBrain.taken.length - 1] : null;
+    cpuSay(`Plan: ${cpuPlanLabel()}. Reading the human as: ${opp}.${tk ? ` Last human turn did: Arousal +${tk.ar}, Trance +${tk.tr}, Submission +${tk.sub}, Transform +${tk.tf}.` : ""}`);
+    recEvent("cpu_brain", { plan: cpuBrain.plan, scores: cpuBrain.planScores, oppPlan: cpuBrain.oppPlan, oppScores: cpuBrain.oppScores });
 }
 function cpuBrainRecordRoll() {
     cpuBrain.history.push(cpuCountsFromFaces(gameState.dice.map(d => d.face)));
@@ -1529,26 +1726,33 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
 function cpuAdaptiveChooseKeep() {
     const plan = cpuAdaptiveKeepPlan(gameState.rerollsLeft);
     cpuBrain.hunting = plan.hunting;
+    recEvent("cpu_keep", { dice: recFaces(gameState.dice), keep: plan.keep.map(k => (k ? 1 : 0)).join(""), hunting: !!plan.hunting, crisis: !!plan.crisis, rerolls: gameState.rerollsLeft });
     gameState.dice.forEach((d, i) => { d.kept = plan.keep[i]; });
 }
 
 // How many Transform-equivalents would one more reroll add right now?
+// Uses the SAME keep plan the CPU will actually use, so locked dice never count as rerollable.
 function cpuExtraRerollGain() {
-    const dice = gameState.dice, n = dice.length;
+    const dice = gameState.dice;
     const counts = cpuCountsFromFaces(dice.map(d => d.face));
-    const bonusTR = hasCard(2, 2) ? 1 : 0, bonusSU = hasCard(2, 36) ? 1 : 0;
-    const nowTR = counts.TR >= 3 ? 1 + (counts.TR - 3) + bonusTR : 0;
-    const nowSU = (counts.SU >= 3 ? 1 + (counts.SU - 3) + bonusSU : 0) * 0.6;
-    const gainTR = cpuThresholdEV(counts.TR, n - counts.TR, 1, bonusTR) - nowTR;
-    const gainSU = (cpuThresholdEV(counts.SU, n - counts.SU, 1, bonusSU)) * 0.6 - nowSU;
-    let gain = Math.max(gainTR, gainSU, 0);
-    if (hasCard(2, 3)) {
-        const distinct = Object.keys(counts).filter(k => counts[k] > 0).length;
-        if (distinct === 6) return 0;                     // Trigger Word is already complete: don't touch the dice
-        const gainHunt = 5 * cpuTrigProb(6 - distinct, n - distinct, 1);
-        if (gainHunt > gain) gain = gainHunt;
-    }
+    const plan = cpuAdaptiveKeepPlan(1);            // what we would keep if we rerolled right now
+    const free = plan.keep.filter(k => !k).length;
+    if (free === 0) return 0;                       // every die would stay locked: a reroll changes nothing
     const me = gameState.p2, slip = Math.max(0, gameState.submission);
+    let gain = 0;
+    if (plan.hunting) {
+        const distinct = Object.keys(counts).filter(k => counts[k] > 0).length;
+        gain = distinct === 6 ? 0 : 5 * cpuTrigProb(6 - distinct, free, 1);
+    } else {
+        const keptOf = k => dice.filter((d, i) => plan.keep[i] && cpuFaceKey(d.face) === k).length;
+        const bonus = { TR: hasCard(2, 2) ? 1 : 0, SU: hasCard(2, 36) ? 1 : 0 };
+        const scale = { TR: 1, SU: 0.6 };
+        ["TR", "SU"].forEach(k => {
+            const now = counts[k] >= 3 ? (1 + (counts[k] - 3) + bonus[k]) : 0;
+            const ev = cpuThresholdEV(keptOf(k), free, 1, bonus[k]);
+            gain = Math.max(gain, (ev - now) * scale[k]);
+        });
+    }
     if (me.vulnerability >= 2 && counts.LU < me.vulnerability) gain += 0.4 * Math.min(2, me.vulnerability - 1);   // extra rolls to find 💧
     if (slip >= 3 && counts.SU < 3) gain += 0.25 * (slip - 2);                                                  // extra rolls to find ⛓️
     return gain;
@@ -1620,15 +1824,28 @@ function cpuAdaptiveCardScore(card) {
     if (isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) score += 60;
     const danger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
     if (danger && [9, 12, 33].includes(card.id)) score += 18;
-    if (p2.arousal >= 3 && [32, 50].includes(card.id)) score += 8;
+    // Arousal 3+ costs rerolls (5 = none: only ~6% to roll a triple). Energy actions are off, so the only cures are
+    // 💧 dice, Quiet Mind, or extra rerolls that bypass the penalty.
+    if (p2.arousal >= 3) {
+        const big = p2.arousal >= 5 ? 1.5 : 1;
+        if ([16, 43, 20].includes(card.id)) score += Math.round(20 * big);   // extra rerolls
+        if (card.id === 33) score += Math.round(25 * big);                   // Quiet Mind
+        if (card.id === 12) score += 18;                                     // Rapid Pulse: stop it climbing again
+        if (card.id === 9) score += 12;                                      // Deep Safeties: bigger 💧
+        if (card.id === 7) score += 8;                                       // extra die
+        if ([32, 50].includes(card.id)) score += 8;                          // Guided Heat / Mutual Heat
+    }
     if (p2.transform >= 6 && [44, 51, 38].includes(card.id)) score += 12 + (p2.transform - 6) * 8;
     if (p1.transform >= 6 && [4, 25, 30, 40].includes(card.id)) score += 12 + (p1.transform - 6) * 8;
     if (p1.transform >= 6 && [10, 39, 52, 15, 36].includes(card.id)) score += 6;
 
     // counters to what the human is building
-    const oppPlan = cpuBrain.oppPlan;
-    const oppStr = (cpuBrain.oppScores || {})[oppPlan] || 0;
-    if (oppPlan !== "none" && CPU_COUNTERS[oppPlan] && CPU_COUNTERS[oppPlan].includes(card.id)) score += Math.min(18, oppStr * 4);
+    let counterBonus = 0;
+    Object.keys(CPU_COUNTERS).forEach(k => {
+        const v = (cpuBrain.oppScores || {})[k] || 0;
+        if (v >= 2 && CPU_COUNTERS[k].includes(card.id)) counterBonus += Math.min(18, v * 3);
+    });
+    score += Math.min(30, counterBonus);
     const onePushers = CPU_ONE_POINT_PUSHERS.filter(id => hasCard(1, id)).length;
     if (card.id === 35) score += onePushers * 14;                                   // Mesmerizing Rhythm
     if (CPU_ONE_POINT_PUSHERS.includes(card.id) && hasCard(1, 35)) score -= 35;     // their Rhythm blocks our 1-pushes
@@ -1821,6 +2038,7 @@ function cpuAdaptiveShopPhase() {
     }
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
     cpuAdaptiveEnergyActions();
+    cpuNoteEndOfTurn();
     cpuSay(`Ends turn with ${p.energy}⚡ (plan: ${cpuPlanLabel()}).`);
 }
 
@@ -2318,6 +2536,7 @@ function useAbsoluteFocus(idx, pId) {
 }
 // ---- INLINE CHOICE DIALOG (shows below the market) ----
 let choiceQueue = [];
+let endTurnAfterChoice = false;   // the CPU tried to end its turn while a dialog was still open
 let choiceActive = null;
 function isChoicePending() { return choiceActive !== null || choiceQueue.length > 0; }
 function showChoiceDialog(cfg) {
@@ -2329,7 +2548,12 @@ function showChoiceDialog(cfg) {
 function showNextChoice() {
     const el = document.getElementById("choice-dialog");
     choiceActive = choiceQueue.shift() || null;
-    if (!choiceActive) { el.style.display = "none"; el.innerHTML = ""; if (typeof updateUI === "function") updateUI(); return; }
+    if (!choiceActive) {
+        el.style.display = "none"; el.innerHTML = "";
+        if (typeof updateUI === "function") updateUI();
+        if (endTurnAfterChoice) { endTurnAfterChoice = false; endTurn(); }   // finish the CPU turn that was waiting on this choice
+        return;
+    }
     el.innerHTML = "";
     const h = document.createElement("h4"); h.textContent = choiceActive.title; el.appendChild(h);
     if (choiceActive.message) { const m = document.createElement("p"); m.textContent = choiceActive.message; el.appendChild(m); }
@@ -3167,7 +3391,11 @@ function buyAction(type, pId) {
 }
 
 function endTurn() {
-    if (isChoicePending()) { nudgeChoiceDialog(); return; }
+    if (isChoicePending()) {
+        if (gameState.activePlayer === 2 && gameState.gameMode === "solo") endTurnAfterChoice = true;   // CPU is done: end its turn as soon as you pick
+        nudgeChoiceDialog(); return;
+    }
+    endTurnAfterChoice = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
     let oppP = gameState.activePlayer === 1 ? gameState.p2 : gameState.p1;
 
@@ -3685,6 +3913,7 @@ function checkWinCondition() {
             .classList.add("winner-highlight");
     }
 
+    recFinish(p1Wins ? 1 : 2);
     document.getElementById("game-over-modal").style.display = "flex";
     return true;
 }
@@ -4160,6 +4389,8 @@ function endGuidedTutorial() {
     }
 }
 
+
+recInstall();
 </script>
 
 
