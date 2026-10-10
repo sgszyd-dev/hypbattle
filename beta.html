@@ -623,7 +623,7 @@ const KNOWN_CARDS = [
     { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {adaptive: 30, aggressive: 10, defensive: 80, v23low: 65} },
     { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {adaptive: 50, aggressive: 60, defensive: 60, v23low: 55} },
     { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {adaptive: 30, aggressive: 40, defensive: 40, v23low: 40} },
-    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Removed by 💧.", ai: {adaptive: 65, aggressive: 80, defensive: 15, v23low: 75} },
+    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Max 1 counter per turn. Removed by 💧.", ai: {adaptive: 58, aggressive: 80, defensive: 15, v23low: 75} },
 	{ id: 42, name: "Mirror Image", cost: 6, type: "Keep", desc: "On your turn, discard this card to buy any card from the card row for free.", ai: {adaptive: 38, aggressive: 25, defensive: 25, v23low: 55} },
     { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {adaptive: 68, aggressive: 40, defensive: 40, v23low: 50} },
     { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {adaptive: 25, aggressive: 25, defensive: 65, v23low: 50} },
@@ -1445,6 +1445,8 @@ function cpuFaceWeights() {
     if (has(28) || has(29)) w.EN += 0.1;
     if (p.energy < 4 && p.inventory.length <= 1) w.EN += 0.25;   // opening: we need money to start a strategy
     if (opp.trance + 2 >= 5) w.SP += 0.35;                       // a setback is within reach
+    const slip = Math.max(0, gameState.submission);
+    if (slip >= 2) w.SU += 0.4 * (slip - 1);                      // sliding toward our end: pushing back matters more and more
     return w;
 }
 
@@ -1458,10 +1460,11 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     const bonusTR = hasCard(2, 2) ? 1 : 0;      // Dream State
     const bonusSU = hasCard(2, 36) ? 1 : 0;     // Deeper Trance
     const pinned = isCpuPinnedInSubmission();
+    const slip = Math.max(0, gameState.submission);   // how far the marker has slid toward the CPU's end
     const keepFace = (k) => { faces.forEach((f, i) => { if (f === k) keep[i] = true; }); };
 
     // 1) Trigger Word hunt: keep one die of every face if the odds beat chasing a triple
-    if (hasCard(2, 3) && !pinned) {
+    if (hasCard(2, 3) && !pinned && p.vulnerability < 2) {
         const distinct = Object.keys(counts).filter(k => counts[k] > 0).length;
         const P = cpuTrigProb(6 - distinct, n - distinct, rerollsAvail);
         const altTR = cpuThresholdEV(counts.TR, n - counts.TR, rerollsAvail, bonusTR);
@@ -1488,12 +1491,20 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
         faces.forEach((f, i) => { if (f === "LU" && k > 0) { keep[i] = true; k--; } });
     }
 
+    // 2b) CRISIS: 2+ vulnerability means rolling 2+ fewer dice. Everything else waits: chase 💧, keep only finished triples
+    if (p.vulnerability >= 2) {
+        ["TR", "SU"].forEach(k => { if (counts[k] >= 3) keepFace(k); });
+        if (pinned) keepFace("SU");
+        return { keep, hunting: false, crisis: true };
+    }
+
     // 3) Threshold faces: pick the better of Transform / Submission, flex to the second one if it is close
     const evTR = cpuThresholdEV(counts.TR, n - counts.TR, rerollsAvail, bonusTR) * w.TR;
     const evSU = cpuThresholdEV(counts.SU, n - counts.SU, rerollsAvail, bonusSU) * w.SU;
     const lead = evTR >= evSU ? "TR" : "SU", sec = lead === "TR" ? "SU" : "TR";
     if (counts[lead] > 0) keepFace(lead);
     if (pinned) keepFace("SU");
+    if (slip >= 2 && counts.SU >= 2) keepFace("SU");   // marker is sliding: build the push back
     if (counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) keepFace(sec);
 
     // 4) Arousal and the linear faces (Energy, Spiral): keep them while enough dice stay free to chase a triple
@@ -1537,6 +1548,9 @@ function cpuExtraRerollGain() {
         const gainHunt = 5 * cpuTrigProb(6 - distinct, n - distinct, 1);
         if (gainHunt > gain) gain = gainHunt;
     }
+    const me = gameState.p2, slip = Math.max(0, gameState.submission);
+    if (me.vulnerability >= 2 && counts.LU < me.vulnerability) gain += 0.4 * Math.min(2, me.vulnerability - 1);   // extra rolls to find 💧
+    if (slip >= 3 && counts.SU < 3) gain += 0.25 * (slip - 2);                                                  // extra rolls to find ⛓️
     return gain;
 }
 
@@ -1621,6 +1635,18 @@ function cpuAdaptiveCardScore(card) {
     if (hasCard(1, 21) && [0, 14, 8, 18, 31].includes(card.id)) score -= 10;        // Switch Play bounces Trance
     if (hasCard(1, 50) && [6, 13, 49].includes(card.id)) score -= 10;               // Mutual Heat bounces Arousal
 
+    // vulnerability: fewer dice is a killer, so fix it (more 💧, more dice, more rerolls)
+    if (p2.vulnerability >= 1 && card.id === 9) score += 10;
+    if (p2.vulnerability >= 2) {
+        if (card.id === 9) score += 25;
+        if (card.id === 7) score += 25;
+        if ([43, 16, 20].includes(card.id)) score += 12;
+    }
+    // submission marker sliding toward our end: get back to neutral before we are pinned
+    const slip = Math.max(0, gameState.submission);
+    if (slip >= 2 && !isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) score += 12 * (slip - 1) + 8;
+    if (slip >= 2 && [25, 30].includes(card.id)) score -= 40;
+
     // economy early, diminishing returns late
     if (gameState.round <= 4 && [45, 29, 28].includes(card.id)) score += 8;
     score -= Math.max(0, p2.inventory.length - 3) * 5;
@@ -1651,6 +1677,8 @@ function cpuAdaptiveExtraConditions(card) {
         case 5:  return opp.inventory.some(c => !inventoryHasName(p, c.name) && cpuAdaptiveCardScore(c) >= 55);
         case 42: return market.some(c => c && c !== card && c.cost >= 5 && passesCardSpecificConditions(c) &&
                                        cpuAdaptiveCardScore(c) >= cpuAdaptiveBuyThreshold() + 8);
+        case 25: return gameState.submission <= 0;     // pushes OUR submission +2: never when it is already sliding
+        case 30: return gameState.submission <= -1;    // pushes OUR submission +4
         case 37: return opp.energy >= 8 || (p.trance >= 4 && opp.energy >= 4);
         case 34: return gameState.submission >= 1;
         case 38: return p.transform >= 6;
@@ -1732,7 +1760,7 @@ function cpuAdaptiveEnergyActions() {
     const reserve = hasCard(2, 16) ? 3 : 0;            // keep a few ⚡ for Hypnotic Suggestion rerolls
     for (let g = 0; g < 12 && !gameState.gameEnded; g++) {
         if (p.energy >= 5 && opp.transform + Math.floor(p.energy / 5) >= 10) { buyAction("transform", 2); cpuSay("Lethal: cashing Energy into Transform."); continue; }
-        if (isCpuPinnedInSubmission() && p.energy >= 6) { buyAction("submission", 2); continue; }
+        if ((isCpuPinnedInSubmission() && p.energy >= 6) || (gameState.submission >= 2 && p.energy >= 9)) { buyAction("submission", 2); continue; }
         if (p.energy - 3 >= reserve && (p.arousal === 3 || p.arousal === 5 || (p.arousal === 4 && p.energy - 6 >= reserve))) { buyAction("arousal", 2); continue; }
         if (p.energy - 5 >= reserve && p.energy >= 5 && (opp.transform >= 5 || p.energy >= 10)) { buyAction("transform", 2); continue; }
         break;
@@ -1751,7 +1779,7 @@ function cpuAdaptiveWantsCalm() {
 
 // What the CPU picks when it causes a Setback (no Physical Manipulation, or pinned)
 function cpuAdaptiveSetbackChoice(victim) {
-    if (isCpuPinnedInSubmission()) return "submission";
+    if (gameState.submission >= 2) return "submission";             // sliding toward our end: push it back toward neutral
     if (gameState.submission <= -3) return "submission";            // marker already near the human's end: push toward overflow
     const blocked = hasCard(1, 50) || hasCard(1, 32) || victim.shieldActive;   // Mutual Heat / Guided Heat / Rapid Pulse
     const crossesBand = [1, 2, 3, 4].includes(victim.arousal);      // +2 Arousal takes away a reroll
@@ -2430,8 +2458,8 @@ function cpuShouldTransformOnSetback() {
     switch (getCpuDifficulty()) {
         case "random": return Math.random() > 0.5;
         case "aggressive":
-        case "v23low":
-        case "adaptive": return true;
+        case "v23low": return true;
+        case "adaptive": return gameState.submission < 2;   // when the marker is sliding, use the setback to push it back
         case "defensive": return gameState.p1.transform >= 6;
         default: return gameState.p1.transform >= 4;
     }
@@ -2510,9 +2538,11 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     target.transform += amount;
     
     // Only apply Vulnerability if the source is an actual opponent
-    if (sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41)) { 
-        target.vulnerability += amount; 
-        log(`Powerful Transform applied ${amount} Vulnerability to ${target.name}.`); 
+    // Powerful Transform: max ONE vulnerability counter per turn, however many Transform points are dealt
+    if (amount > 0 && sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41) && !gameState.vulnGrantedThisTurn) { 
+        gameState.vulnGrantedThisTurn = true;
+        target.vulnerability += 1; 
+        log(`Powerful Transform applied 1 Vulnerability to ${target.name}.`); 
     }
 }
 
@@ -2676,7 +2706,8 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // Stoking Fires applies.
     // Guided Heat is automatically handled by increaseArousal().
     // ------------------------------------------------------------
-    let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
+    //let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
+	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
     if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; log("Stoking Fires boosted virtual Arousal!"); }
 
     if (arousalEffect > 0) {
@@ -2715,7 +2746,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
 function startTurn() {
     if (gameState.activePlayer === 1) log(`=== ROUND ${gameState.round} ===`, true);
     
-    gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false;
+    gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false; gameState.vulnGrantedThisTurn = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
     activeP.shieldActive = false; activeP.simmeringUsed = false;
     activeP.lastRoll = [];
