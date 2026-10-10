@@ -60,6 +60,7 @@ CPU difficulty is stored on `gameState.p2.difficulty`:
 | `aggressive` | Normal | Presses transform, submission, and energy. |
 | `v23low` | Hard | Same family as aggressive, with tighter thresholds. The name is historical. |
 | `defensive` | Expert | Prioritizes lucidity, energy, and not dying. |
+| `adaptive` | Master | Prioritizes card and dice combinations |
 
 `showEnergyActions` is forced to `false` inside `initializeGame()`. The Energy Action buttons (pay energy for arousal, transform, or submission) and the CPU branches that spend energy that way are currently unreachable. The panels and `buyAction()` are still in the file.
 
