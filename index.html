@@ -616,7 +616,7 @@ const CHARACTER_MANIFEST = {
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
     "Leo": [],
-    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf"]
+    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 
 
@@ -2359,20 +2359,29 @@ function cpuAdaptiveShopPhase() {
 //   Hard   : energy theme - banks energy for the best cards, and only uses dice to fix problems or feed its cards.
 // ============================================================
 const CPU_TIERS = {
-    // maxRerolls (optional): rerolls per turn this level will actually use; capChance = how often it really stops there. Normal usually gives up after 1, like a casual player.
+    // slip = how often this level makes believable mistakes while still chasing its agenda (all optional, 0 = perfect play):
+//   keep    : chance to second-guess each kept die that isn't part of a finished triple and reroll it anyway
+//   noise   : +/- points of misjudgement on every card's score each turn (so it sometimes buys the second-best card)
+//   trouble : chance per turn that it doesn't notice it is in trouble (reacts one step later than usual)
+//   deny    : chance per turn that it forgets to wipe the market to keep a liked card from the human
+// maxRerolls / capChance (optional, Normal only): after this many rerolls it stops rerolling with probability capChance.
     //             liked cards    min score   saving window   deny-wipe   wipe when idle / flush      "trouble" starts at       lowered back to
-    aggressive: { like: 55, buy: 32, reach: 3, patience: 3, denyMin: 55, idleWipe: 6, excessWipe: 8,  maxRerolls: 1, capChance: 0.85, danger: { sub: 4, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 } },
-    defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 } },
-    v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 } }
+    aggressive: { like: 55, buy: 32, reach: 3, patience: 3, denyMin: 55, idleWipe: 6, excessWipe: 8,  danger: { sub: 4, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
+                  slip: { keep: 0.5, noise: 22, trouble: 0.4, deny: 0.7 }, maxRerolls: 1, capChance: 0.45 },
+    defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
+                  slip: { keep: 0.32, noise: 16, trouble: 0.1, deny: 0.5 } },
+    v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
+                  slip: { keep: 0.35, noise: 18, trouble: 0.35, deny: 0.5 } }
 };
 function cpuIsTier() { return !!CPU_TIERS[getCpuDifficulty()]; }
 
 // How much trouble the CPU is in, in steps beyond where this level starts to worry (0 = not worried)
 function cpuTierProblems(level) {
     const cfg = CPU_TIERS[level], p = gameState.p2;
-    const step = (v, t) => (v >= t ? v - t + 1 : 0);
+    const late = cpuBrain.troubleBlind ? 1 : 0;      // a distracted turn: notices trouble one step later
+    const step = (v, t) => (v >= t + late ? v - (t + late) + 1 : 0);
     return { sub: step(Math.max(0, gameState.submission), cfg.danger.sub), arousal: step(p.arousal, cfg.danger.arousal),
-             trance: step(p.trance, cfg.danger.trance), vuln: p.vulnerability || 0 };
+             trance: step(p.trance, cfg.danger.trance), vuln: cpuBrain.troubleBlind ? 0 : (p.vulnerability || 0) };
 }
 
 // Release dice that cannot help: a face that can no longer reach its threshold with the dice still free
@@ -2442,6 +2451,17 @@ function cpuTierKeepPlan(level, r) {
         if (aSyn && (counts.AR >= 2 || has(13))) keepFace("AR");
         if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
     }
+    // believable mistakes: second-guess a kept die and reroll it anyway (never one that is part of a finished triple)
+    const slipKeep = (cfg.slip && cfg.slip.keep) || 0;
+    if (slipKeep > 0) {
+        const kept = k => keep.reduce((sum, kp, i) => sum + (kp && faces[i] === k ? 1 : 0), 0);
+        keep.forEach((kp, i) => {
+            if (!kp) return;
+            const f = faces[i];
+            if ((f === "TR" || f === "SU") && kept(f) >= 3) return;
+            if (Math.random() < slipKeep) keep[i] = false;
+        });
+    }
     return cpuReleaseUselessKeeps(keep, r);
 }
 
@@ -2474,6 +2494,12 @@ function cpuTierCardScore(card, level) {
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
     if (level === "v23low" && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
+    const noise = (CPU_TIERS[level].slip && CPU_TIERS[level].slip.noise) || 0;
+    if (noise > 0) {                                  // misjudgement: fixed for the whole turn
+        if (!cpuBrain.noise) cpuBrain.noise = {};
+        if (cpuBrain.noise[card.id] === undefined) cpuBrain.noise[card.id] = (Math.random() * 2 - 1) * noise;
+        score += cpuBrain.noise[card.id];
+    }
     return score;
 }
 function cpuTierExtraConditions(card, level) {
@@ -2521,7 +2547,7 @@ function cpuTierNextAction(level) {
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
     const threat = liked.find(i => !canPay(i) && i.humanCanAfford && i.score >= cfg.denyMin);
-    if (threat && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
+    if (threat && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
     let best = info.filter(i => i.passes && canPay(i) && i.score >= cfg.buy).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
@@ -4010,6 +4036,12 @@ function executeCPUTurn() {
 
     if (cpuIsAdaptive()) cpuBrainBeginTurn();
     cpuBrain.rerollsUsed = 0;
+    if (cpuIsTier()) {                               // decide this turn's mistakes once, so behaviour doesn't flicker
+        const sl = CPU_TIERS[getCpuDifficulty()].slip || {};
+        cpuBrain.noise = {};
+        cpuBrain.troubleBlind = Math.random() < (sl.trouble || 0);
+        cpuBrain.denyBlind = Math.random() < (sl.deny || 0);
+    }
     rollDiceAction();
     updateUI();
 
