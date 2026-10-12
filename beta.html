@@ -734,6 +734,8 @@ let soundEnabled = false;
 let soundAudioContext = null;
 let diceAnimating = new Set();
 let diceAnimationToken = 0;
+let diceAnimationInterval = null;
+let diceAnimationFaces = new Map();
 
 let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
 let lucidityResolve = null;
@@ -3074,11 +3076,13 @@ function renderDiceAndActions(isHumanTurn) {
     const dc = document.getElementById("dice-container"); dc.innerHTML = "";
     gameState.dice.forEach((die, index) => {
         const isAnimating = diceAnimating.has(index);
+        const visibleFace = isAnimating ? (diceAnimationFaces.get(index) || FACES[Math.floor(Math.random() * FACES.length)]) : die.face;
         const div = document.createElement("div");
+        div.dataset.dieIndex = index;
         div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}${isAnimating ? ' rolling-die' : ''}`;
         if (isAnimating) div.style.animationDelay = `${(index % 6) * 35}ms`;
-        if (die.face === "-") div.innerText = "?";
-        else { div.innerText = gameState.showDiceText ? die.face : die.face.split(" ")[0]; if (!gameState.showDiceText) div.style.fontSize = "2.5em"; }
+        if (visibleFace === "-") div.innerText = "?";
+        else { div.innerText = gameState.showDiceText ? visibleFace : visibleFace.split(" ")[0]; if (!gameState.showDiceText) div.style.fontSize = "2.5em"; }
         if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
             if (diceAnimating.size) return;
             die.kept = !die.kept;
@@ -3669,20 +3673,47 @@ function rollDiceAction() {
     gameState.dice.forEach((die, index) => { if (!die.kept) animatedIndices.push(index); });
     gameState.dice = gameState.dice.map(d => d.kept ? d : { face: FACES[Math.floor(Math.random() * FACES.length)], kept: false });
     if (!isInitRoll) gameState.rerollsLeft--;
-    diceAnimating = new Set(animatedIndices);
+
+    // Keep the real result in gameState, but show independently cycling faces
+    // until the animation ends so players cannot read the result early.
+    if (diceAnimationInterval !== null) {
+        window.clearInterval(diceAnimationInterval);
+        diceAnimationInterval = null;
+    }
     const animationToken = ++diceAnimationToken;
+    diceAnimating = new Set(animatedIndices);
+    diceAnimationFaces = new Map(animatedIndices.map(index => [
+        index,
+        FACES[Math.floor(Math.random() * FACES.length)]
+    ]));
+
     playSound("roll");
     syncToFirebase();
     updateUI();
+
+    // Cycle only the displayed faces; never modify the actual dice results.
+    diceAnimationInterval = window.setInterval(() => {
+        if (animationToken !== diceAnimationToken) return;
+        const diceContainer = document.getElementById("dice-container");
+        animatedIndices.forEach(index => {
+            const face = FACES[Math.floor(Math.random() * FACES.length)];
+            diceAnimationFaces.set(index, face);
+            const dieElement = diceContainer && diceContainer.children[index];
+            if (!dieElement) return;
+            dieElement.innerText = gameState.showDiceText ? face : face.split(" ")[0];
+        });
+    }, 75);
+
     // Visual-only animation: the real roll is already determined and synchronized.
     window.setTimeout(() => {
         if (animationToken !== diceAnimationToken) return;
+        if (diceAnimationInterval !== null) {
+            window.clearInterval(diceAnimationInterval);
+            diceAnimationInterval = null;
+        }
+        diceAnimationFaces.clear();
         diceAnimating.clear();
-        // Re-render both action buttons after the animation. They were rendered
-        // disabled while diceAnimating was non-empty; updating only the Roll
-        // button left Resolve Dice disabled until some unrelated UI refresh.
-        // updateUI recalculates both buttons from the current turn/phase/reroll state,
-        // so Resolve is enabled after the final roll only for the active local player.
+        // Reveal the actual results only when the dice have finished settling.
         if (gameState && !gameState.gameEnded) updateUI();
     }, 850);
 }
