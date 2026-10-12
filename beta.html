@@ -22,6 +22,8 @@
         }
         .modal-content {
             background: var(--panel); padding: 30px; border-radius: 8px; width: 600px;
+            max-width: 95vw; box-sizing: border-box;
+            max-height: 90vh; max-height: 90dvh; overflow-y: auto;      /* scrolls instead of being cut off on short screens */
         }
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .modal-content h2, .modal-content h1 { text-align: center; margin-top: 0; grid-column: span 2; }
@@ -110,6 +112,23 @@
         }
         .die.kept { border-color: var(--accent); background: #443355; }
         .die.cpu-kept { border-color: var(--cpu); background: #553333; }
+        .die.rolling-die {
+            animation: dieTumble 620ms cubic-bezier(.18,.72,.25,1) both;
+            border-color: #d8b4fe;
+            box-shadow: 0 0 10px rgba(157,78,221,.8), inset 0 0 10px rgba(157,78,221,.25);
+            will-change: transform, filter;
+        }
+        @keyframes dieTumble {
+            0% { transform: translateY(0) rotateX(0deg) rotateY(0deg) scale(1); filter: brightness(1); }
+            18% { transform: translateY(-13px) rotateX(100deg) rotateY(80deg) scale(1.08); filter: brightness(1.35); }
+            42% { transform: translateY(2px) rotateX(245deg) rotateY(190deg) scale(.96); }
+            66% { transform: translateY(-5px) rotateX(390deg) rotateY(300deg) scale(1.03); filter: brightness(1.2); }
+            84% { transform: translateY(1px) rotateX(510deg) rotateY(405deg) scale(.99); }
+            100% { transform: translateY(0) rotateX(720deg) rotateY(540deg) scale(1); filter: brightness(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .die.rolling-die { animation-duration: 120ms; }
+        }
         
         button {
             background: var(--accent); color: white; border: none; padding: 8px 12px;
@@ -406,6 +425,11 @@
                     </div>
                     <label style="margin-top: 10px;">Dice Display:</label>
                     <select id="dice-text-option"><option value="on">Text + Symbols</option><option value="off">Symbols Only</option></select>
+                    <label style="margin-top: 10px;">Sound Effects:</label>
+                    <label style="display:flex; align-items:center; gap:8px; margin:5px 0 0; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" id="sound-effects-option" onchange="setSoundEnabled(this.checked)" style="width:auto; margin:0;">
+                        Enable sound effects (off by default)
+                    </label>
                     <!--label style="margin-top: 10px;">Default Energy Actions:</label>
                     <select id="energy-actions-option"><option value="off" selected>Don't Show</option><option value="on">Show</option></select-->
                 </div>
@@ -616,7 +640,7 @@ const CHARACTER_MANIFEST = {
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
     "Leo": [],
-    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf"]
+    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 
 
@@ -704,6 +728,12 @@ let gameState = {
 let onlineRoomId = "";
 let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
 let isSyncingFromFirebase = false;
+
+// Presentation-only state: never participates in game rules or online game-state sync.
+let soundEnabled = false;
+let soundAudioContext = null;
+let diceAnimating = new Set();
+let diceAnimationToken = 0;
 
 let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
 let lucidityResolve = null;
@@ -1092,7 +1122,58 @@ function updateSetupImages() {
     }
 }
 
+// Lightweight synthesized UI sounds. Sound is opt-in and defaults to off.
+function setSoundEnabled(enabled) {
+    soundEnabled = !!enabled;
+    if (!soundEnabled) return;
+    try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass && !soundAudioContext) soundAudioContext = new AudioContextClass();
+        if (soundAudioContext && soundAudioContext.state === "suspended") soundAudioContext.resume();
+    } catch (e) {
+        // Audio is an optional presentation layer; failures must never affect gameplay.
+        soundEnabled = false;
+        const toggle = document.getElementById("sound-effects-option");
+        if (toggle) toggle.checked = false;
+    }
+}
+
+function playSound(kind) {
+    if (!soundEnabled) return;
+    try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!soundAudioContext) soundAudioContext = new AudioContextClass();
+        const ctx = soundAudioContext;
+        if (ctx.state === "suspended") ctx.resume();
+        const now = ctx.currentTime;
+        const presets = {
+            roll:  { freq: 145, end: 82, duration: 0.20, wave: "triangle", gain: 0.075 },
+            lock:  { freq: 620, end: 390, duration: 0.075, wave: "sine", gain: 0.055 },
+            resolve:{ freq: 430, end: 660, duration: 0.14, wave: "sine", gain: 0.045 },
+            card:  { freq: 520, end: 880, duration: 0.18, wave: "triangle", gain: 0.055 }
+        };
+        const preset = presets[kind] || presets.lock;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = preset.wave;
+        osc.frequency.setValueAtTime(preset.freq, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(35, preset.end), now + preset.duration);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(preset.gain, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + preset.duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + preset.duration + 0.015);
+    } catch (e) {
+        // Ignore browser/audio-device failures; game logic continues normally.
+    }
+}
+
 function initializeGame() {
+    const soundOption = document.getElementById("sound-effects-option");
+    setSoundEnabled(!!(soundOption && soundOption.checked));
     const gameMode = document.getElementById("game-mode-option").value;
     const showDiceText = document.getElementById("dice-text-option").value === "on";
     const showEnergyActions = false;
@@ -2359,20 +2440,29 @@ function cpuAdaptiveShopPhase() {
 //   Hard   : energy theme - banks energy for the best cards, and only uses dice to fix problems or feed its cards.
 // ============================================================
 const CPU_TIERS = {
-    // maxRerolls (optional): rerolls per turn this level will actually use; capChance = how often it really stops there. Normal usually gives up after 1, like a casual player.
+    // slip = how often this level makes believable mistakes while still chasing its agenda (all optional, 0 = perfect play):
+//   keep    : chance to second-guess each kept die that isn't part of a finished triple and reroll it anyway
+//   noise   : +/- points of misjudgement on every card's score each turn (so it sometimes buys the second-best card)
+//   trouble : chance per turn that it doesn't notice it is in trouble (reacts one step later than usual)
+//   deny    : chance per turn that it forgets to wipe the market to keep a liked card from the human
+// maxRerolls / capChance (optional, Normal only): after this many rerolls it stops rerolling with probability capChance.
     //             liked cards    min score   saving window   deny-wipe   wipe when idle / flush      "trouble" starts at       lowered back to
-    aggressive: { like: 55, buy: 32, reach: 3, patience: 3, denyMin: 55, idleWipe: 6, excessWipe: 8,  maxRerolls: 1, capChance: 0.85, danger: { sub: 4, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 } },
-    defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 } },
-    v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 } }
+    aggressive: { like: 55, buy: 32, reach: 3, patience: 3, denyMin: 55, idleWipe: 6, excessWipe: 8,  danger: { sub: 4, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
+                  slip: { keep: 0.5, noise: 22, trouble: 0.4, deny: 0.7 }, maxRerolls: 1, capChance: 0.45 },
+    defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
+                  slip: { keep: 0.32, noise: 16, trouble: 0.1, deny: 0.5 } },
+    v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
+                  slip: { keep: 0.35, noise: 18, trouble: 0.35, deny: 0.5 } }
 };
 function cpuIsTier() { return !!CPU_TIERS[getCpuDifficulty()]; }
 
 // How much trouble the CPU is in, in steps beyond where this level starts to worry (0 = not worried)
 function cpuTierProblems(level) {
     const cfg = CPU_TIERS[level], p = gameState.p2;
-    const step = (v, t) => (v >= t ? v - t + 1 : 0);
+    const late = cpuBrain.troubleBlind ? 1 : 0;      // a distracted turn: notices trouble one step later
+    const step = (v, t) => (v >= t + late ? v - (t + late) + 1 : 0);
     return { sub: step(Math.max(0, gameState.submission), cfg.danger.sub), arousal: step(p.arousal, cfg.danger.arousal),
-             trance: step(p.trance, cfg.danger.trance), vuln: p.vulnerability || 0 };
+             trance: step(p.trance, cfg.danger.trance), vuln: cpuBrain.troubleBlind ? 0 : (p.vulnerability || 0) };
 }
 
 // Release dice that cannot help: a face that can no longer reach its threshold with the dice still free
@@ -2442,6 +2532,17 @@ function cpuTierKeepPlan(level, r) {
         if (aSyn && (counts.AR >= 2 || has(13))) keepFace("AR");
         if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
     }
+    // believable mistakes: second-guess a kept die and reroll it anyway (never one that is part of a finished triple)
+    const slipKeep = (cfg.slip && cfg.slip.keep) || 0;
+    if (slipKeep > 0) {
+        const kept = k => keep.reduce((sum, kp, i) => sum + (kp && faces[i] === k ? 1 : 0), 0);
+        keep.forEach((kp, i) => {
+            if (!kp) return;
+            const f = faces[i];
+            if ((f === "TR" || f === "SU") && kept(f) >= 3) return;
+            if (Math.random() < slipKeep) keep[i] = false;
+        });
+    }
     return cpuReleaseUselessKeeps(keep, r);
 }
 
@@ -2474,6 +2575,12 @@ function cpuTierCardScore(card, level) {
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
     if (level === "v23low" && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
+    const noise = (CPU_TIERS[level].slip && CPU_TIERS[level].slip.noise) || 0;
+    if (noise > 0) {                                  // misjudgement: fixed for the whole turn
+        if (!cpuBrain.noise) cpuBrain.noise = {};
+        if (cpuBrain.noise[card.id] === undefined) cpuBrain.noise[card.id] = (Math.random() * 2 - 1) * noise;
+        score += cpuBrain.noise[card.id];
+    }
     return score;
 }
 function cpuTierExtraConditions(card, level) {
@@ -2521,7 +2628,7 @@ function cpuTierNextAction(level) {
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
     const threat = liked.find(i => !canPay(i) && i.humanCanAfford && i.score >= cfg.denyMin);
-    if (threat && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
+    if (threat && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
     let best = info.filter(i => i.passes && canPay(i) && i.score >= cfg.buy).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
@@ -2966,10 +3073,19 @@ function updateUI() {
 function renderDiceAndActions(isHumanTurn) {
     const dc = document.getElementById("dice-container"); dc.innerHTML = "";
     gameState.dice.forEach((die, index) => {
-        const div = document.createElement("div"); div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}`;
+        const isAnimating = diceAnimating.has(index);
+        const div = document.createElement("div");
+        div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}${isAnimating ? ' rolling-die' : ''}`;
+        if (isAnimating) div.style.animationDelay = `${(index % 6) * 35}ms`;
         if (die.face === "-") div.innerText = "?";
         else { div.innerText = gameState.showDiceText ? die.face : die.face.split(" ")[0]; if (!gameState.showDiceText) div.style.fontSize = "2.5em"; }
-        if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => { die.kept = !die.kept; syncToFirebase(); updateUI(); };
+        if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
+            if (diceAnimating.size) return;
+            die.kept = !die.kept;
+            playSound("lock");
+            syncToFirebase();
+            updateUI();
+        };
         dc.appendChild(div);
     });
 
@@ -2977,7 +3093,7 @@ function renderDiceAndActions(isHumanTurn) {
     let isInitRoll = gameState.dice[0].face === "-";
     let activeColor = gameState.activePlayer === 1 ? 'var(--player)' : 'var(--cpu)';
 
-    let rollBtnDisabled = !isHumanTurn || (!isInitRoll && gameState.rerollsLeft <= 0) || gameState.phase !== "rolling";
+    let rollBtnDisabled = !isHumanTurn || diceAnimating.size > 0 || (!isInitRoll && gameState.rerollsLeft <= 0) || gameState.phase !== "rolling";
     ag.innerHTML += `<button onclick="rollDiceAction()" id="btn-roll" ${rollBtnDisabled ? 'disabled' : ''} style="${rollBtnDisabled ? '' : 'background: ' + activeColor + ';'}">${isInitRoll ? "Roll Dice" : "Roll Unkept Dice"}</button>`;
     
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
@@ -2985,7 +3101,7 @@ function renderDiceAndActions(isHumanTurn) {
         ag.innerHTML += `<button onclick="buyReroll(1, 16, ${gameState.activePlayer})" style="background:#f4a261; color:#000; font-weight:bold;">Use Hypnotic Suggestion (1⚡)</button>`;
     }
     
-    let resolveDisabled = !isHumanTurn || isInitRoll || gameState.phase !== "rolling";
+    let resolveDisabled = !isHumanTurn || diceAnimating.size > 0 || isInitRoll || gameState.phase !== "rolling";
     ag.innerHTML += `<button onclick="resolveDice()" id="btn-resolve" ${resolveDisabled ? 'disabled' : ''} style="${resolveDisabled ? '' : 'background: ' + activeColor + ';'}">Resolve Dice</button>`;
 }
 
@@ -3549,10 +3665,26 @@ function startTurn() {
 function rollDiceAction() {
     let isInitRoll = gameState.dice[0].face === "-";
     if (!isInitRoll && gameState.rerollsLeft <= 0) return;
+    const animatedIndices = [];
+    gameState.dice.forEach((die, index) => { if (!die.kept) animatedIndices.push(index); });
     gameState.dice = gameState.dice.map(d => d.kept ? d : { face: FACES[Math.floor(Math.random() * FACES.length)], kept: false });
     if (!isInitRoll) gameState.rerollsLeft--;
+    diceAnimating = new Set(animatedIndices);
+    const animationToken = ++diceAnimationToken;
+    playSound("roll");
     syncToFirebase();
     updateUI();
+    // Visual-only animation: the real roll is already determined and synchronized.
+    window.setTimeout(() => {
+        if (animationToken !== diceAnimationToken) return;
+        diceAnimating.clear();
+        // Re-render both action buttons after the animation. They were rendered
+        // disabled while diceAnimating was non-empty; updating only the Roll
+        // button left Resolve Dice disabled until some unrelated UI refresh.
+        // updateUI recalculates both buttons from the current turn/phase/reroll state,
+        // so Resolve is enabled after the final roll only for the active local player.
+        if (gameState && !gameState.gameEnded) updateUI();
+    }, 850);
 }
 
 // LUCIDITY MODAL LOGIC
@@ -3617,6 +3749,7 @@ function confirmLucidity() { if (document.getElementById("lucidity-confirm-btn")
 async function resolveDice() {
     // In online mode, only the active local player executes dice resolution
     if (gameState.gameMode === "online" && !isLocalPlayerTurn()) return;
+    playSound("resolve");
 
     gameState.phase = "shop";
     
@@ -3897,6 +4030,7 @@ function buyCard(index) {
     }
 
     log(`Bought card: ${card.name}`);
+    playSound("card");
 
     if (hasCard(playerId, 46)) {
         pushSubmission(playerId === 1 ? 1 : -1, playerId);
@@ -4010,6 +4144,12 @@ function executeCPUTurn() {
 
     if (cpuIsAdaptive()) cpuBrainBeginTurn();
     cpuBrain.rerollsUsed = 0;
+    if (cpuIsTier()) {                               // decide this turn's mistakes once, so behaviour doesn't flicker
+        const sl = CPU_TIERS[getCpuDifficulty()].slip || {};
+        cpuBrain.noise = {};
+        cpuBrain.troubleBlind = Math.random() < (sl.trouble || 0);
+        cpuBrain.denyBlind = Math.random() < (sl.deny || 0);
+    }
     rollDiceAction();
     updateUI();
 
@@ -4549,7 +4689,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Submission Track</h3>
-            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions.</p>
+            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions again and again.</p>
             <p>At Submission 3 or more, a roll of ⛓️ produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of push.</p>
         </div>
         <div class="help-section">
@@ -4558,7 +4698,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Arousal & Rerolls</h3>
-            <p>Two 🔥 dice produce 1 Arousal, four produce 2, etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. Some cards add rerolls or other modifiers.</p>
+            <p>Two 🔥 dice produce 1 Arousal. Each one after produces one more. So 3 🔥 produce 2, 4 🔥 produce 3, etc., etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. Some cards add rerolls or other modifiers.</p>
         </div>
         <div class="help-section">
             <h3>Transform</h3>
@@ -4585,8 +4725,8 @@ const HELP_CONTENT = {
                 <div class="help-box"><div class="help-die">💧 LUCIDITY</div>Reduce your own Trance, Arousal, and applicable Vulnerability.</div>
                 <div class="help-box"><div class="help-die">⚡ ENERGY</div>Gain Energy. Power Boost can add extra Energy.</div>
                 <div class="help-box"><div class="help-die">⛓️ SUBMISSION</div>Three or more push the Submission track. Three ⛓️ also trigger effects from cards such as Somnambulism.</div>
-                <div class="help-box"><div class="help-die">🔥 AROUSAL</div>Every two 🔥 contribute 1 Arousal, with card effects able to modify the result.</div>
-                <div class="help-box"><div class="help-die">👁️ TRANSFORM</div>Three or more deal Transform damage to the opponent.</div>
+                <div class="help-box"><div class="help-die">🔥 AROUSAL</div>Two 🔥 contribute 1 Arousal, and one more Arousal for each 🔥, with card effects able to modify the result.</div>
+                <div class="help-box"><div class="help-die">👁️ TRANSFORM</div>Three or more deal further Transforms to the opponent.</div>
             </div>
         </div>
         <div class="help-section">
@@ -4609,7 +4749,8 @@ const HELP_CONTENT = {
         <div class="help-section">
             <h3>Buying Cards</h3>
             <p>You may buy multiple cards during your shop phase if you have enough Energy. Hypnotic Focus reduces the cost of only your first purchase that turn; later purchases use their normal modified cost.</p>
-            <p><strong>Wipe Row</strong> costs 2 Energy, discards the current market cards, and replaces the row with new cards when available.</p>
+            <p><strong>Wipe Row</strong> costs 2 Energy, discards the current market cards, and replaces the row with new cards when available. If you think the opponent will get a powerful card and you
+			can't afford it, it is sometimes beneficial to wipe the market so they can't get it.</p>
         </div>
     `,
     advanced: `
@@ -4641,7 +4782,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>AI Difficulties</h3>
-            <p>Beginner is more random. Easy uses basic strategy. Normal is more aggressive. Hard uses a stronger strategic profile. Expert emphasizes defensive play.</p>
+            <p>Beginner is more random. Easy uses basic strategy. Normal is more aggressive. Hard uses a stronger strategic profile. Expert emphasizes defensive play. Master/Mistress uses an adaptive playstyle and can be very challenging.</p>
         </div>
     `
 };
