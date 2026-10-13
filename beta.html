@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hypnotic Duel - Beta V12.0</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
             --accent: #9d4edd; --accent-hover: #7b2cbf;
             --cpu: #ff4d4d; --player: #4cc9f0;
+            --font-display: 'Cinzel', Georgia, serif;
+            --font-ui: 'Inter', 'Segoe UI', Tahoma, sans-serif;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-ui);
             background-color: var(--bg); color: var(--text);
             margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
         }
@@ -24,6 +29,61 @@
             background: var(--panel); padding: 30px; border-radius: 8px; width: 600px;
             max-width: 95vw; box-sizing: border-box;
             max-height: 90vh; max-height: 90dvh; overflow-y: auto;      /* scrolls instead of being cut off on short screens */
+        }
+        /* Compact, occult-themed setup and the shared options/tools dialog. */
+        #settings-modal { background: rgba(4, 2, 12, .88); backdrop-filter: blur(5px); }
+        .setup-modal-content {
+            width: min(760px, 96vw); padding: 21px 24px 22px;
+            border: 1px solid rgba(192,132,252,.55);
+            box-shadow: 0 0 0 1px rgba(76,201,240,.08), 0 18px 70px rgba(0,0,0,.7), 0 0 28px rgba(157,78,221,.18);
+            background: radial-gradient(ellipse at top, #393047 0%, var(--panel) 58%);
+        }
+        .setup-brand { text-align:center; margin-bottom:15px; }
+        .setup-brand h2 { margin:0 0 4px; border:0; padding:0; letter-spacing:.13em; font-size:1.55rem; }
+        .setup-brand .setup-tagline { color:#c9a9f2; font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; }
+        .setup-modal-content .settings-grid { gap:12px; }
+        .setup-modal-content .modal-col { gap:6px; }
+        .setup-modal-content .modal-col h3 { margin-bottom:3px; font-size:1rem; }
+        .setup-modal-content .setup-preview { height:138px !important; margin-bottom:5px !important; border-style:solid; border-color:#554767; }
+        .setup-modal-content label { font-size:.88rem; }
+        .setup-modal-content select, .setup-modal-content input { padding:7px; }
+        .setup-mode-section { grid-column:span 2; border-top:1px solid rgba(192,132,252,.32); padding-top:12px; }
+        .setup-mode-section > label:first-child { color:#d8b5ff; text-transform:uppercase; letter-spacing:.08em; font-size:.75rem; }
+        .setup-footer-actions { display:flex; gap:9px; margin-top:12px; }
+        .setup-footer-actions button { flex:1; margin:0; }
+        .themed-secondary-btn { background:#30243f !important; border:1px solid #72518c !important; }
+        #options-modal { z-index: 180; background:rgba(4,2,12,.82); backdrop-filter:blur(5px); }
+        .options-modal-content {
+            width:min(540px, 95vw); padding:24px;
+            border:1px solid rgba(192,132,252,.58);
+            background:radial-gradient(ellipse at top, #393047 0%, var(--panel) 62%);
+            box-shadow:0 18px 70px rgba(0,0,0,.72), 0 0 32px rgba(157,78,221,.2);
+        }
+        .options-modal-content h2 { margin-bottom:5px; border:0; padding:0; letter-spacing:.08em; }
+        .options-subtitle { text-align:center; color:#bda9d3; font-size:.84rem; margin:0 0 17px; }
+        .options-section { border:1px solid #51405f; border-radius:9px; padding:13px; margin-top:12px; background:rgba(12,9,18,.35); }
+        .options-section h3 { font-size:.88rem; color:#d8b5ff; letter-spacing:.1em; text-transform:uppercase; margin:0 0 12px; }
+        .option-row { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:9px 0; }
+        .option-row label { font-weight:normal; }
+        .option-row select { min-width:170px; max-width:55%; }
+        .option-toggle { display:flex; align-items:center; gap:9px; cursor:pointer; }
+        .option-toggle input { width:auto !important; margin:0; accent-color:var(--accent); }
+        .options-tool-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .options-tool-grid button { width:100%; min-height:40px; }
+        .options-tool-grid .danger-tool { background:#662b38; border-color:#a94a5b; }
+        .options-close { width:100%; margin-top:15px; background:#49335e !important; }
+        @media (max-width: 620px) {
+            .main-toolbar-btn { font-size:.78rem; padding:7px 8px; }
+            .turn-history-card { padding:9px; }
+            .turn-history-section ul { font-size:.76rem; }
+            .setup-modal-content { padding:16px 13px; }
+            .setup-modal-content .settings-grid { gap:8px; }
+            .setup-modal-content .setup-preview { height:105px !important; }
+            .setup-modal-content .modal-col { min-width:0; }
+            .setup-modal-content select { max-width:100%; font-size:.88rem; }
+            .options-modal-content { padding:18px 14px; }
+            .option-row { align-items:flex-start; flex-direction:column; gap:6px; }
+            .option-row select { max-width:100%; width:100%; }
         }
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .modal-content h2, .modal-content h1 { text-align: center; margin-top: 0; grid-column: span 2; }
@@ -47,7 +107,15 @@
         .board { display: flex; gap: 15px; width: 100%; max-width: 1200px; }
         .panel { background: var(--panel); padding: 15px; border-radius: 8px; flex: 1; display: flex; flex-direction: column; }
         .center-board { flex: 2; gap: 10px; }
+        h1, h2, h3, .setup-brand h2, .options-modal-content h2 {
+            font-family: var(--font-display);
+            font-weight: 600;
+        }
+        h1 { letter-spacing: .035em; }
         h2, h3 { margin: 0 0 10px 0; border-bottom: 2px solid var(--accent); padding-bottom: 5px; transition: text-shadow 0.3s; }
+        .setup-brand h2 { letter-spacing: .10em; }
+        .options-modal-content h2 { letter-spacing: .06em; }
+        .setup-brand .setup-tagline, .options-section h3 { font-family: var(--font-ui); }
         
         .active-player-glow {
             text-shadow: 0 0 15px currentColor, 0 0 25px currentColor;
@@ -171,6 +239,11 @@
 
         .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; }
         .track-container { background: #111; padding: 15px; border-radius: 5px; text-align: center; }
+        /* Keep the middle Submission label mathematically centered, independent of side-label lengths. */
+        #track-labels { display: grid !important; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 6px; }
+        #track-labels span:first-child { justify-self: start; text-align: left; }
+        #track-labels span:nth-child(2) { justify-self: center; text-align: center; white-space: nowrap; }
+        #track-labels span:last-child { justify-self: end; text-align: right; }
         .track-nodes { display: flex; justify-content: space-between; align-items: center; position: relative; margin-top: 10px; min-height: 28px; }
         .track-nodes::before {
             content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px;
@@ -244,6 +317,7 @@
             .die.rolling-die { animation-duration: 120ms; }
         }
         
+        button, input, select, textarea { font-family: var(--font-ui); }
         button {
             background: var(--accent); color: white; border: none; padding: 8px 12px;
             border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-top: 5px;
@@ -252,11 +326,42 @@
         button:disabled { background: #555 !important; cursor: not-allowed; }
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         
-        .log { background: #111; padding: 10px; height: 180px; overflow-y: scroll; border-radius: 5px; font-family: monospace; font-size: 0.9em; }
+        .log { background: #111; padding: 10px; height: 180px; overflow-y: scroll; border-radius: 5px; font-family: var(--font-ui); font-size: 0.82em; line-height: 1.5; }
+        .main-toolbar-btn { width:auto; margin:0; white-space:nowrap; padding:8px 11px; }
+        .turn-history-card { margin-top:12px; border:1px solid #51405f; border-radius:9px; padding:12px; background:linear-gradient(145deg,rgba(42,31,56,.96),rgba(16,13,23,.96)); box-shadow:inset 0 0 18px rgba(157,78,221,.06); }
+        .turn-history-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+        .turn-history-head h3 { margin:0; border:0; padding:0; font-size:.95rem; color:#e0c5ff; }
+        .turn-history-nav { display:flex; align-items:center; gap:7px; }
+        .turn-history-nav button { width:32px; height:30px; padding:0; margin:0; display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
+        .turn-history-position { color:#b9a8ca; font-size:.75rem; min-width:76px; text-align:center; }
+        .turn-history-player { color:#e5d6f4; font-size:.84rem; font-weight:600; margin:0 0 8px; }
+        .turn-history-section { margin-top:8px; }
+        .turn-history-section strong { display:block; color:#c8a7f0; font-size:.73rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:3px; }
+        .turn-history-section ul { margin:0; padding-left:19px; font-size:.8rem; line-height:1.45; color:#ded7e8; }
+        .turn-history-section li { margin:2px 0; overflow-wrap:anywhere; }
+        .turn-history-empty { color:#aa9db8; font-size:.82rem; padding:8px 0; }
+        .log-hidden { display:none !important; }
         .cpu-last-roll { font-size: 1.2em; letter-spacing: 2px; white-space: nowrap; overflow: hidden; text-align: center; margin-top: 10px; background: #111; border-radius: 5px; padding: 5px;}
         .vuln-badge { color: #ff9f1c; font-weight: bold; font-size: 0.9em; }
 		
-		.btn-end-turn {
+		        .turn-status-block { margin:10px 0 0; min-width:0; }
+        /* Equal outer grid columns keep the turn label centered in the full row,
+           regardless of which player's End Turn button is visible/enabled. */
+        .turn-status-row { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:6px; width:100%; }
+        #turn-indicator { grid-column:2; min-width:0; max-width:100%; text-align:center; font-weight:bold; font-size:1.02em; white-space:nowrap; }
+        .compact-end-turn { width:auto; min-width:0; justify-self:start; margin:0; padding:7px 9px; font-size:.72em; letter-spacing:.2px; border-width:1px; white-space:nowrap; }
+        #btn-end-turn-2 { justify-self:end; }
+        .turn-end-p1:not(:disabled) { background:var(--player) !important; }
+        .turn-end-p2:not(:disabled) { background:var(--cpu) !important; }
+        .rerolls-status { display:block; text-align:center; font-size:.85em; font-weight:normal; margin-top:5px; }
+        @media (max-width: 480px) {
+            .turn-status-row { gap:3px; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+            .compact-end-turn { padding:6px 5px; font-size:.64em; }
+            #turn-indicator { font-size:.88em; }
+        }
+
+        .btn-end-turn {
+
 			margin-top: auto;
 			padding: 14px;
 			font-size: 1.1em;
@@ -296,6 +401,11 @@
 			cursor: not-allowed;
 			filter: none;
 		}
+        /* Compact placement overrides the original full-width footer button sizing. */
+        .btn-end-turn.compact-end-turn { margin:0; padding:7px 9px; font-size:.72em; letter-spacing:.2px; }
+        @media (max-width: 480px) {
+            .btn-end-turn.compact-end-turn { padding:6px 5px; font-size:.64em; }
+        }
 
 
         /* ============================================================
@@ -495,12 +605,12 @@
 
     <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Game Settings</h2>
+        <div class="modal-content setup-modal-content">
+            <div class="setup-brand"><h2>HYPNOTIC DUEL</h2><div class="setup-tagline">The mind is the battlefield</div></div>
             <div class="settings-grid">
                <div class="modal-col" id="p1-setup-col">
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
-                    <div class="image-stub" id="setup-p1-image" style="height: 180px; margin-bottom: 10px;"></div>
+                    <div class="image-stub" id="setup-p1-image" class="setup-preview" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
                     <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type" onchange="onTransformSelectChange('p1-transform-type')"></select>
                     <div id="p1-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
@@ -509,7 +619,7 @@
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
-                    <div class="image-stub" id="setup-cpu-image" style="height: 180px; margin-bottom: 10px;"></div>
+                    <div class="image-stub" id="setup-cpu-image" class="setup-preview" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
                     <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type" onchange="onTransformSelectChange('cpu-transform-type')"></select>
                     <div id="cpu-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
@@ -527,7 +637,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-col" style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px;">
+                <div class="modal-col setup-mode-section">
                     <label>Game Mode:</label>
                     <select id="game-mode-option" onchange="toggleGameMode()">
                         <option value="solo">1 Player vs CPU</option>
@@ -574,22 +684,58 @@
                             <option value="2">Guest (Player 2)</option>
                         </select>
                     </div>
-                    <label style="margin-top: 10px;">Dice Display:</label>
-                    <select id="dice-text-option"><option value="on">Text + Symbols</option><option value="off">Symbols Only</option></select>
-                    <label style="margin-top: 10px;">Sound Effects:</label>
-                    <label style="display:flex; align-items:center; gap:8px; margin:5px 0 0; font-weight:normal; cursor:pointer;">
-                        <input type="checkbox" id="sound-effects-option" onchange="setSoundEnabled(this.checked)" style="width:auto; margin:0;">
-                        Enable sound effects (off by default)
-                    </label>
-                    <!--label style="margin-top: 10px;">Default Energy Actions:</label>
-                    <select id="energy-actions-option"><option value="off" selected>Don't Show</option><option value="on">Show</option></select-->
+                    <!-- Display and sound settings live in the shared Options & Tools dialog. -->
                 </div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button type="button" class="help-btn" onclick="openHelpModal('quick')" style="flex:1;">? How to Play</button>
-                <button type="button" class="help-btn" onclick="prepareGuidedTutorial()" style="flex:1;">Guided Tutorial</button>
+            <div class="setup-footer-actions">
+                <button type="button" class="themed-secondary-btn" onclick="openOptionsModal('setup')">⚙ Options &amp; Tools</button>
+                <button type="button" class="themed-secondary-btn" onclick="prepareGuidedTutorial()">✦ Guided Tutorial</button>
             </div>
-            <button class="start-btn" id="start-game-btn" onclick="onStartClicked()">Start Game</button>
+            <button class="start-btn" id="start-game-btn" onclick="onStartClicked()">✧ Begin Duel ✧</button>
+        </div>
+    </div>
+
+    <!-- SHARED DISPLAY / AUDIO OPTIONS AND GAME TOOLS -->
+    <div id="options-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content options-modal-content">
+            <h2>✧ OPTIONS &amp; TOOLS ✧</h2>
+            <p class="options-subtitle">Tune the experience or consult your grimoire.</p>
+
+            <section class="options-section" aria-labelledby="options-display-heading">
+                <h3 id="options-display-heading">Display &amp; Audio</h3>
+                <div class="option-row">
+                    <label for="dice-text-option">Dice notation</label>
+                    <select id="dice-text-option" onchange="applyDiceDisplay(this.value)">
+                        <option value="on">Text + Symbols</option>
+                        <option value="off">Symbols Only</option>
+                    </select>
+                </div>
+                <div class="option-row">
+                    <label class="option-toggle" for="sound-effects-option">
+                        <input type="checkbox" id="sound-effects-option" onchange="setSoundEnabled(this.checked)">
+                        <span>Enable sound effects</span>
+                    </label>
+                    <span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
+                </div>
+                <div class="option-row">
+                    <label class="option-toggle" for="show-game-log-option">
+                        <input type="checkbox" id="show-game-log-option" onchange="setGameLogVisible(this.checked)">
+                        <span>Show detailed game log</span>
+                    </label>
+                    <span style="color:#9e91ad;font-size:.78rem;">History is still recorded</span>
+                </div>
+            </section>
+
+            <section class="options-section" aria-labelledby="options-tools-heading">
+                <h3 id="options-tools-heading">Game Tools</h3>
+                <div class="options-tool-grid">
+                    <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
+                    <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
+                    <button type="button" onclick="recDownload()">⇩ Download Game Logs</button>
+                    <button type="button" class="danger-tool" onclick="confirmResetGame()">↻ Reset Game</button>
+                </div>
+            </section>
+            <button type="button" class="options-close" onclick="closeOptionsModal()">Return to Game</button>
         </div>
     </div>
 
@@ -679,9 +825,8 @@
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin-bottom: 10px;">
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
-            <button class="help-btn" onclick="openHelpModal('quick')">? How to Play</button>
-            <button class="help-btn" onclick="recDownload()" title="Download recorded games (JSON) for AI analysis">💾 Download Game Logs</button>
-            <button onclick="location.reload()" style="width: auto; background: #e63946; font-weight: bold; padding: 10px 20px;">Reset Game</button>
+            <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Browse every card and its effect">📚 Card Library</button>
+            <button class="help-btn themed-secondary-btn main-toolbar-btn" onclick="openOptionsModal('game')" title="Display, audio, help, logs, and game controls">⚙ Options &amp; Tools</button>
         </div>
     </div>
 
@@ -719,7 +864,6 @@
             <h3>Active Cards</h3>
             <div id="p1-inventory" class="inventory"></div>
 
-            <button onclick="endTurn()" id="btn-end-turn-1" class="btn-end-turn">End Turn</button>
         </div>
 
         <!-- CENTER PANEL -->
@@ -740,12 +884,27 @@
             <div class="choice-dialog" id="choice-dialog"></div>
             <div id="card-trigger-toast" role="status" aria-live="polite"></div>
 
-            <h3 style="display: flex; flex-direction: column; align-items: center; border: none; gap: 5px; margin: 10px 0 0 0;">
-                <span id="turn-indicator">►► Turn ◄◄</span> 
-                <span style="font-size: 0.85em; font-weight: normal;" id="rerolls-indicator"></span>
-            </h3>
+            <div class="turn-status-block">
+                <div class="turn-status-row">
+                    <button onclick="endTurn()" id="btn-end-turn-1" class="btn-end-turn compact-end-turn turn-end-p1">End Turn</button>
+                    <span id="turn-indicator">►► Turn ◄◄</span>
+                    <button onclick="endTurn()" id="btn-end-turn-2" class="btn-end-turn compact-end-turn turn-end-p2" style="display: none;">End Turn</button>
+                </div>
+                <span id="rerolls-indicator" class="rerolls-status"></span>
+            </div>
             <div class="dice-container" id="dice-container"></div>
             <div class="actions-grid" id="actions-grid"></div>
+            <section class="turn-history-card" id="turn-history-card" aria-label="Turn history">
+                <div class="turn-history-head">
+                    <h3>✧ Turn Chronicle</h3>
+                    <div class="turn-history-nav">
+                        <button type="button" id="turn-history-prev" onclick="moveTurnHistory(-1)" aria-label="Previous turn" title="Previous turn">‹</button>
+                        <span class="turn-history-position" id="turn-history-position">Turn —</span>
+                        <button type="button" id="turn-history-next" onclick="moveTurnHistory(1)" aria-label="Next turn" title="Next turn">›</button>
+                    </div>
+                </div>
+                <div id="turn-history-content" aria-live="polite"><div class="turn-history-empty">Turn events will appear here as the duel unfolds.</div></div>
+            </section>
             <div class="log" id="game-log"></div>
         </div>
 
@@ -780,7 +939,6 @@
             <h3>Active Cards</h3>
             <div id="p2-inventory" class="inventory"></div>
             
-            <button onclick="endTurn()" id="btn-end-turn-2" class="btn-end-turn" style="display: none;">End Turn</button>
         </div>
     </div>
 
@@ -804,18 +962,18 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat"],
     "Roz": ["Werewolf","Cow","Eevee"],
     "Victor": [],
-    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet","Robot"],
+    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
-    "Mark": ["Robot","Puppet"],
+    "Mark": ["Robot","Puppet","Statue"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 
@@ -908,6 +1066,11 @@ let isSyncingFromFirebase = false;
 // Presentation-only state: never participates in game rules or online game-state sync.
 let soundEnabled = false;
 let soundAudioContext = null;
+// Presentation preferences are local to this browser, not shared game-state rules.
+let localShowDiceText = true;
+let localShowGameLog = true;
+let selectedHistoryIndex = -1; // -1 follows the newest available turn
+let optionsReturnTarget = "game";
 let diceAnimating = new Set();
 let diceAnimationToken = 0;
 let diceAnimationInterval = null;
@@ -917,6 +1080,10 @@ let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal:
 let lucidityResolve = null;
 
 window.onload = () => {
+    loadLocalDisplayPreferences();
+    setGameLogVisible(localShowGameLog);
+    const diceOption = document.getElementById("dice-text-option");
+    if (diceOption) diceOption.value = localShowDiceText ? "on" : "off";
     const populate = (id, arr, addRandom = false) => {
         const select = document.getElementById(id);
         select.innerHTML = "";
@@ -1113,10 +1280,7 @@ function addLog(msg) {
     msg = cpuDecorateLog(String(msg));
     gameState.log.push(msg);
 
-    // Keep the log to a reasonable size (e.g., last 50 entries)
-    if (gameState.log.length > 50) {
-        gameState.log.shift();
-    }
+    // Keep the complete in-match log so hiding the panel never discards history.
 
     // Sync to Firebase and update local UI
     syncToFirebase();
@@ -1134,6 +1298,87 @@ function renderLog() {
 
     logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
     logBox.scrollTop = logBox.scrollHeight;
+}
+
+function historyPlainText(value) {
+    const box = document.createElement("div");
+    box.innerHTML = String(value == null ? "" : value);
+    return (box.textContent || box.innerText || "").replace(/\s+/g, " ").trim();
+}
+
+function getTurnHistoryGroups() {
+    let logs = gameState && gameState.log ? gameState.log : [];
+    if (!Array.isArray(logs)) logs = Object.values(logs);
+    const groups = [];
+    let current = null;
+    let currentRound = null;
+    logs.forEach(raw => {
+        const text = historyPlainText(raw);
+        if (!text) return;
+        const roundMatch = text.match(/ROUND\s+(\d+)/i);
+        if (roundMatch) currentRound = Number(roundMatch[1]);
+        if (/---\s*.+?['’]s Turn\s*---/i.test(text) || /---\s*Player\s*\d+\s+Turn\s*---/i.test(text)) {
+            current = { player: text.replace(/^---\s*/, "").replace(/\s*---$/, ""), round: currentRound, events: [] };
+            groups.push(current);
+        }
+        if (!current) {
+            current = { player: "Earlier events", round: currentRound, events: [] };
+            groups.push(current);
+        }
+        // Don't repeat the generated turn header as a bullet in its own card.
+        if (!/---\s*.+?['’]s Turn\s*---/i.test(text)) current.events.push(text);
+    });
+    return groups;
+}
+
+function escapeHistoryHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[ch]));
+}
+
+function renderTurnHistory() {
+    const content = document.getElementById("turn-history-content");
+    const position = document.getElementById("turn-history-position");
+    const prev = document.getElementById("turn-history-prev");
+    const next = document.getElementById("turn-history-next");
+    if (!content || !gameState) return;
+    const groups = getTurnHistoryGroups();
+    if (!groups.length) {
+        content.innerHTML = '<div class="turn-history-empty">Turn events will appear here as the duel unfolds.</div>';
+        if (position) position.textContent = "Turn —";
+        if (prev) prev.disabled = true;
+        if (next) next.disabled = true;
+        return;
+    }
+    const index = selectedHistoryIndex < 0 ? groups.length - 1 : Math.max(0, Math.min(selectedHistoryIndex, groups.length - 1));
+    if (selectedHistoryIndex >= groups.length) selectedHistoryIndex = groups.length - 1;
+    const group = groups[index];
+    const events = group.events || [];
+    const categories = [
+        { label: "Rolls & Dice", match: t => /roll|dice|reroll|re-roll|kept|last keep/i.test(t) },
+        { label: "Cards & Effects", match: t => /card|bought|used|trigger|granted|activated|played|discard|shield|altered state|override|staircase|rapid pulse|mental awakening/i.test(t) }
+    ];
+    const used = new Set();
+    let sections = "";
+    categories.forEach(category => {
+        const items = events.filter(t => category.match(t));
+        items.forEach(t => used.add(t));
+        if (items.length) sections += `<div class="turn-history-section"><strong>${category.label}</strong><ul>${items.slice(-8).map(t => `<li>${escapeHistoryHtml(t)}</li>`).join("")}</ul></div>`;
+    });
+    const outcomes = events.filter(t => !used.has(t));
+    if (outcomes.length) sections += `<div class="turn-history-section"><strong>Turn events</strong><ul>${outcomes.slice(-8).map(t => `<li>${escapeHistoryHtml(t)}</li>`).join("")}</ul></div>`;
+    const roundLabel = group.round ? ` · Round ${group.round}` : "";
+    content.innerHTML = `<div class="turn-history-player">${escapeHistoryHtml(group.player)}${roundLabel}</div>${sections || '<div class="turn-history-empty">No detailed events were recorded for this turn.</div>'}`;
+    if (position) position.textContent = `Turn ${index + 1} / ${groups.length}`;
+    if (prev) prev.disabled = index <= 0;
+    if (next) next.disabled = index >= groups.length - 1;
+}
+
+function moveTurnHistory(direction) {
+    const groups = getTurnHistoryGroups();
+    if (!groups.length) return;
+    const current = selectedHistoryIndex < 0 ? groups.length - 1 : selectedHistoryIndex;
+    selectedHistoryIndex = Math.max(0, Math.min(groups.length - 1, current + direction));
+    renderTurnHistory();
 }
 
 // ============================================================
@@ -1374,11 +1619,66 @@ function playSubmissionCrackleSound() {
     } catch (e) { /* Optional UI sound only; never affect gameplay. */ }
 }
 
+function applyDiceDisplay(value) {
+    localShowDiceText = value !== "off";
+    try { localStorage.setItem("hypduel_show_dice_text", String(localShowDiceText)); } catch (e) {}
+    // Keep the legacy field initialized for existing saves, but rendering uses this local preference.
+    if (gameState && !gameState.gameEnded) {
+        try { updateUI(); } catch (e) { /* Settings must not interrupt gameplay. */ }
+    }
+}
+
+function loadLocalDisplayPreferences() {
+    try {
+        const savedDice = localStorage.getItem("hypduel_show_dice_text");
+        if (savedDice !== null) localShowDiceText = savedDice !== "false";
+        const savedLog = localStorage.getItem("hypduel_show_game_log");
+        if (savedLog !== null) localShowGameLog = savedLog !== "false";
+    } catch (e) { /* Storage may be unavailable for local files or private browsing. */ }
+}
+
+function setGameLogVisible(visible) {
+    localShowGameLog = !!visible;
+    try { localStorage.setItem("hypduel_show_game_log", String(localShowGameLog)); } catch (e) {}
+    const logBox = document.getElementById("game-log");
+    if (logBox) {
+        logBox.classList.toggle("log-hidden", !localShowGameLog);
+        logBox.setAttribute("aria-hidden", String(!localShowGameLog));
+    }
+    const toggle = document.getElementById("show-game-log-option");
+    if (toggle) toggle.checked = localShowGameLog;
+}
+
+function openOptionsModal(returnTarget = "game") {
+    optionsReturnTarget = returnTarget === "setup" ? "setup" : "game";
+    const diceSelect = document.getElementById("dice-text-option");
+    if (diceSelect) diceSelect.value = localShowDiceText ? "on" : "off";
+    const soundToggle = document.getElementById("sound-effects-option");
+    if (soundToggle) soundToggle.checked = soundEnabled;
+    const logToggle = document.getElementById("show-game-log-option");
+    if (logToggle) logToggle.checked = localShowGameLog;
+    const modal = document.getElementById("options-modal");
+    if (modal) modal.style.display = "flex";
+}
+
+function closeOptionsModal() {
+    const modal = document.getElementById("options-modal");
+    if (modal) modal.style.display = "none";
+    // The setup dialog remains open behind Options when launched from setup.
+}
+
+function confirmResetGame() {
+    if (window.confirm("Reset Hypnotic Duel and return to the setup screen? The current match will be lost.")) {
+        window.location.reload();
+    }
+}
+
 function initializeGame() {
     const soundOption = document.getElementById("sound-effects-option");
     setSoundEnabled(!!(soundOption && soundOption.checked));
     const gameMode = document.getElementById("game-mode-option").value;
     const showDiceText = document.getElementById("dice-text-option").value === "on";
+    localShowDiceText = showDiceText;
     const showEnergyActions = false;
 	//document.getElementById("energy-actions-option").value === "on";
 
@@ -1756,13 +2056,10 @@ function log(msg, bold = false) {
     msg = cpuDecorateLog(String(msg));
     gameState.log.push(msg);
 
-    if (gameState.log.length > 50) {
-        gameState.log.shift();
-    }
-
+    // Retain all entries for this match; the visibility toggle only hides the panel.
     renderLog();
-	
-    logEl.innerHTML += `<div style="${bold ? 'font-weight:bold; color:var(--accent); margin-top:5px;' : ''}">> ${msg}</div>`;
+    renderTurnHistory();
+    setGameLogVisible(localShowGameLog);
     logEl.scrollTop = logEl.scrollHeight;
 }
 
@@ -3493,6 +3790,8 @@ function updateUI() {
     renderInventory(1); 
     renderInventory(2); 
     renderLog();
+    renderTurnHistory();
+    setGameLogVisible(localShowGameLog);
     checkWinCondition();
 }
 
@@ -3506,7 +3805,11 @@ function renderDiceAndActions(isHumanTurn) {
         div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}${isAnimating ? ' rolling-die' : ''}`;
         if (isAnimating) div.style.animationDelay = `${(index % 6) * 35}ms`;
         if (visibleFace === "-") div.innerText = "?";
-        else { div.innerText = gameState.showDiceText ? visibleFace : visibleFace.split(" ")[0]; if (!gameState.showDiceText) div.style.fontSize = "2.5em"; }
+        else {
+            div.innerText = localShowDiceText ? visibleFace : visibleFace.split(" ")[0];
+            // Text + symbol labels need the compact base size; symbol-only gets the larger glyph.
+            div.style.fontSize = localShowDiceText ? "0.8em" : "2.5em";
+        }
         if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
             if (diceAnimating.size) return;
             die.kept = !die.kept;
@@ -4185,7 +4488,7 @@ function rollDiceAction() {
             diceAnimationFaces.set(index, face);
             const dieElement = diceContainer && diceContainer.children[index];
             if (!dieElement) return;
-            dieElement.innerText = gameState.showDiceText ? face : face.split(" ")[0];
+            dieElement.innerText = localShowDiceText ? face : face.split(" ")[0];
         });
     }, 75);
 

@@ -606,18 +606,18 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat"],
     "Roz": ["Werewolf","Cow","Eevee"],
     "Victor": [],
-    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Gender","Werewolf","Dog","Statue","Puppet","Robot"],
+    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet","Robot"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
-    "Mark": ["Robot","Puppet"],
+    "Mark": ["Robot","Puppet","Statue"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 
