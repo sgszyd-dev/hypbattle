@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V12.0</title>
+    <title>Hypnotic Duel - Beta V13.0</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -334,6 +334,8 @@
         .turn-history-nav { display:flex; align-items:center; gap:7px; }
         .turn-history-nav button { width:32px; height:30px; padding:0; margin:0; display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
         .turn-history-position { color:#b9a8ca; font-size:.75rem; min-width:76px; text-align:center; }
+        .player-name-p1 { color: var(--player); font-weight: 700; }
+        .player-name-p2 { color: var(--cpu); font-weight: 700; }
         .turn-history-player { color:#e5d6f4; font-size:.84rem; font-weight:600; margin:0 0 8px; }
         .turn-history-section { margin-top:8px; }
         .turn-history-section strong { display:block; color:#c8a7f0; font-size:.73rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:3px; }
@@ -483,8 +485,29 @@
             border-radius: 6px;
             padding: 10px;
         }
+        .help-card-entry.help-card-keep { border-color: #c084fc; box-shadow: inset 0 0 0 1px rgba(192,132,252,.16); }
+        .help-card-entry.help-card-instant { border-color: #ffd34d; box-shadow: inset 0 0 0 1px rgba(255,211,77,.16); }
         .help-card-entry strong { color: var(--accent); }
         .help-card-entry .help-card-meta { color: #aaa; font-size: 0.85em; }
+        .help-card-entry .help-card-cost { color: #ff9f1c; font-weight:800; }
+        #game-popup .modal-content.card-popup-instant { border:2px solid #ffd34d; box-shadow:0 0 0 1px rgba(255,211,77,.22), 0 0 22px rgba(255,211,77,.16); }
+        #game-popup .modal-content.card-popup-keep { border:2px solid #c084fc; box-shadow:0 0 0 1px rgba(192,132,252,.22), 0 0 22px rgba(192,132,252,.16); }
+        .help-card-type-icon { display:inline-block; margin-right:4px; font-size:1.05em; }
+        .energy-glow { transition: text-shadow .25s ease, color .25s ease; }
+        @keyframes statValueChangeEnergy { 0% { text-shadow: 0 0 0 rgba(255,211,77,0); } 28% { text-shadow: 0 0 15px rgba(255,211,77,.98), 0 0 25px rgba(255,159,28,.72); } 100% { text-shadow: inherit; } }
+        @keyframes statValueChangeTrance { 0% { text-shadow: 0 0 0 rgba(76,201,240,0); } 28% { text-shadow: 0 0 15px rgba(76,201,240,.98), 0 0 24px rgba(22,132,199,.72); } 100% { text-shadow: inherit; } }
+        @keyframes statValueChangeArousal { 0% { text-shadow: 0 0 0 rgba(255,80,65,0); } 28% { text-shadow: 0 0 15px rgba(255,80,65,.98), 0 0 24px rgba(255,159,28,.72); } 100% { text-shadow: inherit; } }
+        .stat-change-energy { animation: statValueChangeEnergy .9s ease-out; }
+        .stat-change-trance { animation: statValueChangeTrance .9s ease-out; }
+        .stat-change-arousal { animation: statValueChangeArousal .9s ease-out; }
+        .turn-history-card .history-card-link { background:transparent; color:#f0d8ff; border:0; padding:0; margin:0; width:auto; display:inline; font:inherit; font-weight:700; text-decoration:underline; text-decoration-color:rgba(214,181,255,.55); cursor:pointer; }
+        .turn-history-card .history-card-link:hover { color:#fff; }
+        .turn-history-section .history-event { overflow-wrap:anywhere; }
+        .obey-label-active { font-weight:800 !important; text-shadow:0 0 5px currentColor,0 0 12px currentColor; }
+        .stat .stat-label, .stat .stat-value { transition: color .2s ease, text-shadow .2s ease; }
+        .log-toolbar { display:flex; justify-content:flex-end; margin:6px 0 0; }
+        .log-toolbar button { width:auto; margin:0; padding:5px 9px; font-size:.78rem; background:#393044; border:1px solid #655273; }
+        .restart-game-toolbar-btn { display:none; background:#662b38 !important; border:1px solid #a94a5b !important; }
         .tutorial-overlay {
             z-index: 500;
             background: rgba(0,0,0,0.72);
@@ -563,7 +586,7 @@
             border-color: var(--accent); opacity: 1; visibility: visible;
         }
         #card-trigger-toast > div { overflow-wrap: anywhere; }
-        #card-trigger-toast > div:nth-child(n+3) { display: none; }
+        #card-trigger-toast > div:nth-child(n+4) { display: none; }
         #card-trigger-toast .toast-player { font-weight: 700; }
         @media (prefers-reduced-motion: reduce) {
             .inv-card.active-keep-card, .inv-card.active-keep-card.card-triggered, #card-trigger-toast { animation: none !important; transition: none !important; }
@@ -689,6 +712,7 @@
             </div>
             <div class="setup-footer-actions">
                 <button type="button" class="themed-secondary-btn" onclick="openOptionsModal('setup')">⚙ Options &amp; Tools</button>
+                <button type="button" class="themed-secondary-btn" onclick="showAboutBox()">ⓘ About</button>
                 <button type="button" class="themed-secondary-btn" onclick="prepareGuidedTutorial()">✦ Guided Tutorial</button>
             </div>
             <button class="start-btn" id="start-game-btn" onclick="onStartClicked()">✧ Begin Duel ✧</button>
@@ -724,6 +748,13 @@
                     </label>
                     <span style="color:#9e91ad;font-size:.78rem;">History is still recorded</span>
                 </div>
+                <div class="option-row">
+                    <label class="option-toggle" for="show-brain-comments-option">
+                        <input type="checkbox" id="show-brain-comments-option" onchange="setBrainCommentsVisible(this.checked)">
+                        <span>Show AI/brain comments in Chronicle</span>
+                    </label>
+                    <span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
+                </div>
             </section>
 
             <section class="options-section" aria-labelledby="options-tools-heading">
@@ -732,6 +763,7 @@
                     <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
                     <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
                     <button type="button" onclick="recDownload()">⇩ Download Game Logs</button>
+                    <button type="button" onclick="showAboutBox()">ⓘ About</button>
                     <button type="button" class="danger-tool" onclick="confirmResetGame()">↻ Reset Game</button>
                 </div>
             </section>
@@ -754,7 +786,7 @@
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="start-btn" onclick="recDownload()" style="margin-top: 0; background: #2a9d8f !important;">💾 Download Game Log</button>
                 <button class="start-btn" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
-                <button class="start-btn" onclick="document.getElementById('game-over-modal').style.display='none'" style="margin-top: 0; background: #666 !important;">View Board</button>
+                <button class="start-btn" onclick="closeGameOverToBoard()" style="margin-top: 0; background: #666 !important;">View Board</button>
             </div>
         </div>
     </div>
@@ -769,7 +801,7 @@
                 <div id="cinematic-counter">Stage 0 / 10</div>
                 <div class="cinematic-track"><div id="cinematic-fill" class="cinematic-fill"></div></div>
             </div>
-            <button id="cinematic-skip" type="button" class="cinematic-skip">Skip sequence</button>
+            <button id="cinematic-skip" type="button" class="cinematic-skip">Skip to Final</button>
         </div>
     </div>
 
@@ -809,7 +841,7 @@
             </div>
 
             <div class="lucidity-row" id="lucidity-row-vuln" style="display:none;">
-                <span class="vuln-badge">Vulnerability (Max: <span id="lucidity-max-vuln">0</span>)</span>
+                <span class="vuln-badge">Vulnerability 🪫 (Max: <span id="lucidity-max-vuln">0</span>)</span>
                 <div>
                     <button onclick="adjLucidity('vuln', -1)">-</button>
                     <span id="lucidity-val-vuln" style="display:inline-block; width: 30px; text-align:center; font-weight:bold;">0</span>
@@ -825,8 +857,10 @@
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin-bottom: 10px;">
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
-            <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Browse every card and its effect">📚 Card Library</button>
+            <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Card Library" aria-label="Card Library">📚</button>
+            <button id="restart-game-toolbar-btn" class="themed-secondary-btn main-toolbar-btn restart-game-toolbar-btn" onclick="restartGameFromBoard()" title="Restart game" aria-label="Restart game">↻</button>
             <button class="help-btn themed-secondary-btn main-toolbar-btn" onclick="openOptionsModal('game')" title="Display, audio, help, logs, and game controls">⚙ Options &amp; Tools</button>
+            <button type="button" class="themed-secondary-btn main-toolbar-btn" onclick="showAboutBox()" title="About Hypnotic Duel" aria-label="About Hypnotic Duel">ⓘ</button>
         </div>
     </div>
 
@@ -841,10 +875,10 @@
                     <div class="transform-progress-fill" id="p1-transform-progress"></div>
                 </div>
             </div>
-            <div class="stat">Trance 🌀: <span id="p1-trance">0</span></div>
-            <div class="stat">Arousal 🔥: <span id="p1-arousal">0</span></div>
-            <div class="stat">Energy ⚡: <span id="p1-energy">0</span></div>
-            <div class="stat vuln-badge" id="p1-vuln-container" style="display:none;">Vulnerability: <span id="p1-vuln">0</span></div>
+            <div class="stat"><span class="stat-label" id="p1-trance-label">Trance 🌀:</span> <span class="stat-value" id="p1-trance">0</span></div>
+            <div class="stat"><span class="stat-label" id="p1-arousal-label">Arousal 🔥:</span> <span class="stat-value" id="p1-arousal">0</span></div>
+            <div class="stat"><span class="stat-label energy-glow" id="p1-energy-label">Energy ⚡:</span> <span class="stat-value energy-glow" id="p1-energy">0</span></div>
+            <div class="stat vuln-badge" id="p1-vuln-container" style="display:none;">Vulnerability 🪫: <span id="p1-vuln">0</span></div>
             
             <div id="energy-actions-panel-1" style="display: none;">
                 <hr style="width: 100%; border: 1px solid #444;">
@@ -856,7 +890,7 @@
             
             <div id="p1-last-keep-section" style="display: none;">
                 <hr style="width: 100%; border: 1px solid #444;">
-                <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Keep</h3>
+                <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Roll</h3>
                 <div class="cpu-last-roll" id="p1-last-roll">--</div>
             </div>
 
@@ -906,6 +940,7 @@
                 <div id="turn-history-content" aria-live="polite"><div class="turn-history-empty">Turn events will appear here as the duel unfolds.</div></div>
             </section>
             <div class="log" id="game-log"></div>
+            <div class="log-toolbar" id="game-log-toolbar"><button type="button" onclick="copyGameLog()" title="Copy the complete game log">⧉ Copy Log</button></div>
         </div>
 
         <!-- PLAYER 2 / CPU PANEL -->
@@ -918,10 +953,10 @@
                     <div class="transform-progress-fill" id="p2-transform-progress"></div>
                 </div>
             </div>
-            <div class="stat">Trance 🌀: <span id="p2-trance">0</span></div>
-            <div class="stat">Arousal 🔥: <span id="p2-arousal">0</span></div>
-            <div class="stat">Energy ⚡: <span id="p2-energy">0</span></div>
-            <div class="stat vuln-badge" id="p2-vuln-container" style="display:none;">Vulnerability: <span id="p2-vuln">0</span></div>
+            <div class="stat"><span class="stat-label" id="p2-trance-label">Trance 🌀:</span> <span class="stat-value" id="p2-trance">0</span></div>
+            <div class="stat"><span class="stat-label" id="p2-arousal-label">Arousal 🔥:</span> <span class="stat-value" id="p2-arousal">0</span></div>
+            <div class="stat"><span class="stat-label energy-glow" id="p2-energy-label">Energy ⚡:</span> <span class="stat-value energy-glow" id="p2-energy">0</span></div>
+            <div class="stat vuln-badge" id="p2-vuln-container" style="display:none;">Vulnerability 🪫: <span id="p2-vuln">0</span></div>
             
             <div id="energy-actions-panel-2" style="display: none;">
                 <hr style="width: 100%; border: 1px solid #444;">
@@ -932,7 +967,7 @@
             </div>
 
             <hr style="width: 100%; border: 1px solid #444;">
-            <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Keep</h3>
+            <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Roll</h3>
             <div class="cpu-last-roll" id="cpu-last-roll">--</div>
             
             <hr style="width: 100%; border: 1px solid #444;">
@@ -962,7 +997,7 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat"],
@@ -972,7 +1007,7 @@ const CHARACTER_MANIFEST = {
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
     "Zixuan": ["Dog","Fox","Pig"],
-    "Hyeri": ["Bunny","Squirrel","Cat"],
+    "Hyeri": ["Bunny","Squirrel","Cat","Dragon"],
     "Mark": ["Robot","Puppet","Statue"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
@@ -1069,6 +1104,8 @@ let soundAudioContext = null;
 // Presentation preferences are local to this browser, not shared game-state rules.
 let localShowDiceText = true;
 let localShowGameLog = true;
+let localShowBrainComments = false;
+let gameOverSeen = false;
 let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
@@ -1287,6 +1324,71 @@ function addLog(msg) {
     updateUI();
 }
 
+function formatResourceTermsInTextNode(textNode) {
+    if (!textNode || !textNode.nodeValue) return;
+    let value = textNode.nodeValue;
+    // Protect card names: some contain resource words that must remain intact.
+    const names = (typeof KNOWN_CARDS !== "undefined" ? KNOWN_CARDS : []).map(c => c.name).filter(Boolean).sort((a,b) => b.length-a.length);
+    const placeholders = [];
+    names.forEach((name, i) => {
+        const re = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+        value = value.replace(re, match => { const token = `ZZCARDNAME${i}ZZ`; placeholders.push([token, match]); return token; });
+    });
+    const resources = [
+        [/\bTrance\b\s*(?:🌀)?/gi, "🌀"], [/\bSubmission\b\s*(?:⛓️)?/gi, "⛓️"],
+        [/\bArousal\b\s*(?:🔥)?/gi, "🔥"], [/\bEnergy\b\s*(?:⚡)?/gi, "⚡"],
+        [/\bTransform\b\s*(?:👁️)?/gi, "👁️"], [/\bLucidity\b\s*(?:💧)?/gi, "💧"],
+        [/\bVulnerability\b\s*(?:🪫)?/gi, "🪫"], [/\bVuln\b/gi, "🪫"]
+    ];
+    resources.forEach(([re, symbol]) => { value = value.replace(re, symbol); });
+    placeholders.forEach(([token, original]) => { value = value.replace(token, original); });
+    textNode.nodeValue = value;
+}
+
+function applyResourceSymbolsToLogEntry(entry) {
+    if (!entry) return;
+    const walker = document.createTreeWalker(entry, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(formatResourceTermsInTextNode);
+}
+
+function colorizePlayerNamesInElement(root) {
+    if (!root || !gameState) return;
+    const players = [
+        { name: gameState.p1 && gameState.p1.name, cls: "player-name-p1" },
+        { name: gameState.p2 && gameState.p2.name, cls: "player-name-p2" }
+    ].filter(p => p.name).sort((a, b) => b.name.length - a.name.length);
+    if (!players.length) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement && node.parentElement.closest("button, .history-card-link, .player-name-p1, .player-name-p2")) continue;
+        nodes.push(node);
+    }
+    nodes.forEach(node => {
+        const text = node.nodeValue;
+        let matches = [];
+        players.forEach(player => {
+            const escaped = player.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "giu");
+            let m; while ((m = re.exec(text))) matches.push({ start: m.index, end: m.index + m[0].length, value: m[0], cls: player.cls });
+        });
+        matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+        const filtered = []; let lastEnd = -1;
+        matches.forEach(m => { if (m.start >= lastEnd) { filtered.push(m); lastEnd = m.end; } });
+        if (!filtered.length) return;
+        const fragment = document.createDocumentFragment(); let cursor = 0;
+        filtered.forEach(m => {
+            if (m.start > cursor) fragment.appendChild(document.createTextNode(text.slice(cursor, m.start)));
+            const span = document.createElement("span"); span.className = m.cls; span.textContent = m.value; fragment.appendChild(span); cursor = m.end;
+        });
+        if (cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
+        node.parentNode.replaceChild(fragment, node);
+    });
+}
+
 function renderLog() {
     const logBox = document.getElementById("game-log"); // Replace with your HTML log container ID
     if (!logBox || !gameState) return;
@@ -1297,6 +1399,10 @@ function renderLog() {
     }
 
     logBox.innerHTML = logs.map(msg => `<div class="log-entry">${msg}</div>`).join("");
+    Array.from(logBox.querySelectorAll(".log-entry")).forEach(entry => {
+        applyResourceSymbolsToLogEntry(entry);
+        colorizePlayerNamesInElement(entry);
+    });
     logBox.scrollTop = logBox.scrollHeight;
 }
 
@@ -1317,6 +1423,12 @@ function getTurnHistoryGroups() {
         if (!text) return;
         const roundMatch = text.match(/ROUND\s+(\d+)/i);
         if (roundMatch) currentRound = Number(roundMatch[1]);
+        // Round banners are useful in the detailed log but add noise to the Chronicle.
+        if (/^=+\s*ROUND\b/i.test(text) || /^ROUND\s+\d+\s*=*$/i.test(text)) return;
+        // CPU-specific market-denial narration stays in the detailed log; the generic Market Wiped event is shown in Chronicle.
+        if (/^CPU (?:used Wipe|wiped market)\b/i.test(text)) return;
+        // Brain/AI narration remains in the detailed log; the Chronicle hides it by default.
+        if (!localShowBrainComments && /🧠|\bCPU Score for card\b/i.test(text)) return;
         if (/---\s*.+?['’]s Turn\s*---/i.test(text) || /---\s*Player\s*\d+\s+Turn\s*---/i.test(text)) {
             current = { player: text.replace(/^---\s*/, "").replace(/\s*---$/, ""), round: currentRound, events: [] };
             groups.push(current);
@@ -1333,6 +1445,67 @@ function getTurnHistoryGroups() {
 
 function escapeHistoryHtml(value) {
     return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[ch]));
+}
+
+function historyPlayerLabelHtml(value) {
+    let html = escapeHistoryHtml(value);
+    const players = [
+        { name: gameState && gameState.p1 && gameState.p1.name, cls: "player-name-p1" },
+        { name: gameState && gameState.p2 && gameState.p2.name, cls: "player-name-p2" }
+    ].filter(p => p.name).sort((a, b) => b.name.length - a.name.length);
+    players.forEach(player => {
+        const escaped = escapeHistoryHtml(player.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${escaped})(['’]s)?(?![\\p{L}\\p{N}])`, "giu");
+        html = html.replace(re, `<span class="${player.cls}">$1$2</span>`);
+    });
+    return html;
+}
+
+function historyEventHtml(value) {
+    let html = escapeHistoryHtml(value);
+    const sorted = [...new Map(KNOWN_CARDS.slice().sort((a, b) => b.name.length - a.name.length).map(card => [card.name.toLowerCase(), card])).values()];
+    const linkedNames = new Set();
+    sorted.forEach(card => {
+        const nameKey = card.name.toLowerCase();
+        if (linkedNames.has(nameKey)) return;
+        linkedNames.add(nameKey);
+        const escapedName = escapeHistoryHtml(card.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escapedName, "gi");
+        html = html.replace(re, match => `<button type="button" class="history-card-link" onclick="showCardDetails(${Number(card.id)})" title="View ${escapeHistoryHtml(card.name)}">${match}</button>`);
+    });
+    // Replace resource names with their die symbols while leaving linked card names intact.
+    const resources = [[/\bTrance\b\s*(?:🌀)?/gi,"🌀"],[/\bSubmission\b\s*(?:⛓️)?/gi,"⛓️"],[/\bArousal\b\s*(?:🔥)?/gi,"🔥"],[/\bEnergy\b\s*(?:⚡)?/gi,"⚡"],[/\bTransform\b\s*(?:👁️)?/gi,"👁️"],[/\bLucidity\b\s*(?:💧)?/gi,"💧"],[/\bVulnerability\b\s*(?:🪫)?/gi,"🪫"],[/\bVuln\b/gi,"🪫"]];
+    // Protect card-link HTML before replacing plain resource terms.
+    const links = [];
+    html = html.replace(/<button\b[^>]*class="history-card-link"[^>]*>[\s\S]*?<\/button>/gi, match => { const token=`ZZHISTORYLINK${links.length}ZZ`; links.push([token,match]); return token; });
+    resources.forEach(([re,symbol]) => { html = html.replace(re,symbol); });
+    // Color player names without altering linked card labels or their attributes.
+    const playerNames = [
+        { name: gameState && gameState.p1 && gameState.p1.name, cls: "player-name-p1" },
+        { name: gameState && gameState.p2 && gameState.p2.name, cls: "player-name-p2" }
+    ].filter(p => p.name).sort((a, b) => b.name.length - a.name.length);
+    const protectedLinks = [];
+    html = html.replace(/<button\b[^>]*class="history-card-link"[^>]*>[\s\S]*?<\/button>/gi, match => { const token = `ZZPLAYERLINK${protectedLinks.length}ZZ`; protectedLinks.push([token, match]); return token; });
+    playerNames.forEach(player => {
+        const escaped = escapeHistoryHtml(player.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${escaped})(['’]s)?(?![\\p{L}\\p{N}])`, "giu");
+        html = html.replace(re, `<span class="${player.cls}">$1$2</span>`);
+    });
+    protectedLinks.forEach(([token, link]) => { html = html.replace(token, link); });
+    links.forEach(([token,link]) => { html = html.replace(token,link); });
+    return html;
+}
+
+function showCardDetails(cardId) {
+    const card = KNOWN_CARDS.find(c => Number(c.id) === Number(cardId));
+    if (!card) return;
+    const esc = value => escapeHistoryHtml(value);
+    showPopup(esc(card.name), `<div style="font-size:.9em;font-weight:bold;margin-bottom:8px;"><span class="help-card-type-icon">${card.type === "Keep" ? "🖐️" : "💥"}</span>${esc(card.type)} · Cost <span style="color:#ff9f1c">${Number(card.cost)}⚡</span></div><div>${esc(card.desc)}</div>`);
+    const shell = document.querySelector("#game-popup .modal-content");
+    if (shell) {
+        shell.classList.remove("card-popup-instant", "card-popup-keep");
+        shell.classList.add(card.type === "Keep" ? "card-popup-keep" : "card-popup-instant");
+    }
 }
 
 function renderTurnHistory() {
@@ -1354,7 +1527,7 @@ function renderTurnHistory() {
     const group = groups[index];
     const events = group.events || [];
     const categories = [
-        { label: "Rolls & Dice", match: t => /roll|dice|reroll|re-roll|kept|last keep/i.test(t) },
+        { label: "Dice Roll", match: t => /^Dice Roll:/i.test(t) },
         { label: "Cards & Effects", match: t => /card|bought|used|trigger|granted|activated|played|discard|shield|altered state|override|staircase|rapid pulse|mental awakening/i.test(t) }
     ];
     const used = new Set();
@@ -1362,12 +1535,12 @@ function renderTurnHistory() {
     categories.forEach(category => {
         const items = events.filter(t => category.match(t));
         items.forEach(t => used.add(t));
-        if (items.length) sections += `<div class="turn-history-section"><strong>${category.label}</strong><ul>${items.slice(-8).map(t => `<li>${escapeHistoryHtml(t)}</li>`).join("")}</ul></div>`;
+        if (items.length) sections += `<div class="turn-history-section"><strong>${category.label}</strong><ul>${items.slice(-8).map(t => { const shown = category.label === "Dice Roll" ? t.replace(/^Dice Roll:\s*/i, "").replace(/,\s*/g, " ") : t; return `<li class="history-event">${historyEventHtml(shown)}</li>`; }).join("")}</ul></div>`;
     });
     const outcomes = events.filter(t => !used.has(t));
-    if (outcomes.length) sections += `<div class="turn-history-section"><strong>Turn events</strong><ul>${outcomes.slice(-8).map(t => `<li>${escapeHistoryHtml(t)}</li>`).join("")}</ul></div>`;
+    if (outcomes.length) sections += `<div class="turn-history-section"><strong>Turn events</strong><ul>${outcomes.slice(-8).map(t => `<li class="history-event">${historyEventHtml(t)}</li>`).join("")}</ul></div>`;
     const roundLabel = group.round ? ` · Round ${group.round}` : "";
-    content.innerHTML = `<div class="turn-history-player">${escapeHistoryHtml(group.player)}${roundLabel}</div>${sections || '<div class="turn-history-empty">No detailed events were recorded for this turn.</div>'}`;
+    content.innerHTML = `<div class="turn-history-player">${historyPlayerLabelHtml(group.player)}${roundLabel}</div>${sections || '<div class="turn-history-empty">No detailed events were recorded for this turn.</div>'}`;
     if (position) position.textContent = `Turn ${index + 1} / ${groups.length}`;
     if (prev) prev.disabled = index <= 0;
     if (next) next.disabled = index >= groups.length - 1;
@@ -1634,6 +1807,8 @@ function loadLocalDisplayPreferences() {
         if (savedDice !== null) localShowDiceText = savedDice !== "false";
         const savedLog = localStorage.getItem("hypduel_show_game_log");
         if (savedLog !== null) localShowGameLog = savedLog !== "false";
+        const savedBrain = localStorage.getItem("hypduel_show_brain_comments");
+        if (savedBrain !== null) localShowBrainComments = savedBrain === "true";
     } catch (e) { /* Storage may be unavailable for local files or private browsing. */ }
 }
 
@@ -1645,8 +1820,54 @@ function setGameLogVisible(visible) {
         logBox.classList.toggle("log-hidden", !localShowGameLog);
         logBox.setAttribute("aria-hidden", String(!localShowGameLog));
     }
+    const logToolbar = document.getElementById("game-log-toolbar");
+    if (logToolbar) logToolbar.classList.toggle("log-hidden", !localShowGameLog);
     const toggle = document.getElementById("show-game-log-option");
     if (toggle) toggle.checked = localShowGameLog;
+}
+
+function setBrainCommentsVisible(visible) {
+    localShowBrainComments = !!visible;
+    try { localStorage.setItem("hypduel_show_brain_comments", String(localShowBrainComments)); } catch (e) {}
+    const toggle = document.getElementById("show-brain-comments-option");
+    if (toggle) toggle.checked = localShowBrainComments;
+    renderTurnHistory();
+}
+
+async function copyGameLog() {
+    const logs = (gameState && Array.isArray(gameState.log)) ? gameState.log : [];
+    const text = logs.map(msg => {
+        const entry = document.createElement("div");
+        entry.textContent = historyPlainText(msg);
+        applyResourceSymbolsToLogEntry(entry);
+        return entry.textContent;
+    }).join("\n");
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const area = document.createElement("textarea");
+            area.value = text; area.style.position = "fixed"; area.style.opacity = "0";
+            document.body.appendChild(area); area.select();
+            const ok = document.execCommand("copy"); area.remove();
+            if (!ok) throw new Error("Clipboard copy was not available");
+        }
+        const button = document.querySelector("#game-log-toolbar button");
+        if (button) { const old = button.textContent; button.textContent = "✓ Copied"; setTimeout(() => button.textContent = old, 1400); }
+    } catch (err) {
+        showPopup("Copy Log", "Your browser blocked clipboard access. You can still select and copy the visible log manually.");
+    }
+}
+
+function closeGameOverToBoard() {
+    const modal = document.getElementById("game-over-modal");
+    if (modal) modal.style.display = "none";
+    gameOverSeen = true;
+    const restart = document.getElementById("restart-game-toolbar-btn");
+    if (restart) restart.style.display = "inline-block";
+}
+function restartGameFromBoard() {
+    if (window.confirm("Restart Hypnotic Duel? The current match will be lost.")) window.location.reload();
 }
 
 function openOptionsModal(returnTarget = "game") {
@@ -1657,6 +1878,8 @@ function openOptionsModal(returnTarget = "game") {
     if (soundToggle) soundToggle.checked = soundEnabled;
     const logToggle = document.getElementById("show-game-log-option");
     if (logToggle) logToggle.checked = localShowGameLog;
+    const brainToggle = document.getElementById("show-brain-comments-option");
+    if (brainToggle) brainToggle.checked = localShowBrainComments;
     const modal = document.getElementById("options-modal");
     if (modal) modal.style.display = "flex";
 }
@@ -2064,9 +2287,17 @@ function log(msg, bold = false) {
 }
 
 
+const GAME_VERSION = "20261013.20"; // Update this label for each release.
+function showAboutBox() {
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel (c) 2026 Siobhán Green.<br><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    showPopup("About Hypnotic Duel", body);
+}
+
 function showPopup(title, body) {
     document.getElementById("popup-title").innerText = title;
     document.getElementById("popup-body").innerHTML = body;
+    const shell = document.querySelector("#game-popup .modal-content");
+    if (shell) shell.classList.remove("card-popup-instant", "card-popup-keep");
     document.getElementById("game-popup").style.display = "flex";
 }
 function getCardRef(playerId, cardId) {
@@ -3356,7 +3587,7 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     const [stolenCard] = seller.inventory.splice(opponentCardIndex, 1);
     buyer.inventory.push(stolenCard);
 
-    log(`Player ${buyerNum} used Hypnotic Dominance to buy ${stolenCard.name} from opponent for ${cost} ⚡!`);
+    log(`${buyer.name} used Hypnotic Dominance to buy ${stolenCard.name} from ${seller.name} for ${cost} ⚡!`);
 	syncToFirebase();
     updateUI();
     return true;
@@ -3509,6 +3740,8 @@ function preloadCinematicStage(path) {
 async function playFinalTransformationCinematic(loserId) {
     if (!ENABLE_FINAL_TRANSFORMATION_CINEMATIC) return;
     const loser = loserId === 1 ? gameState.p1 : gameState.p2;
+    const winner = loserId === 1 ? gameState.p2 : gameState.p1;
+    const finalCaption = `${winner.name} has transformed ${loser.name} into a ${loser.transformTarget || "new form"}`;
     const overlay = document.getElementById("final-transform-cinematic");
     const portrait = document.getElementById("cinematic-avatar");
     const caption = document.getElementById("cinematic-caption");
@@ -3522,7 +3755,13 @@ async function playFinalTransformationCinematic(loserId) {
     const stageDelay = reducedMotion ? 70 : 330;
     const fadeDelay = reducedMotion ? 15 : 170;
     let skipped = false;
-    const skip = () => { skipped = true; };
+    let waitingForContinue = false;
+    let continueCinematic = null;
+    const skip = () => {
+        if (waitingForContinue) { if (continueCinematic) continueCinematic(); }
+        else skipped = true;
+    };
+    skipButton.textContent = "Skip to Final";
     skipButton.onclick = skip;
     overlay.style.setProperty("--cinematic-player-color", loserId === 1 ? "var(--player)" : "var(--cpu)");
     overlay.style.display = "flex";
@@ -3565,7 +3804,7 @@ async function playFinalTransformationCinematic(loserId) {
         void overlay.offsetWidth;
         if (stage === 10) {
             overlay.classList.add("cinematic-final");
-            if (caption) caption.textContent = "Transformation complete";
+            if (caption) caption.textContent = finalCaption;
             if (counterWrap) counterWrap.style.display = "none";
         } else {
             overlay.classList.add("cinematic-shimmer");
@@ -3577,10 +3816,25 @@ async function playFinalTransformationCinematic(loserId) {
 
     // If stage 0 is absent, the first available stage still plays; if stage 10 is absent,
     // finish cleanly on the last available artwork instead of displaying a broken image.
-    if (!skipped && shownStage !== null) {
-        if (caption) caption.textContent = "Transformation complete";
+    if (skipped && shownStage !== null) {
+        const finalLoaded = await preloadCinematicStage(stagePath(10));
+        if (finalLoaded) {
+            portrait.src = finalLoaded.src;
+            portrait.alt = `${loser.name}, final transformation stage`;
+            shownStage = 10;
+            overlay.classList.add("cinematic-final");
+        }
+    }
+    if (shownStage !== null) {
+        if (caption) caption.textContent = finalCaption;
         if (counterWrap) counterWrap.style.display = "none";
-        await cinematicWait(reducedMotion ? 80 : 650);
+        overlay.classList.remove("cinematic-shimmer", "cinematic-intense");
+        overlay.classList.add("cinematic-final");
+        skipButton.textContent = "Continue";
+        waitingForContinue = true;
+        await new Promise(resolve => { continueCinematic = resolve; });
+        waitingForContinue = false;
+        skipButton.textContent = "Skip to Final";
     }
     overlay.style.display = "none";
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
@@ -3614,6 +3868,24 @@ function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     if (!existing) container.appendChild(img);
 }
 
+function pulseChangedStat(playerPrefix, statName, currentValue) {
+    const ids = [`${playerPrefix}-${statName}`, `${playerPrefix}-${statName}-label`];
+    const value = String(currentValue == null ? 0 : currentValue);
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const dataKey = `last${statName.charAt(0).toUpperCase()}${statName.slice(1)}Value`;
+        if (el.dataset[dataKey] !== undefined && el.dataset[dataKey] !== value) {
+            const className = `stat-change-${statName}`;
+            el.classList.remove(className);
+            void el.offsetWidth;
+            el.classList.add(className);
+            window.setTimeout(() => el.classList.remove(className), 950);
+        }
+        el.dataset[dataKey] = value;
+    });
+}
+
 function updateUI() {
     if (!gameState || gameState.gameEnded) return;
 
@@ -3633,6 +3905,18 @@ function updateUI() {
         document.getElementById(`${p}-trance`).innerText = pObj.trance;
         document.getElementById(`${p}-arousal`).innerText = pObj.arousal;
         document.getElementById(`${p}-energy`).innerText = pObj.energy;
+        pulseChangedStat(p, "trance", pObj.trance);
+        pulseChangedStat(p, "arousal", pObj.arousal);
+        pulseChangedStat(p, "energy", pObj.energy);
+        const energyLevel = Math.max(0, Math.min(10, Number(pObj.energy) || 0));
+        const energyGlow = energyLevel <= 0 ? "none" : `0 0 ${2 + energyLevel * 1.1}px rgba(255,211,77,${(0.12 + energyLevel * 0.055).toFixed(2)}), 0 0 ${4 + energyLevel * 1.5}px rgba(255,159,28,${(0.08 + energyLevel * 0.045).toFixed(2)})`;
+        [`${p}-energy`, `${p}-energy-label`].forEach(id => { const el = document.getElementById(id); if (el) { el.style.textShadow = energyGlow; el.style.color = energyLevel >= 7 ? "#ffe6a0" : ""; } });
+        const tranceColors = ["#ffffff", "#d8efff", "#a9dcff", "#70c5ff", "#4cc9f0", "#1684c7"];
+        const tranceColor = tranceColors[Math.max(0, Math.min(5, Number(pObj.trance) || 0))];
+        [`${p}-trance`, `${p}-trance-label`].forEach(id => { const el = document.getElementById(id); if (el) { el.style.color = tranceColor; el.style.textShadow = Number(pObj.trance) >= 4 ? `0 0 8px ${tranceColor}66` : "none"; } });
+        const arousal = Math.max(0, Math.min(5, Number(pObj.arousal) || 0));
+        const arousalColor = arousal >= 5 ? "#ff3434" : arousal >= 3 ? "#ff9f1c" : "#ffffff";
+        [`${p}-arousal`, `${p}-arousal-label`].forEach(id => { const el = document.getElementById(id); if (el) { el.style.color = arousalColor; el.style.textShadow = arousal >= 3 ? `0 0 7px ${arousalColor}55` : "none"; } });
         document.getElementById(`${p}-vuln`).innerText = pObj.vulnerability;
         document.getElementById(`${p}-vuln-container`).style.display = pObj.vulnerability > 0 ? "flex" : "none";
 
@@ -3689,15 +3973,11 @@ function updateUI() {
         if (marker) {
             const activeNode = track.querySelector(`.node[data-track-index="${activeIndex}"]`);
             if (activeNode) {
-                // Measure in the track's own coordinate space; offsetLeft can be misleading
-                // when nested layout/offset parents change. Clamp the marker center so its
-                // full circle stays on the track even at either endpoint.
-                const trackRect = track.getBoundingClientRect();
-                const nodeRect = activeNode.getBoundingClientRect();
-                const markerRadius = (marker.offsetWidth || 13) / 2;
-                const measuredCenter = nodeRect.left - trackRect.left + nodeRect.width / 2;
-                const safeCenter = Math.max(markerRadius, Math.min(track.clientWidth - markerRadius, measuredCenter));
-                marker.style.left = `${safeCenter}px`;
+                // The nodes and marker are direct children of the same positioned track.
+                // Use their shared offset coordinate system so the marker center overlays
+                // the active node exactly, without mixing viewport and content-box coordinates.
+                const nodeCenter = activeNode.offsetLeft + activeNode.offsetWidth / 2;
+                marker.style.left = `${nodeCenter}px`;
             }
             marker.classList.toggle('pressure', Math.abs(rawSubmission) >= 4 && Math.abs(rawSubmission) < 5);
             marker.classList.toggle('endpoint', Math.abs(rawSubmission) >= 5);
@@ -3749,7 +4029,7 @@ function updateUI() {
 
     const trackLabels = document.getElementById("track-labels");
     if (trackLabels && gameState.p1 && gameState.p2) {
-        trackLabels.innerHTML = `<span>${gameState.p1.name} Will Obey</span><span>Neutral</span><span>${playerDisplayName(gameState.p2)} Will Obey</span>`;
+        trackLabels.innerHTML = `<span class="${Number(gameState.submission) === -5 ? 'obey-label-active' : ''}" style="color:${Number(gameState.submission) === -5 ? 'var(--cpu)' : ''}">${gameState.p1.name} Will Obey</span><span>Neutral</span><span class="${Number(gameState.submission) === 5 ? 'obey-label-active' : ''}" style="color:${Number(gameState.submission) === 5 ? 'var(--player)' : ''}">${playerDisplayName(gameState.p2)} Will Obey</span>`;
     }
 
     let dirArrowsLeft = isP1 ? "◄◄ " : "";
@@ -3899,16 +4179,26 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
         });
     }, 75);
 }
+function showTurnAlert(message, beneficiaryId) {
+    const toast = document.getElementById("card-trigger-toast");
+    if (!toast) return;
+    const color = beneficiaryId === 1 ? "var(--player)" : "var(--cpu)";
+    const line = `<div><strong style="color:${color}">Turn outcome</strong> · ${escapeHistoryHtml(message)}</div>`;
+    toast.innerHTML = toast.innerHTML ? `${line}${toast.innerHTML}` : line;
+    toast.classList.add("visible");
+    if (cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
+}
+
 function renderCardTriggerToast(notices) {
     if (!notices.length) return;
     const toast = document.getElementById('card-trigger-toast');
     if (!toast) return;
     const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const rows = notices.map(n => `<div><span class="toast-player" style="color:${n.playerId === 1 ? 'var(--player)' : 'var(--cpu)'}">${esc(n.playerName)}</span> · <strong>${esc(n.cardName)}</strong>: ${esc(n.detail)}</div>`);
-    toast.innerHTML = rows.join('');
+    const existing = toast.classList.contains('visible') ? toast.innerHTML : '';
+    toast.innerHTML = existing ? `${existing}${rows.join('')}` : rows.join('');
     toast.classList.remove('visible'); void toast.offsetWidth; toast.classList.add('visible');
-    if (cardTriggerToastTimer) clearTimeout(cardTriggerToastTimer);
-    cardTriggerToastTimer = setTimeout(() => toast.classList.remove('visible'), 2600);
+    if (cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
 }
 
 function renderInventory(playerId) {
@@ -4098,6 +4388,8 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
     const before = targetObj.trance;
     targetObj.trance += amount;
     if (targetObj.trance <= before) return false;
+    const triggersSetback = before < 5 && targetObj.trance >= 5;
+    if (triggersSetback) log(`${targetObj.name}'s 🌀 deepens +${amount} 🌀.`);
 
     checkTranceSetback(targetObj, sourcePlayerId);
 
@@ -4114,7 +4406,7 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
         }
         increaseTrance.reflecting = false;
     }
-    return true;
+    return !triggersSetback;
 }
 
 function cpuShouldTransformOnSetback() {
@@ -4132,8 +4424,6 @@ function cpuShouldTransformOnSetback() {
 function checkTranceSetback(oppP, activePlayerId) {
     while (oppP.trance >= 5) {
         oppP.trance -= 5;
-        log(`SETBACK! ${oppP.name} Trance maxed.`);
-
         const victimId = oppP === gameState.p1 ? 1 : 2;
         const canManipulate = activePlayerId && hasCard(activePlayerId, 17);
         const humanChooses = activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online";
@@ -4141,26 +4431,26 @@ function checkTranceSetback(oppP, activePlayerId) {
         if (humanChooses) {
             const oppName = oppP.name;
             const opts = [
-                { label: "Push Submission 2", onClick: () => pushSubmission(activePlayerId === 1 ? 2 : -2, activePlayerId) },
+                { label: "Push Submission 2", onClick: () => { pushSubmission(activePlayerId === 1 ? 2 : -2, activePlayerId); log(`SETBACK: ${oppName} is deep in 🌀 becomes more submissive (+2 ⛓️).`); } },
                 { label: `${oppName} Arousal +2`, onClick: () => {
                     increaseArousal(gameState["p" + victimId], 2, victimId, activePlayerId);
-                    log(`Setback applied: Arousal +2.`);
+                    log(`SETBACK: ${oppName} is deep in 🌀 becomes more aroused (+2 🔥).`);
                 } }
             ];
             if (canManipulate) opts.push({ label: `Physical Manipulation: Transform ${oppName} +1`, onClick: () => {
                 applyTransform(victimId, 1, activePlayerId);
-                log(`Physical Manipulation: ${oppName} Transform +1.`);
+                log(`SETBACK: ${oppName} is deep in 🌀 and is made to transform (+1 👁️).`);
             } });
             showChoiceDialog({ title: `${oppName} Setback!`, message: "Choose the effect:", options: opts });
         } else if (canManipulate && cpuShouldTransformOnSetback()) {
             applyTransform(victimId, 1, activePlayerId);
-            log(`CPU Physical Manipulation: ${oppP.name} Transform +1.`);
+            log(`SETBACK: ${oppP.name} is deep in 🌀 and is made to transform (+1 👁️).`);
         } else if (cpuIsAdaptive() && activePlayerId === 2 && cpuAdaptiveSetbackChoice(oppP) === "arousal") {
             increaseArousal(oppP, 2, victimId, activePlayerId);
-            log(`CPU Setback applied: Arousal +2.`);
+            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more aroused (+2 🔥).`);
         } else {
             pushSubmission(-2, 2);
-            log(`CPU Setback applied: Submission -2.`);
+            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more submissive (+2 ⛓️).`);
         }
     }
 }
@@ -4203,6 +4493,12 @@ function increaseArousal(target, amount, recipientId, sourceId) {
 function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     let target = targetPlayerId === 1 ? gameState.p1 : gameState.p2;
     target.transform += amount;
+    if (amount > 0 && target) {
+        const transformAlert = Number(sourcePlayerId) === 0
+            ? `${target.name} obeys and transforms ${amount} 👁️.`
+            : `${target.name} transforms +${amount} 👁️.`;
+        showTurnAlert(transformAlert, targetPlayerId);
+    }
     
     // Only apply Vulnerability if the source is an actual opponent
     // Powerful Transform: max ONE vulnerability counter per turn, however many Transform points are dealt
@@ -4233,9 +4529,13 @@ function executeInstant(card, playerId) {
         pushSubmission(playerId === 1 ? 2 : -2, playerId);
         log(`Mind Fog! Opponent Trance +2, Sub pushed 2.`);
     }
-    else if (card.id === 10 || card.id === 39) { pushSubmission(playerId === 1 ? 4 : -4, playerId); log(`${card.name}! Sub pushed 4.`); }
+    else if (card.id === 10 || card.id === 39) {
+        pushSubmission(playerId === 1 ? 4 : -4, playerId);
+        log(`${p.name} used ${card.name}: ${opp.name}'s submission deepens +4 ⛓️.`);
+        showTurnAlert(`${p.name} used ${card.name}: ${opp.name}'s submission deepens +4 ⛓️.`, playerId);
+    }
     else if (card.id === 11) { pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`Sluggish Mind! Sub pushed 2.`); }
-    else if (card.id === 14) { increaseTrance(opp, 2, playerId); log(`Spiral Descent! Opponent Trance +2.`); }
+    else if (card.id === 14) { increaseTrance(opp, 2, playerId); log(`Spiral Descent! Opponent 🌀 +2.`); }
     else if (card.id === 18) {
         pushSubmission(playerId === 1 ? 2 : -2, playerId);
         increaseTrance(opp, 1, playerId);
@@ -4322,7 +4622,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
     if (counts["⚡ ENERGY"] > 0) {
         let gain = counts["⚡ ENERGY"];
         if (hasCard(playerId, 45)) { gain += 1; queueCardTrigger(playerId, 45, "+1 extra Energy from dice"); log("Power Boost granted +1 extra Energy from virtual dice!"); }
-        p.energy += gain; log(`Virtual dice granted +${gain} Energy.`);
+        p.energy += gain; log(`${p.name} gains +${gain} ⚡ from virtual dice.`);
     }
 
     // ------------------------------------------------------------
@@ -4336,7 +4636,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
 			tPush += 1;
 			log("Deep Gaze deepened virtual Spiral Trance by 1 more!");
 		}
-		if (increaseTrance(opp, tPush, playerId)) log(`Virtual Spiral: Opp Trance +${tPush}`);
+		if (increaseTrance(opp, tPush, playerId)) log(`${opp.name}'s trance deepens +${tPush} 🌀 from virtual dice.`);
 	}
 
     // ------------------------------------------------------------
@@ -4348,23 +4648,26 @@ async function rollVirtualDice(playerId, count, sourceName) {
     if (hasCard(playerId, 9) && lCount > 0) { lCount += 1; log("Deep Safeties boosted virtual Lucidity!"); }
 
     if (lCount > 0) {
+        const arousalCost = hasCard(oppId, 48) ? 2 : 1;
+        const canClearAll = lCount >= lucidityClearCost(p, arousalCost);
         if (p.trance === 0 && p.arousal === 0 && p.vulnerability === 0) {
-            log("Virtual Lucidity rolled, but stats are already 0.");
+            log(`Lucidity rolled, but ${p.name} is clear-headed.`);
+        } else if (canClearAll) {
+            const allocations = autoAllocateLucidity(lCount, p, arousalCost);
+            const lucidityParts = lucidityResultParts(p, allocations, hasCard(oppId, 41));
+            log(lucidityParts.length ? `${p.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${p.name} is clear-headed.`);
         } else if (isLocalPlayerTurn()) {
-            let showVuln = hasCard(oppId, 41) || p.vulnerability > 0;
-            let allocations = await showLucidityDialog(lCount, p, showVuln);
-
+            const showVuln = hasCard(oppId, 41);
+            const allocations = await showLucidityDialog(lCount, p, showVuln, arousalCost);
             if (allocations.trance > 0) p.trance = Math.max(0, p.trance - allocations.trance);
             if (allocations.arousal > 0) p.arousal = Math.max(0, p.arousal - allocations.arousal);
             if (allocations.vuln > 0) p.vulnerability = Math.max(0, p.vulnerability - allocations.vuln);
-
-            log(`Virtual Lucidity applied: Trance -${allocations.trance}, Arousal -${allocations.arousal}, Vuln -${allocations.vuln}`);
+            const lucidityParts = lucidityResultParts(p, allocations, hasCard(oppId, 41));
+            log(lucidityParts.length ? `${p.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${p.name} is clear-headed.`);
         } else {
-            let rem = lCount;
-            let vRem = Math.min(p.vulnerability, rem); p.vulnerability -= vRem; rem -= vRem;
-            let aRem = Math.min(p.arousal, rem); p.arousal -= aRem; rem -= aRem;
-            let tRem = Math.min(p.trance, rem); p.trance -= tRem;
-            log("Virtual Lucidity resolved.");
+            const allocations = autoAllocateLucidity(lCount, p, arousalCost);
+            const lucidityParts = lucidityResultParts(p, allocations, hasCard(oppId, 41));
+            log(lucidityParts.length ? `${p.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${p.name} is clear-headed.`);
         }
     }
 
@@ -4376,11 +4679,11 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // ------------------------------------------------------------
     //let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
 	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
-    if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; queueCardTrigger(playerId, 13, "Boosted virtual Arousal effect by 1"); log("Stoking Fires boosted virtual Arousal!"); }
+    if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] >= 2) { arousalEffect += 1; queueCardTrigger(playerId, 13, "Boosted virtual Arousal effect by 1"); log("Stoking Fires boosted virtual Arousal!"); }
 
     if (arousalEffect > 0) {
         if (opp.shieldActive) log("Rapid Pulse shielded virtual Arousal!");
-        else { increaseArousal(opp, arousalEffect, oppId, playerId); log(`Virtual Arousal: Opp Arousal +${arousalEffect}`); }
+        else { increaseArousal(opp, arousalEffect, oppId, playerId); log(`${opp.name}'s arousal increases +${arousalEffect} 🔥 from virtual dice.`); }
     }
 
     // ------------------------------------------------------------
@@ -4394,7 +4697,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
     if (counts["⛓️ SUBMISSION"] > 0) {
         let submissionPush = playerId === 1 ? counts["⛓️ SUBMISSION"] : -counts["⛓️ SUBMISSION"];
         pushSubmission(submissionPush, playerId);
-        log(`Virtual Submission pushed the track by ${submissionPush}.`);
+        log(`${opp.name}'s submission deepens +${Math.abs(submissionPush)} ⛓️ from virtual dice.`);
     }
 
     // ------------------------------------------------------------
@@ -4404,7 +4707,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // ------------------------------------------------------------
     if (counts["👁️ TRANSFORM"] > 0) {
         applyTransform(oppId, counts["👁️ TRANSFORM"], playerId);
-        log(`Virtual Transform: Opp Transform +${counts["👁️ TRANSFORM"]}.`);
+        log(`${gameState[playerId === 1 ? "p2" : "p1"].name} transforms +${counts["👁️ TRANSFORM"]} 👁️ from virtual dice.`);
     }
 
     syncToFirebase();
@@ -4420,7 +4723,8 @@ function startTurn() {
     activeP.lastRoll = [];
     
     if (activeP.arousal <= 2) gameState.rerollsLeft = 2; else if (activeP.arousal <= 4) gameState.rerollsLeft = 1; else gameState.rerollsLeft = 0;
-    if (hasCard(gameState.activePlayer, 43)) { gameState.rerollsLeft += 1; log("Mental Awakening granted +1 reroll."); }
+    const mentalAwakeningActive = hasCard(gameState.activePlayer, 43);
+    if (mentalAwakeningActive) gameState.rerollsLeft += 1;
 
     gameState.phase = "rolling";
 	const activePObj = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
@@ -4446,8 +4750,9 @@ function startTurn() {
     
     gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
     log(`--- ${activeP.name}'s Turn ---`);
+    if (mentalAwakeningActive) log(`${activeP.name} has Mental Awakening: +1 reroll.`);
     
-    if (hasCard(gameState.activePlayer, 15)) { pushSubmission(gameState.activePlayer === 1 ? 1 : -1, gameState.activePlayer); log(`${activeP.name}'s Altered State pushed sub 1.`); }
+    if (hasCard(gameState.activePlayer, 15)) { pushSubmission(gameState.activePlayer === 1 ? 1 : -1, gameState.activePlayer); log(`${activeP.name}'s Altered State deepened ${oppP.name}'s submission by 1.`); }
 
     syncToFirebase();
     updateUI(); 
@@ -4455,6 +4760,14 @@ function startTurn() {
 }
 
 function rollDiceAction() {
+    // A new roll selects this player's turn card; otherwise browsing stays where the player left it.
+    const historyGroupsAtRoll = getTurnHistoryGroups();
+    if (historyGroupsAtRoll.length) selectedHistoryIndex = historyGroupsAtRoll.length - 1;
+    const triggerToast = document.getElementById("card-trigger-toast");
+    if (triggerToast) { triggerToast.classList.remove("visible"); triggerToast.innerHTML = ""; }
+    if (cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
+    if (typeof cardTriggerFlushTimer !== "undefined" && cardTriggerFlushTimer) { clearTimeout(cardTriggerFlushTimer); cardTriggerFlushTimer = null; }
+    if (typeof pendingCardTriggerNotices !== "undefined") pendingCardTriggerNotices = [];
     let isInitRoll = gameState.dice[0].face === "-";
     if (!isInitRoll && gameState.rerollsLeft <= 0) return;
     const animatedIndices = [];
@@ -4507,6 +4820,25 @@ function rollDiceAction() {
 }
 
 // LUCIDITY MODAL LOGIC
+function autoAllocateLucidity(points, playerObj, arousalCost = 1) {
+    let rem = Math.max(0, Number(points) || 0);
+    const allocation = { trance: 0, arousal: 0, vuln: 0 };
+    allocation.vuln = Math.min(playerObj.vulnerability || 0, rem); playerObj.vulnerability -= allocation.vuln; rem -= allocation.vuln;
+    const cost = Math.max(1, Number(arousalCost) || 1);
+    allocation.arousal = Math.min(playerObj.arousal || 0, Math.floor(rem / cost)); playerObj.arousal -= allocation.arousal; rem -= allocation.arousal * cost;
+    allocation.trance = Math.min(playerObj.trance || 0, rem); playerObj.trance -= allocation.trance;
+    return allocation;
+}
+function lucidityClearCost(playerObj, arousalCost = 1) {
+    return (Number(playerObj.vulnerability) || 0) + (Number(playerObj.arousal) || 0) * Math.max(1, Number(arousalCost) || 1) + (Number(playerObj.trance) || 0);
+}
+function lucidityResultParts(playerObj, allocation, opponentHasPowerfulTransform) {
+    const parts = [];
+    if (allocation.trance > 0) parts.push(`-${allocation.trance} 🌀`);
+    if (allocation.arousal > 0) parts.push(`-${allocation.arousal} 🔥`);
+    if (opponentHasPowerfulTransform && allocation.vuln > 0) parts.push(`-${allocation.vuln} 🪫`);
+    return parts;
+}
 function showLucidityDialog(points, playerObj, showVuln, arousalCost = 1) {
     return new Promise((resolve) => {
         lucidityResolve = resolve;
@@ -4592,6 +4924,7 @@ async function resolveDice() {
     const currentDiceFaces = gameState.dice.map(d => d.face);
     activeP.lastRoll = [...currentDiceFaces];
     activeP.lastKeep = [...currentDiceFaces];
+    log(`Dice Roll: ${currentDiceFaces.map(face => String(face || "-").split(" ")[0]).join(", ")}`);
 
     // Count dice faces
     let counts = { SPIRAL: 0, LUCIDITY: 0, ENERGY: 0, SUBMISSION: 0, AROUSAL: 0, TRANSFORM: 0 };
@@ -4621,51 +4954,48 @@ async function resolveDice() {
 			tPush += 1;
 			log("Deep Gaze deepened Trance by 1 more!");
 		}
-		if (increaseTrance(oppP, tPush, activePlayerNum)) log(`Opp Trance +${tPush}`);
+		if (increaseTrance(oppP, tPush, activePlayerNum)) log(`${oppP.name}'s trance deepens +${tPush} 🌀.`);
 	}
 
     // 3. Lucidity
     let lCount = counts.LUCIDITY;
     if (hasCard(activePlayerNum, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
     if (lCount > 0) {
+        const arousalCost = hasCard(oppId, 48) ? 2 : 1;
+        const canClearAll = lCount >= lucidityClearCost(activeP, arousalCost);
         if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
-            log(`Lucidity rolled, but stats are 0.`);
+            log(`Lucidity rolled, but ${activeP.name} is clear-headed.`);
+        } else if (canClearAll) {
+            const allocations = autoAllocateLucidity(lCount, activeP, arousalCost);
+            const lucidityParts = lucidityResultParts(activeP, allocations, hasCard(oppId, 41));
+            log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
         } else if (isHumanTurn) {
-            let showVuln = hasCard(oppId, 41) || activeP.vulnerability > 0;
-            
-            // Execution pauses here while player uses dialog
-			let arousalCost = hasCard(oppId, 48) ? 2 : 1;
-            let allocations = await showLucidityDialog(lCount, activeP, showVuln, arousalCost);
-            
-            // RE-BIND activeP & oppP to live gameState after await
+            const showVuln = hasCard(oppId, 41);
+            const allocations = await showLucidityDialog(lCount, activeP, showVuln, arousalCost);
             activeP = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
             oppP = activePlayerNum === 1 ? gameState.p2 : gameState.p1;
-
             if (allocations) {
-                let tSub = Number(allocations.trance || 0);
-                let aSub = Number(allocations.arousal || 0);
-                let vSub = Number(allocations.vuln || 0);
-
+                const tSub = Number(allocations.trance || 0);
+                const aSub = Number(allocations.arousal || 0);
+                const vSub = Number(allocations.vuln || 0);
                 if (tSub > 0) activeP.trance = Math.max(0, activeP.trance - tSub);
                 if (aSub > 0) activeP.arousal = Math.max(0, activeP.arousal - aSub);
                 if (vSub > 0) activeP.vulnerability = Math.max(0, activeP.vulnerability - vSub);
-                log(`Lucidity applied: Trance -${tSub}, Arousal -${aSub}, Vuln -${vSub}`);
+                const allocationsUsed = { trance: tSub, arousal: aSub, vuln: vSub };
+                const lucidityParts = lucidityResultParts(activeP, allocationsUsed, hasCard(oppId, 41));
+                log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
             }
         } else {
-			let rem = lCount;
-			let vRem = Math.min(activeP.vulnerability, rem); activeP.vulnerability -= vRem; rem -= vRem;
-			let arousalCost = hasCard(oppId, 48) ? 2 : 1;
-			let aRem = Math.min(activeP.arousal, Math.floor(rem / arousalCost));
-			activeP.arousal -= aRem; rem -= aRem * arousalCost;
-			let tRem = Math.min(activeP.trance, rem); activeP.trance -= tRem;
-			log(`Lucidity resolved.`);
-		}
+            const allocations = autoAllocateLucidity(lCount, activeP, arousalCost);
+            const lucidityParts = lucidityResultParts(activeP, allocations, hasCard(oppId, 41));
+            log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
+        }
     }
 
     // 4. Arousal
     //let arousalEffect = Math.floor(counts.AROUSAL / 2);
 	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
-    if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; queueCardTrigger(activePlayerNum, 13, "Boosted Arousal effect by 1"); log(`Stoking Fires boosted Arousal!`); }
+    if (hasCard(activePlayerNum, 13) && counts.AROUSAL >= 2) { arousalEffect += 1; queueCardTrigger(activePlayerNum, 13, "Boosted Arousal effect by 1"); log(`Stoking Fires boosted Arousal!`); }
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
             if (typeof increaseArousal === "function") {
@@ -4673,7 +5003,7 @@ async function resolveDice() {
             } else {
                 oppP.arousal = (oppP.arousal || 0) + arousalEffect;
             }
-            log(`Opp Arousal +${arousalEffect}`); 
+            log(`${oppP.name}'s arousal increases +${arousalEffect} 🔥.`); 
         } 
     }
 
@@ -4681,12 +5011,12 @@ async function resolveDice() {
     if (counts.SUBMISSION >= 3) {
         let effect = 1 + (counts.SUBMISSION - 3); 
         pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); 
-        log(`Sub track pushed.`);
+        log(`${oppP.name}'s submission deepens +${effect} ⛓️.`);
         if (hasCard(activePlayerNum, 23)) { 
             if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId, activePlayerNum); 
             else oppP.arousal = (oppP.arousal || 0) + 1;
             queueCardTrigger(activePlayerNum, 23, "Opponent Arousal +1 on 3+ Submission");
-            log("Submissive Flush triggered: Opp Arousal +1."); 
+            log(`${oppP.name}'s arousal increases +1 🔥 from Submissive Flush.`); 
         }
         if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; queueCardTrigger(activePlayerNum, 24, "Earned an extra turn with 1 fewer die"); log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
     }
@@ -4695,7 +5025,7 @@ async function resolveDice() {
     if (counts.TRANSFORM >= 3) {
         let effect = 1 + (counts.TRANSFORM - 3); 
         applyTransform(oppId, effect, activePlayerNum); 
-        log(`Opp Transform +${effect}`);
+        log(`${oppP.name} transforms +${effect} 👁️.`);
         if (hasCard(activePlayerNum, 2)) { applyTransform(oppId, 1, activePlayerNum); queueCardTrigger(activePlayerNum, 2, "Added 1 Transform damage"); log(`Dream State actively boosted Transform damage by 1!`); }
         if (hasCard(activePlayerNum, 22)) { pushSubmission(activePlayerNum === 1 ? 1 : -1, activePlayerNum); queueCardTrigger(activePlayerNum, 22, "Pushed Submission +1 on 3+ Transform"); log("Mental Shackles triggered: Sub pushed +1."); }
     }
@@ -4746,8 +5076,8 @@ function pushSubmission(amount, sourcePlayer = null) {
     }
 
     let newSub = gameState.submission + amount;
-    if (newSub > 5) { let overflow = newSub - 5; gameState.submission = 5; applyTransform(2, overflow, 0); animateSubmissionOverflow(2, overflow); log(`Sub overflow! Player 2 takes ${overflow} Transform.`); }
-    else if (newSub < -5) { let overflow = Math.abs(newSub - (-5)); gameState.submission = -5; applyTransform(1, overflow, 0); animateSubmissionOverflow(1, overflow); log(`Sub overflow! P1 takes ${overflow} Transform.`); }
+    if (newSub > 5) { let overflow = newSub - 5; gameState.submission = 5; applyTransform(2, overflow, 0); animateSubmissionOverflow(2, overflow); log(`${gameState.p2.name} obeys and transforms ${overflow} 👁️.`); }
+    else if (newSub < -5) { let overflow = Math.abs(newSub - (-5)); gameState.submission = -5; applyTransform(1, overflow, 0); animateSubmissionOverflow(1, overflow); log(`${gameState.p1.name} obeys and transforms ${overflow} 👁️.`); }
     else gameState.submission = newSub;
 }
 
@@ -4823,7 +5153,7 @@ function wipeMarket() {
         refillMarket();
         syncToFirebase();
         updateUI();
-        log("Market wiped.");
+        log(`Market Wiped. New cards: ${market.map(card => card && card.name).filter(Boolean).join(", ") || "none"}`);
     }
 }
 
@@ -4912,12 +5242,14 @@ function endTurn() {
 
     if (gameState.activePlayer === 1 && gameState.submission === -5) {
         applyTransform(1, 1, 0);
-        log("P1 takes 1 Transform from Obeying!");
+        log(`${gameState.p1.name} obeys and transforms 1 👁️.`);
+        showTurnAlert(`${gameState.p1.name} gains 1 Transform from obeying!`, 1);
     }
 
     if (gameState.activePlayer === 2 && gameState.submission === 5) {
         applyTransform(2, 1, 0);
-        log("Player 2 takes 1 Transform from Obeying!");
+        log(`${gameState.p2.name} obeys and transforms 1 👁️.`);
+        showTurnAlert(`${playerDisplayName(gameState.p2)} gains 1 Transform from obeying!`, 2);
     }
 
     if (hasCard(gameState.activePlayer, 27) && activeP.energy === 0) {
@@ -4929,7 +5261,7 @@ function endTurn() {
     if (hasCard(gameState.activePlayer, 31)) {
 		let tPush = Math.floor(activeP.energy / 6) * 2;
 		if (tPush > 0) {
-			log(`Falling Sensation: Opp Trance +${tPush}`);
+			log(`Falling Sensation: ${oppP.name}'s trance deepens +${tPush} 🌀.`);
 			increaseTrance(oppP, tPush, gameState.activePlayer);
 		}
 	}
@@ -5704,13 +6036,17 @@ function renderHelpCards(filter = '') {
     const list = document.getElementById('help-card-list');
     if (!list) return;
     const q = String(filter || '').trim().toLowerCase();
-    const cards = KNOWN_CARDS.filter(card =>
-        !q || `${card.name} ${card.type} ${card.desc}`.toLowerCase().includes(q)
-    );
+    const searchAliases = { transform: '👁️', trance: '🌀', energy: '⚡', lucidity: '💧', arousal: '🔥', submission: '⛓️' };
+    const queryTerms = q.split(/\s+/).filter(Boolean).map(term => searchAliases[term] || term);
+    const cards = KNOWN_CARDS.filter(card => {
+        if (!q) return true;
+        const haystack = `${card.name} ${card.type} ${card.desc}`.toLowerCase();
+        return haystack.includes(q) || queryTerms.some(term => haystack.includes(term));
+    });
     list.innerHTML = cards.map(card => `
-        <div class="help-card-entry">
-            <div><strong>${card.name}</strong> <span class="help-card-meta">${card.type} · ${card.cost}⚡</span></div>
-            <div style="margin-top:5px;">${card.desc}</div>
+        <div class="help-card-entry ${card.type === 'Keep' ? 'help-card-keep' : 'help-card-instant'}">
+            <div><strong>${escapeHistoryHtml(card.name)}</strong> <span class="help-card-meta"><span class="help-card-type-icon">${card.type === 'Keep' ? '🖐️' : '💥'}</span>${escapeHistoryHtml(card.type)} · <span class="help-card-cost">${Number(card.cost)}⚡</span></span></div>
+            <div style="margin-top:5px;">${escapeHistoryHtml(card.desc)}</div>
         </div>
     `).join('') || '<div class="help-box">No cards match that search.</div>';
 }
