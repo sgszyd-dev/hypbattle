@@ -598,7 +598,7 @@ const CHARACTERS = [
     { name: "Cassandra", gender: "female" },
     { name: "Zixuan",    gender: "male" },
     { name: "Hyeri", 	 gender: "female" },
-    { name: "Leo",       gender: "male" },
+    { name: "Mark",       gender: "male" },
     { name: "Fable",     gender: "female" }
 ];
 const NAMES = CHARACTERS.map(c => c.name);
@@ -606,7 +606,7 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat"],
@@ -617,7 +617,7 @@ const CHARACTER_MANIFEST = {
     "Cassandra": [],
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
-    "Leo": [],
+    "Mark": ["Robot"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 

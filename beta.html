@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V8.0 (Two Player Support)</title>
+    <title>Hypnotic Duel - Beta V12.0</title>
     <style>
         :root {
             --bg: #1e1e24; --panel: #2b2b36; --text: #f0f0f5; 
@@ -67,19 +67,133 @@
         .image-stub img:hover { transform: scale(1.03); }
         .winner-highlight { border: 4px solid #ffcc00; box-shadow: 0 0 20px #ffcc00; background: #222; }
 
+        /* Transformation progress: each player's bar uses that player's board color. */
+        .transform-progress-wrap { margin: -5px 0 13px; width: 100%; }
+        .transform-progress-track {
+            position: relative; height: 15px; overflow: hidden; border-radius: 999px;
+            background: #111; border: 1px solid #555; box-shadow: inset 0 1px 3px #000;
+        }
+        .transform-progress-fill {
+            height: 100%; width: 0%; border-radius: inherit;
+            transition: width 550ms cubic-bezier(.2,.8,.2,1), filter 250ms ease;
+        }
+        #p1-transform-progress { background: var(--player); box-shadow: 0 0 8px rgba(76,201,240,.45); }
+        #p2-transform-progress { background: var(--cpu); box-shadow: 0 0 8px rgba(255,77,77,.4); }
+        .transform-progress-caption { display:flex; justify-content:space-between; margin-bottom:4px; font-size:.78em; color:#bbb; }
+        .transform-progress-caption span:last-child { font-variant-numeric: tabular-nums; }
+
+        /* Transformation event effects. They are presentation-only and never alter game state. */
+        #p1-image.transform-pulse, #p1-image.transform-pulse-strong, #p1-image.transform-pulse-final { color: var(--player); }
+        #p2-image.transform-pulse, #p2-image.transform-pulse-strong, #p2-image.transform-pulse-final { color: var(--cpu); }
+        .image-stub.transform-pulse { animation: transformPulse 650ms ease-out; }
+        .image-stub.transform-pulse-strong { animation: transformPulseStrong 900ms ease-out; }
+        .image-stub.transform-pulse-final { animation: transformPulseFinal 1350ms ease-out; }
+        .transform-progress-track.transform-pulse .transform-progress-fill { filter: brightness(1.35); }
+        .transform-progress-track.transform-pulse-strong .transform-progress-fill { filter: brightness(1.65); }
+        .transform-progress-track.transform-pulse-final .transform-progress-fill { filter: brightness(1.9) saturate(1.35); }
+        @keyframes transformPulse {
+            0% { box-shadow: 0 0 0 0 currentColor; }
+            35% { box-shadow: 0 0 20px 5px currentColor; }
+            100% { box-shadow: 0 0 5px 1px currentColor; }
+        }
+        @keyframes transformPulseStrong {
+            0% { box-shadow: 0 0 0 0 currentColor; filter: brightness(1); }
+            30% { box-shadow: 0 0 30px 9px currentColor; filter: brightness(1.5); }
+            65% { box-shadow: 0 0 14px 4px currentColor; }
+            100% { box-shadow: 0 0 6px 1px currentColor; filter: brightness(1); }
+        }
+        @keyframes transformPulseFinal {
+            0% { box-shadow: 0 0 0 0 #fff; filter: brightness(1); }
+            22% { box-shadow: 0 0 38px 13px #fff, 0 0 55px 18px currentColor; filter: brightness(1.8); }
+            48% { box-shadow: 0 0 20px 7px currentColor; filter: brightness(1.35); }
+            72% { box-shadow: 0 0 34px 10px #fff, 0 0 48px 15px currentColor; }
+            100% { box-shadow: 0 0 8px 2px currentColor; filter: brightness(1); }
+        }
+        /* Optional artwork shimmer/fade; disable with ENABLE_TRANSFORMATION_ART_TRANSITIONS below. */
+        .image-stub img.art-stage-transition { animation: artStageFade 650ms ease-out; }
+        .image-stub.art-shimmer::after {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,.5) 48%, transparent 70%);
+            transform: translateX(-120%); animation: artShimmer 700ms ease-out;
+        }
+        @keyframes artStageFade {
+            0% { opacity: .15; filter: brightness(1.8) saturate(.7); }
+            45% { opacity: .75; filter: brightness(1.35) saturate(1.15); }
+            100% { opacity: 1; filter: brightness(1) saturate(1); }
+        }
+        @keyframes artShimmer { to { transform: translateX(120%); } }
+        @media (prefers-reduced-motion: reduce) {
+            .transform-progress-fill { transition: none; }
+            .image-stub.transform-pulse, .image-stub.transform-pulse-strong, .image-stub.transform-pulse-final,
+            .image-stub img.art-stage-transition, .image-stub.art-shimmer::after { animation-duration: 1ms !important; }
+        }
+
+        /* Final-transformation cinematic: isolated overlay; does not move the live board portraits. */
+        #final-transform-cinematic {
+            position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center;
+            padding: 22px; box-sizing: border-box; background: rgba(5, 3, 12, .94); backdrop-filter: blur(7px);
+            color: #fff; text-align: center; overflow: hidden;
+        }
+        #final-transform-cinematic .cinematic-inner { width: min(88vw, 520px); display:flex; flex-direction:column; align-items:center; gap:12px; }
+        #final-transform-cinematic .cinematic-kicker { font-size:.85rem; letter-spacing:.24em; text-transform:uppercase; color:#d8b5ff; }
+        #final-transform-cinematic .cinematic-portrait-wrap {
+            position:relative; width:min(68vw, 390px); height:min(62vh, 470px); min-height:230px; overflow:hidden;
+            border:3px solid var(--cinematic-player-color, var(--accent)); border-radius:14px; background:#100d18;
+            box-shadow:0 0 22px 5px color-mix(in srgb, var(--cinematic-player-color, var(--accent)) 50%, transparent), 0 0 70px rgba(157,78,221,.25);
+            transform:scale(.82); opacity:0;
+        }
+        #final-transform-cinematic.cinematic-enter .cinematic-portrait-wrap { animation: cinematicEnter 520ms cubic-bezier(.16,.8,.25,1) forwards; }
+        #final-transform-cinematic .cinematic-portrait-wrap img { width:100%; height:100%; object-fit:cover; object-position:center top; opacity:1; transition:opacity 180ms ease, filter 220ms ease; }
+        #final-transform-cinematic .cinematic-portrait-wrap img.is-fading { opacity:0; filter:brightness(1.9) saturate(.7); }
+        #final-transform-cinematic .cinematic-portrait-wrap::after {
+            content:''; position:absolute; inset:0; pointer-events:none; opacity:0;
+            background:linear-gradient(115deg, transparent 20%, rgba(255,255,255,.75) 48%, transparent 72%);
+            transform:translateX(-130%);
+        }
+        #final-transform-cinematic.cinematic-shimmer .cinematic-portrait-wrap::after { opacity:1; animation:cinematicShimmer 650ms ease-out; }
+        #final-transform-cinematic.cinematic-intense .cinematic-portrait-wrap { animation:cinematicIntense 520ms ease-out both; }
+        #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation:cinematicFinal 950ms cubic-bezier(.15,.8,.2,1) both; }
+        #final-transform-cinematic .cinematic-caption { font-size:1.1rem; font-weight:700; min-height:1.4em; text-shadow:0 0 16px rgba(210,160,255,.65); }
+        #final-transform-cinematic .cinematic-counter { width:min(68vw,390px); color:#d9d2e4; font-size:.85rem; font-variant-numeric:tabular-nums; }
+        #final-transform-cinematic .cinematic-track { height:7px; margin-top:7px; background:#31283d; border-radius:99px; overflow:hidden; }
+        #final-transform-cinematic .cinematic-fill { height:100%; width:0%; background:var(--cinematic-player-color,var(--accent)); box-shadow:0 0 12px var(--cinematic-player-color,var(--accent)); transition:width 260ms ease; }
+        #final-transform-cinematic .cinematic-skip { margin-top:4px; padding:8px 16px; border:1px solid #746581; border-radius:7px; background:#282131; color:#eee; cursor:pointer; }
+        #final-transform-cinematic .cinematic-skip:hover { background:#3c2c4b; }
+        @keyframes cinematicEnter { 0%{opacity:0;transform:scale(.72)} 70%{opacity:1;transform:scale(1.035)} 100%{opacity:1;transform:scale(1)} }
+        @keyframes cinematicShimmer { 0%{transform:translateX(-130%)} 100%{transform:translateX(130%)} }
+        @keyframes cinematicIntense { 0%{opacity:1;filter:brightness(1);transform:scale(1)} 35%{opacity:1;filter:brightness(1.65);transform:scale(1.035)} 100%{opacity:1;filter:brightness(1);transform:scale(1)} }
+        @keyframes cinematicFinal { 0%{opacity:1;filter:brightness(1);transform:scale(1)} 24%{opacity:1;filter:brightness(2.1);transform:scale(1.075)} 52%{opacity:1;filter:brightness(1.35);transform:scale(1.025)} 100%{opacity:1;filter:brightness(1);transform:scale(1)} }
+        @media (prefers-reduced-motion: reduce) {
+            #final-transform-cinematic *, #final-transform-cinematic.cinematic-enter .cinematic-portrait-wrap,
+            #final-transform-cinematic.cinematic-intense .cinematic-portrait-wrap,
+            #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation-duration:1ms !important; transition-duration:1ms !important; }
+        }
+
         .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; }
         .track-container { background: #111; padding: 15px; border-radius: 5px; text-align: center; }
-        .track-nodes { display: flex; justify-content: space-between; position: relative; margin-top: 10px; }
+        .track-nodes { display: flex; justify-content: space-between; align-items: center; position: relative; margin-top: 10px; min-height: 28px; }
         .track-nodes::before {
-            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; 
-            background: #444; z-index: 1; transform: translateY(-50%);
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, rgba(255,77,77,.38), #444 50%, rgba(76,201,240,.38));
+            z-index: 1; transform: translateY(-50%); border-radius: 99px;
         }
-        
-        /* Submission Track Nodes & Styling */
-        .node { width: 20px; height: 20px; background: #333; border-radius: 50%; z-index: 2; border: 2px solid #555; position: relative; }
-        .node.active { background: var(--accent); border-color: white; box-shadow: 0 0 10px var(--accent); transform: scale(1.3); }
-        .node.active-left-end { background: var(--cpu); border-color: yellow; box-shadow: 0 0 15px yellow; transform: scale(1.3); z-index: 3; }
-        .node.active-right-end { background: var(--player); border-color: yellow; box-shadow: 0 0 15px yellow; transform: scale(1.3); z-index: 3; }
+        /* Submission Track: a persistent marker slides smoothly between the nodes. */
+        .node { width: 16px; height: 16px; flex: 0 0 16px; background: #333; border-radius: 50%; z-index: 2; border: 2px solid #555; position: relative; transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease; box-sizing: content-box; }
+        .node.active { background: var(--accent); border-color: #eee; box-shadow: 0 0 8px rgba(157,78,221,.6); }
+        .node.active-left-end { background: var(--cpu); border-color: #ffd166; box-shadow: 0 0 12px rgba(255,77,77,.8); }
+        .node.active-right-end { background: var(--player); border-color: #ffd166; box-shadow: 0 0 12px rgba(76,201,240,.8); }
+        .submission-marker { position: absolute; z-index: 4; left: 50%; top: 50%; width: 13px; height: 13px; border-radius: 50%; box-sizing: border-box; background: #fff; border: 3px solid var(--accent); box-shadow: 0 0 8px var(--accent), 0 0 16px rgba(255,255,255,.35); transform: translate(-50%,-50%); transition: left .42s cubic-bezier(.2,.8,.25,1), background .2s ease, border-color .2s ease, box-shadow .2s ease; pointer-events: none; }
+        .submission-marker.pressure { animation: submissionPressurePulse .95s ease-in-out infinite; }
+        .submission-marker.endpoint { background: #fff4b8; border-color: #fff; box-shadow: 0 0 12px #ffcf4a, 0 0 25px rgba(255,207,74,.9); animation: submissionEndpointPulse .42s ease-in-out infinite alternate; }
+        .track-container.submission-left-pressure { box-shadow: inset 0 0 22px rgba(255,77,77,.12); }
+        .track-container.submission-right-pressure { box-shadow: inset 0 0 22px rgba(76,201,240,.12); }
+        .track-container.endpoint-crackle { animation: submissionCrackle .38s steps(2,end) 2; }
+        @keyframes submissionPressurePulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
+        @keyframes submissionEndpointPulse { from { transform: translate(-50%,-50%) scale(1); } to { transform: translate(-50%,-50%) scale(1.35); } }
+        @keyframes submissionCrackle { 0%,100% { filter: brightness(1); } 25% { filter: brightness(1.6) contrast(1.2); } 50% { filter: brightness(.85); } 75% { filter: brightness(1.45); } }
+        .transform-overflow-impact { animation: transformOverflowImpact .78s ease-out; }
+        @keyframes transformOverflowImpact { 0% { filter: brightness(1); transform: translateX(0) scale(1); } 18% { filter: brightness(1.8); transform: translateX(-4px) scale(1.025); } 38% { transform: translateX(4px) scale(1.015); } 58% { transform: translateX(-2px) scale(1.005); } 100% { filter: brightness(1); transform: translateX(0) scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .submission-marker, .submission-marker.pressure, .submission-marker.endpoint, .track-container.endpoint-crackle, .transform-overflow-impact { animation: none !important; transition-duration: 1ms !important; } }
 
         .market-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .choice-dialog { display: none; background: #1b1b1b; border: 2px solid var(--accent); border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; text-align: center; }
@@ -308,6 +422,43 @@
             .help-modal-content { width: 94vw; }
         }
 
+
+        /* Active-card feedback: restrained idle glow, short trigger pulse, compact grouped toast. */
+        .inv-card.active-keep-card {
+            border-color: var(--card-owner-color, var(--accent));
+            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+        }
+        .inv-card.active-keep-card.card-triggered {
+            border-color: var(--card-owner-color, var(--accent));
+            box-shadow: 0 0 0 1px var(--card-owner-color, var(--accent)), 0 0 16px color-mix(in srgb, var(--card-owner-color, var(--accent)) 55%, transparent);
+            animation: activeCardTriggerPulse .68s ease-out;
+        }
+        @keyframes activeCardTriggerPulse {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.035); }
+            100% { transform: scale(1); }
+        }
+        /* Reserve a permanent alert slot so card notices never shift the board layout. */
+        #card-trigger-toast {
+            position: relative; z-index: 2; width: 100%; box-sizing: border-box;
+            height: 58px; min-height: 58px; flex: 0 0 58px; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; gap: 2px;
+            margin: 7px auto 5px; padding: 6px 10px;
+            border: 1px solid transparent; border-radius: 8px; background: rgba(28, 25, 38, .96);
+            color: var(--text); font-size: .86rem; line-height: 1.25; text-align: center;
+            opacity: 0; visibility: hidden; pointer-events: none; transform: none;
+            transition: opacity .18s ease, visibility .18s ease, border-color .18s ease;
+        }
+        #card-trigger-toast.visible {
+            border-color: var(--accent); opacity: 1; visibility: visible;
+        }
+        #card-trigger-toast > div { overflow-wrap: anywhere; }
+        #card-trigger-toast > div:nth-child(n+3) { display: none; }
+        #card-trigger-toast .toast-player { font-weight: 700; }
+        @media (prefers-reduced-motion: reduce) {
+            .inv-card.active-keep-card, .inv-card.active-keep-card.card-triggered, #card-trigger-toast { animation: none !important; transition: none !important; }
+        }
+
     </style>
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
@@ -462,6 +613,20 @@
         </div>
     </div>
 
+    <!-- Final transformation movie. Set ENABLE_FINAL_TRANSFORMATION_CINEMATIC=false to bypass it. -->
+    <div id="final-transform-cinematic" aria-live="polite" aria-label="Final transformation sequence">
+        <div class="cinematic-inner">
+            <div class="cinematic-kicker">Final Transformation</div>
+            <div class="cinematic-portrait-wrap"><img id="cinematic-avatar" alt="Final transformation stage" /></div>
+            <div id="cinematic-caption" class="cinematic-caption">Transformation beginning…</div>
+            <div id="cinematic-counter-wrap" class="cinematic-counter">
+                <div id="cinematic-counter">Stage 0 / 10</div>
+                <div class="cinematic-track"><div id="cinematic-fill" class="cinematic-fill"></div></div>
+            </div>
+            <button id="cinematic-skip" type="button" class="cinematic-skip">Skip sequence</button>
+        </div>
+    </div>
+
     <!-- VIRTUAL ROLLS POPUP -->
     <div id="game-popup" class="modal-overlay" style="display: none; z-index: 200;">
         <div class="modal-content" style="width: 400px; text-align: center;">
@@ -525,9 +690,14 @@
         <div class="panel">
             <h2 id="ui-p1-name" style="color: var(--player)">Player 1</h2>
             <div class="image-stub" id="p1-image">Image Stub</div>
+            <div class="transform-progress-wrap" title="Transformation progress">
+                <div class="transform-progress-caption"><span>Transformation</span><span id="p1-transform-progress-label">0 / 10</span></div>
+                <div class="transform-progress-track" id="p1-transform-progress-track" role="progressbar" aria-label="Player 1 transformation progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
+                    <div class="transform-progress-fill" id="p1-transform-progress"></div>
+                </div>
+            </div>
             <div class="stat">Trance 🌀: <span id="p1-trance">0</span></div>
             <div class="stat">Arousal 🔥: <span id="p1-arousal">0</span></div>
-            <div class="stat">Transform 👁️: <span id="p1-transform">0</span></div>
             <div class="stat">Energy ⚡: <span id="p1-energy">0</span></div>
             <div class="stat vuln-badge" id="p1-vuln-container" style="display:none;">Vulnerability: <span id="p1-vuln">0</span></div>
             
@@ -568,6 +738,7 @@
             </div>
             <div class="market-row" id="market-container"></div>
             <div class="choice-dialog" id="choice-dialog"></div>
+            <div id="card-trigger-toast" role="status" aria-live="polite"></div>
 
             <h3 style="display: flex; flex-direction: column; align-items: center; border: none; gap: 5px; margin: 10px 0 0 0;">
                 <span id="turn-indicator">►► Turn ◄◄</span> 
@@ -582,9 +753,14 @@
         <div class="panel">
             <h2 id="ui-cpu-name" style="color: var(--cpu)">CPU</h2>
             <div class="image-stub" id="p2-image">Image Stub</div>
+            <div class="transform-progress-wrap" title="Transformation progress">
+                <div class="transform-progress-caption"><span>Transformation</span><span id="p2-transform-progress-label">0 / 10</span></div>
+                <div class="transform-progress-track" id="p2-transform-progress-track" role="progressbar" aria-label="Player 2 transformation progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
+                    <div class="transform-progress-fill" id="p2-transform-progress"></div>
+                </div>
+            </div>
             <div class="stat">Trance 🌀: <span id="p2-trance">0</span></div>
             <div class="stat">Arousal 🔥: <span id="p2-arousal">0</span></div>
-            <div class="stat">Transform 👁️: <span id="p2-transform">0</span></div>
             <div class="stat">Energy ⚡: <span id="p2-energy">0</span></div>
             <div class="stat vuln-badge" id="p2-vuln-container" style="display:none;">Vulnerability: <span id="p2-vuln">0</span></div>
             
@@ -620,7 +796,7 @@ const CHARACTERS = [
     { name: "Cassandra", gender: "female" },
     { name: "Zixuan",    gender: "male" },
     { name: "Hyeri", 	 gender: "female" },
-    { name: "Leo",       gender: "male" },
+    { name: "Mark",       gender: "male" },
     { name: "Fable",     gender: "female" }
 ];
 const NAMES = CHARACTERS.map(c => c.name);
@@ -628,7 +804,7 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat"],
@@ -639,7 +815,7 @@ const CHARACTER_MANIFEST = {
     "Cassandra": [],
     "Zixuan": ["Dog","Fox","Pig"],
     "Hyeri": ["Bunny","Squirrel","Cat"],
-    "Leo": [],
+    "Mark": ["Robot"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
 	};
 
@@ -1171,6 +1347,31 @@ function playSound(kind) {
     } catch (e) {
         // Ignore browser/audio-device failures; game logic continues normally.
     }
+}
+
+function playSubmissionCrackleSound() {
+    if (!soundEnabled) return;
+    try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!soundAudioContext) soundAudioContext = new AudioContextClass();
+        const ctx = soundAudioContext;
+        if (ctx.state === "suspended") ctx.resume();
+        const now = ctx.currentTime;
+        // Three short, slightly dissonant bursts create a distinct magical crackle.
+        [0, 0.055, 0.125].forEach((offset, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = i === 1 ? "square" : "sawtooth";
+            osc.frequency.setValueAtTime([980, 1460, 720][i], now + offset);
+            osc.frequency.exponentialRampToValueAtTime([420, 610, 280][i], now + offset + 0.075);
+            gain.gain.setValueAtTime(0.0001, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.045, now + offset + 0.008);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.08);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(now + offset); osc.stop(now + offset + 0.085);
+        });
+    } catch (e) { /* Optional UI sound only; never affect gameplay. */ }
 }
 
 function initializeGame() {
@@ -2951,8 +3152,182 @@ function isLocalPlayerTurn() {
     return activeP === 1 || gameState.gameMode === "pvp";
 }
 
+// Presentation-only switch: set to false to disable shimmer/fade between avatar stages.
+const ENABLE_TRANSFORMATION_ART_TRANSITIONS = true;
+// Set false to return immediately to the normal game-over screen.
+const ENABLE_FINAL_TRANSFORMATION_CINEMATIC = true;
+const lastDisplayedTransform = { p1: null, p2: null };
+const transformationGainThisTurn = { p1: 0, p2: 0 };
+let lastObservedActivePlayer = null;
+let lastDisplayedSubmission = null;
+const transformEffectTimers = {};
+
+function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stageChanged, cumulativeGainThisTurn) {
+    const portrait = document.getElementById(`${playerKey}-image`);
+    const progressTrack = document.getElementById(`${playerKey}-transform-progress-track`);
+    if (!portrait) return;
+
+    // A stage change can happen downward too; the pulse is reserved for transformation increases.
+    if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
+        portrait.classList.add("art-shimmer");
+        window.setTimeout(() => portrait.classList.remove("art-shimmer"), 750);
+        const img = portrait.querySelector("img");
+        if (img) {
+            img.classList.remove("art-stage-transition");
+            void img.offsetWidth;
+            img.classList.add("art-stage-transition");
+            window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
+        }
+    }
+
+    if (amountChanged <= 0) return;
+    const effectClass = currentLevel >= 10 ? "transform-pulse-final" :
+        (amountChanged >= 2 || cumulativeGainThisTurn >= 2 || currentLevel >= 8 ? "transform-pulse-strong" : "transform-pulse");
+    const classes = ["transform-pulse", "transform-pulse-strong", "transform-pulse-final"];
+    [portrait, progressTrack].filter(Boolean).forEach(el => {
+        el.classList.remove(...classes);
+        void el.offsetWidth; // restart the CSS animation if multiple changes land close together
+        el.classList.add(effectClass);
+    });
+
+    if (transformEffectTimers[playerKey]) window.clearTimeout(transformEffectTimers[playerKey]);
+    transformEffectTimers[playerKey] = window.setTimeout(() => {
+        [portrait, progressTrack].filter(Boolean).forEach(el => el.classList.remove(...classes));
+    }, effectClass === "transform-pulse-final" ? 1450 : effectClass === "transform-pulse-strong" ? 1000 : 750);
+}
+
+function cinematicWait(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function preloadCinematicStage(path) {
+    return new Promise(resolve => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null); // Missing artwork is skipped, never shown as a blank frame.
+        image.src = path;
+    });
+}
+
+async function playFinalTransformationCinematic(loserId) {
+    if (!ENABLE_FINAL_TRANSFORMATION_CINEMATIC) return;
+    const loser = loserId === 1 ? gameState.p1 : gameState.p2;
+    const overlay = document.getElementById("final-transform-cinematic");
+    const portrait = document.getElementById("cinematic-avatar");
+    const caption = document.getElementById("cinematic-caption");
+    const counterWrap = document.getElementById("cinematic-counter-wrap");
+    const counter = document.getElementById("cinematic-counter");
+    const fill = document.getElementById("cinematic-fill");
+    const skipButton = document.getElementById("cinematic-skip");
+    if (!loser || !overlay || !portrait) return;
+
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const stageDelay = reducedMotion ? 70 : 330;
+    const fadeDelay = reducedMotion ? 15 : 170;
+    let skipped = false;
+    const skip = () => { skipped = true; };
+    skipButton.onclick = skip;
+    overlay.style.setProperty("--cinematic-player-color", loserId === 1 ? "var(--player)" : "var(--cpu)");
+    overlay.style.display = "flex";
+    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
+    void overlay.offsetWidth;
+    overlay.classList.add("cinematic-enter");
+    if (caption) caption.textContent = `${playerDisplayName(loser)} — transformation begins`;
+    if (counterWrap) counterWrap.style.display = "block";
+
+    const stagePath = stage => `images/avatars/${loser.name}/${loser.name}_to_${loser.transformTarget}_${stage}.jpg`;
+    let shownStage = null;
+    // Begin at stage 0, then play the complete 1–10 sequence regardless of the actual finishing stage.
+    for (let stage = 0; stage <= 10; stage++) {
+        if (skipped) break;
+        const loaded = await preloadCinematicStage(stagePath(stage));
+        if (skipped) break;
+        if (!loaded) continue;
+
+        if (shownStage === null) {
+            portrait.src = loaded.src;
+            portrait.alt = `${loser.name}, transformation stage ${stage}`;
+            shownStage = stage;
+            if (counter) counter.textContent = `Stage ${stage} / 10`;
+            if (fill) fill.style.width = `${stage * 10}%`;
+            await cinematicWait(reducedMotion ? 20 : 300);
+            continue;
+        }
+
+        portrait.classList.add("is-fading");
+        await cinematicWait(fadeDelay);
+        if (skipped) break;
+        portrait.src = loaded.src;
+        portrait.alt = `${loser.name}, transformation stage ${stage}`;
+        shownStage = stage;
+        if (counter) counter.textContent = `Stage ${stage} / 10`;
+        if (fill) fill.style.width = `${stage * 10}%`;
+        portrait.classList.remove("is-fading");
+
+        overlay.classList.remove("cinematic-shimmer", "cinematic-intense", "cinematic-final");
+        void overlay.offsetWidth;
+        if (stage === 10) {
+            overlay.classList.add("cinematic-final");
+            if (caption) caption.textContent = "Transformation complete";
+            if (counterWrap) counterWrap.style.display = "none";
+        } else {
+            overlay.classList.add("cinematic-shimmer");
+            if (stage >= 8) overlay.classList.add("cinematic-intense");
+            if (caption) caption.textContent = stage >= 8 ? "The final changes take hold…" : "Transformation in progress…";
+        }
+        await cinematicWait(stage === 10 ? (reducedMotion ? 180 : 1050) : stageDelay);
+    }
+
+    // If stage 0 is absent, the first available stage still plays; if stage 10 is absent,
+    // finish cleanly on the last available artwork instead of displaying a broken image.
+    if (!skipped && shownStage !== null) {
+        if (caption) caption.textContent = "Transformation complete";
+        if (counterWrap) counterWrap.style.display = "none";
+        await cinematicWait(reducedMotion ? 80 : 650);
+    }
+    overlay.style.display = "none";
+    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
+    portrait.classList.remove("is-fading");
+}
+
+function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
+    if (!container) return;
+    // Avoid reloading/replacing the image on every UI refresh; only update when its stage changes.
+    const existing = container.querySelector("img");
+    if (existing && existing.dataset.avatarPath === imgPath) return;
+
+    const img = document.createElement("img");
+    img.src = imgPath;
+    img.dataset.avatarPath = imgPath;
+    img.alt = filename;
+    img.onclick = () => openImageModal(imgPath);
+    img.onerror = () => {
+        container.textContent = `Image Req: ${filename}`;
+    };
+    img.onload = () => {
+        // Recheck that this image is still the desired stage before displaying it.
+        if (img.dataset.avatarPath !== imgPath) return;
+        container.replaceChildren(img);
+        if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
+            img.classList.add("art-stage-transition");
+            window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
+        }
+    };
+    // Load first, then replace the old stage, so a missing image doesn't blank a valid portrait.
+    if (!existing) container.appendChild(img);
+}
+
 function updateUI() {
     if (!gameState || gameState.gameEnded) return;
+
+    // Track transformation gained during the currently active player's turn, even when
+    // multiple separate effects each add only one point.
+    const observedActivePlayer = Number(gameState.activePlayer);
+    if (lastObservedActivePlayer !== observedActivePlayer) {
+        transformationGainThisTurn.p1 = 0;
+        transformationGainThisTurn.p2 = 0;
+        lastObservedActivePlayer = observedActivePlayer;
+    }
     
     ['p1', 'p2'].forEach((p) => {
         let pObj = gameState[p];
@@ -2960,20 +3335,30 @@ function updateUI() {
 
         document.getElementById(`${p}-trance`).innerText = pObj.trance;
         document.getElementById(`${p}-arousal`).innerText = pObj.arousal;
-        document.getElementById(`${p}-transform`).innerText = pObj.transform;
         document.getElementById(`${p}-energy`).innerText = pObj.energy;
         document.getElementById(`${p}-vuln`).innerText = pObj.vulnerability;
         document.getElementById(`${p}-vuln-container`).style.display = pObj.vulnerability > 0 ? "flex" : "none";
 
-        let filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(11, pObj.transform)}.jpg`;
-        let imgPath = `images/avatars/${pObj.name}/${filename}`;
-        let container = document.getElementById(`${p}-image`);
-        if (container) {
-            const img = new Image(); 
-            img.src = imgPath;
-            img.onload = () => container.innerHTML = `<img src="${imgPath}" onclick="openImageModal('${imgPath}')" />`;
-            img.onerror = () => container.innerHTML = `Image Req:<br/>${filename}`;
+        const progressLevel = Math.max(0, Math.min(10, Number(pObj.transform) || 0));
+        const progressFill = document.getElementById(`${p}-transform-progress`);
+        const progressTrack = document.getElementById(`${p}-transform-progress-track`);
+        const progressLabel = document.getElementById(`${p}-transform-progress-label`);
+        if (progressFill) progressFill.style.width = `${progressLevel * 10}%`;
+        if (progressLabel) progressLabel.textContent = `${progressLevel} / 10`;
+        if (progressTrack) progressTrack.setAttribute("aria-valuenow", String(progressLevel));
+
+        const previousTransform = lastDisplayedTransform[p];
+        const transformDelta = previousTransform === null ? 0 : Number(pObj.transform) - previousTransform;
+        const stageChanged = previousTransform !== null && Math.min(11, Number(pObj.transform)) !== Math.min(11, previousTransform);
+        const filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(11, pObj.transform)}.jpg`;
+        const imgPath = `images/avatars/${pObj.name}/${filename}`;
+        const container = document.getElementById(`${p}-image`);
+        updateAvatarPortrait(container, imgPath, filename, stageChanged);
+        if (previousTransform !== null && transformDelta !== 0) {
+            if (transformDelta > 0) transformationGainThisTurn[p] += transformDelta;
+            playTransformationUIEffect(p, transformDelta, Number(pObj.transform) || 0, stageChanged, transformationGainThisTurn[p]);
         }
+        lastDisplayedTransform[p] = Number(pObj.transform) || 0;
     });
 
     const p1LastRoll = gameState.p1?.lastRoll || [];
@@ -2983,19 +3368,58 @@ function updateUI() {
 
     const track = document.getElementById("submission-track");
     if (track) {
-        track.innerHTML = "";
-        let activeIndex = Math.max(0, Math.min(10, gameState.submission + 5)); 
-        for(let i = 0; i < 11; i++) {
-            let cls = 'node';
-            if (i === activeIndex) {
-                if (i === 0) cls += ' active-left-end';
-                else if (i === 10) cls += ' active-right-end';
-                else cls += ' active';
+        // Build nodes only once so the marker can transition rather than being recreated on every UI refresh.
+        if (!track.querySelector('.node')) {
+            for (let i = 0; i < 11; i++) {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.dataset.trackIndex = String(i);
+                track.appendChild(node);
             }
-            let nDiv = document.createElement("div");
-            nDiv.className = cls;
-            track.appendChild(nDiv);
+            const marker = document.createElement('div');
+            marker.className = 'submission-marker';
+            marker.id = 'submission-marker';
+            marker.setAttribute('aria-hidden', 'true');
+            track.appendChild(marker);
         }
+        const rawSubmission = Number(gameState.submission) || 0;
+        const activeIndex = Math.max(0, Math.min(10, rawSubmission + 5));
+        const marker = track.querySelector('#submission-marker');
+        track.querySelectorAll('.node').forEach((node, i) => {
+            node.classList.remove('active', 'active-left-end', 'active-right-end');
+            if (i === activeIndex) node.classList.add(i === 0 ? 'active-left-end' : i === 10 ? 'active-right-end' : 'active');
+        });
+        if (marker) {
+            const activeNode = track.querySelector(`.node[data-track-index="${activeIndex}"]`);
+            if (activeNode) {
+                // Measure in the track's own coordinate space; offsetLeft can be misleading
+                // when nested layout/offset parents change. Clamp the marker center so its
+                // full circle stays on the track even at either endpoint.
+                const trackRect = track.getBoundingClientRect();
+                const nodeRect = activeNode.getBoundingClientRect();
+                const markerRadius = (marker.offsetWidth || 13) / 2;
+                const measuredCenter = nodeRect.left - trackRect.left + nodeRect.width / 2;
+                const safeCenter = Math.max(markerRadius, Math.min(track.clientWidth - markerRadius, measuredCenter));
+                marker.style.left = `${safeCenter}px`;
+            }
+            marker.classList.toggle('pressure', Math.abs(rawSubmission) >= 4 && Math.abs(rawSubmission) < 5);
+            marker.classList.toggle('endpoint', Math.abs(rawSubmission) >= 5);
+            marker.style.borderColor = rawSubmission < 0 ? 'var(--cpu)' : rawSubmission > 0 ? 'var(--player)' : 'var(--accent)';
+            marker.style.boxShadow = rawSubmission < 0 ? '0 0 10px var(--cpu), 0 0 18px rgba(255,77,77,.45)' : rawSubmission > 0 ? '0 0 10px var(--player), 0 0 18px rgba(76,201,240,.45)' : '';
+        }
+        const trackContainer = track.closest('.track-container');
+        if (trackContainer) {
+            trackContainer.classList.toggle('submission-left-pressure', rawSubmission <= -4);
+            trackContainer.classList.toggle('submission-right-pressure', rawSubmission >= 4);
+            if (Math.abs(rawSubmission) === 5 && lastDisplayedSubmission !== rawSubmission) {
+                trackContainer.classList.remove('endpoint-crackle');
+                void trackContainer.offsetWidth;
+                trackContainer.classList.add('endpoint-crackle');
+                window.setTimeout(() => trackContainer.classList.remove('endpoint-crackle'), 850);
+                playSubmissionCrackleSound();
+            }
+        }
+        lastDisplayedSubmission = rawSubmission;
     }
 
     const activePlayerNum = Number(gameState.activePlayer);
@@ -3132,6 +3556,58 @@ function renderMarket() {
     });
 }
 
+// Visual-only card feedback. Local UI state only; never added to gameState/Firebase.
+let pendingCardTriggerNotices = [];
+let cardTriggerFlushTimer = null;
+let cardTriggerToastTimer = null;
+function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = "passive") {
+    if (!gameState || ![1, 2].includes(Number(playerId))) return;
+    const p = Number(playerId) === 1 ? gameState.p1 : gameState.p2;
+    if (!p) return;
+    const inventory = Array.isArray(p.inventory) ? p.inventory : Object.values(p.inventory || {});
+    const card = inventory.find(c => c && Number(c.id) === Number(cardId));
+    const cardName = card?.name || (typeof KNOWN_CARDS !== "undefined" ? (KNOWN_CARDS.find(c => Number(c.id) === Number(cardId)) || {}).name : "") || `Card ${cardId}`;
+    pendingCardTriggerNotices.push({ playerId: Number(playerId), playerName: p.name || `Player ${playerId}`, cardId: Number(cardId), cardName, detail, kind });
+    if (cardTriggerFlushTimer) return;
+    cardTriggerFlushTimer = setTimeout(() => {
+        cardTriggerFlushTimer = null;
+        const notices = pendingCardTriggerNotices.splice(0);
+        const unique = [];
+        const seen = new Set();
+        notices.forEach(n => {
+            const k = `${n.playerId}:${n.cardId}:${n.detail}`;
+            if (!seen.has(k)) { seen.add(k); unique.push(n); }
+        });
+        renderCardTriggerToast(unique);
+        // Animate only cards that actually triggered in this batch. No timer-based
+        // reapplication during ordinary inventory redraws (e.g. clicking dice).
+        const animated = new Set();
+        unique.forEach(n => {
+            const key = `${n.playerId}:${n.cardId}`;
+            if (animated.has(key)) return;
+            animated.add(key);
+            const inv = document.getElementById(`p${n.playerId}-inventory`);
+            const el = inv && inv.querySelector(`.inv-card[data-card-id="${n.cardId}"]`);
+            if (!el) return;
+            el.classList.remove('card-triggered');
+            void el.offsetWidth;
+            el.classList.add('card-triggered');
+            setTimeout(() => el.classList.remove('card-triggered'), 760);
+        });
+    }, 75);
+}
+function renderCardTriggerToast(notices) {
+    if (!notices.length) return;
+    const toast = document.getElementById('card-trigger-toast');
+    if (!toast) return;
+    const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const rows = notices.map(n => `<div><span class="toast-player" style="color:${n.playerId === 1 ? 'var(--player)' : 'var(--cpu)'}">${esc(n.playerName)}</span> · <strong>${esc(n.cardName)}</strong>: ${esc(n.detail)}</div>`);
+    toast.innerHTML = rows.join('');
+    toast.classList.remove('visible'); void toast.offsetWidth; toast.classList.add('visible');
+    if (cardTriggerToastTimer) clearTimeout(cardTriggerToastTimer);
+    cardTriggerToastTimer = setTimeout(() => toast.classList.remove('visible'), 2600);
+}
+
 function renderInventory(playerId) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
     let invDiv = document.getElementById(`p${playerId}-inventory`);
@@ -3147,7 +3623,9 @@ function renderInventory(playerId) {
         && hasCard(buyerId, 5);
 
     p.inventory.forEach((card, idx) => {
-        let html = `<div class="inv-card"><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
+        const keepClass = card.type === "Keep" ? " active-keep-card" : "";
+        const ownerColor = playerId === 1 ? "var(--player)" : "var(--cpu)";
+        let html = `<div class="inv-card${keepClass}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};"><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
         if (isHuman && isTurn) {
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
             if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
@@ -3177,6 +3655,7 @@ function useAbsoluteFocus(idx, pId) {
     let card = p.inventory[idx];
 
     if (card && card.charges > 0) {
+        queueCardTrigger(pId, 20, "Spent a Focus charge for +1 Reroll", "manual");
         card.charges -= 1;
         gameState.rerollsLeft += 1;
         log(`Used Absolute Focus charge. (${card.charges} left)`);
@@ -3242,6 +3721,7 @@ function useQuietMind(pId) {
     const apply = (stat) => {
         const pl = pId === 1 ? gameState.p1 : gameState.p2;
         if (pl.energy < 2 || pl[stat] <= 0) return;
+        queueCardTrigger(pId, 33, `Reduced ${stat === "trance" ? "Trance" : "Arousal"} by 1`, "manual");
         pl.energy -= 2;
         pl[stat]--;
         log(`${pl.name} used Quiet Mind to reduce ${stat === "trance" ? "Trance" : "Arousal"}.`);
@@ -3278,7 +3758,7 @@ function discardForFreeBuy(invIndex, pId) {
     gameState.freeBuyActive = true;
     log(`${p.name} discarded Mirror Image! Next buy is free.`); syncToFirebase(); updateUI();
 }
-function useRapidPulse(pId) { let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } }
+function useRapidPulse(pId) { let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { queueCardTrigger(pId, 12, "Activated shield for this turn", "manual"); p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } }
 
 function useFadingReality(pId) {
     let changed = 0;
@@ -3290,6 +3770,7 @@ function useFadingReality(pId) {
         }
     });
     if (changed > 0) {
+        queueCardTrigger(pId, 47, `Rerolled ${changed} unlocked Transform die${changed === 1 ? "" : "s"}`, "manual");
         log(`Fading Reality: rerolled ${changed} unlocked Transform die${changed === 1 ? "" : "s"}.`);
         syncToFirebase();
         updateUI();
@@ -3299,7 +3780,7 @@ function useFadingReality(pId) {
 function useSimmeringArousal(pId) {
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     let idx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL" && !d.kept);
-    if(idx !== -1) { gameState.dice[idx].face = "🔥 AROUSAL"; p.simmeringUsed = true; log("Simmering Arousal: Changed a die to Arousal."); syncToFirebase(); updateUI(); }
+    if(idx !== -1) { queueCardTrigger(pId, 49, "Changed one die to 🔥", "manual"); gameState.dice[idx].face = "🔥 AROUSAL"; p.simmeringUsed = true; log("Simmering Arousal: Changed a die to Arousal."); syncToFirebase(); updateUI(); }
 }
 
 function increaseTrance(targetObj, amount, sourcePlayerId) {
@@ -3390,6 +3871,7 @@ function increaseArousal(target, amount, recipientId, sourceId) {
     pObj.arousal = Math.min(5, pObj.arousal + amount);
     if (pObj.arousal > before && hasCard(recipientId, 32)) {
         pObj.energy += 1;
+        queueCardTrigger(recipientId, 32, "+1 Energy when Arousal increased");
         log(`Guided Heat triggered: +1 Energy from arousal increase.`);
     }
 
@@ -3403,9 +3885,11 @@ function increaseArousal(target, amount, recipientId, sourceId) {
     } else {
         const srcBefore = src.arousal;
         src.arousal = Math.min(5, src.arousal + 1);
+        queueCardTrigger(recipientId, 50, `Reflected 1 🔥 to ${src.name}`);
         log(`Mutual Heat: ${pObj.name} reflects 1 🔥 to ${src.name}.`);
         if (src.arousal > srcBefore && hasCard(sourceId, 32)) {
             src.energy += 1;
+            queueCardTrigger(sourceId, 32, "+1 Energy when reflected Arousal increased");
             log(`Guided Heat triggered: +1 Energy from arousal increase.`);
         }
     }
@@ -3422,6 +3906,7 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     if (amount > 0 && sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41) && !gameState.vulnGrantedThisTurn) { 
         gameState.vulnGrantedThisTurn = true;
         target.vulnerability += 1; 
+        queueCardTrigger(sourcePlayerId, 41, `Applied 1 Vulnerability to ${target.name}`);
         log(`Powerful Transform applied 1 Vulnerability to ${target.name}.`); 
     }
 }
@@ -3533,7 +4018,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // ------------------------------------------------------------
     if (counts["⚡ ENERGY"] > 0) {
         let gain = counts["⚡ ENERGY"];
-        if (hasCard(playerId, 45)) { gain += 1; log("Power Boost granted +1 extra Energy from virtual dice!"); }
+        if (hasCard(playerId, 45)) { gain += 1; queueCardTrigger(playerId, 45, "+1 extra Energy from dice"); log("Power Boost granted +1 extra Energy from virtual dice!"); }
         p.energy += gain; log(`Virtual dice granted +${gain} Energy.`);
     }
 
@@ -3588,7 +4073,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
     // ------------------------------------------------------------
     //let arousalEffect = Math.floor(counts["🔥 AROUSAL"] / 2);
 	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
-    if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; log("Stoking Fires boosted virtual Arousal!"); }
+    if (hasCard(playerId, 13) && counts["🔥 AROUSAL"] > 0) { arousalEffect += 1; queueCardTrigger(playerId, 13, "Boosted virtual Arousal effect by 1"); log("Stoking Fires boosted virtual Arousal!"); }
 
     if (arousalEffect > 0) {
         if (opp.shieldActive) log("Rapid Pulse shielded virtual Arousal!");
@@ -3821,7 +4306,7 @@ async function resolveDice() {
     // 1. Energy
     if (counts.ENERGY > 0) { 
         let gain = counts.ENERGY;
-        if (hasCard(activePlayerNum, 45)) { gain += 1; log("Power Boost granted +1 extra Energy!"); }
+        if (hasCard(activePlayerNum, 45)) { gain += 1; queueCardTrigger(activePlayerNum, 45, "+1 extra Energy from dice"); log("Power Boost granted +1 extra Energy!"); }
         activeP.energy += gain; 
         log(`+${gain} Energy.`); 
     }
@@ -3877,7 +4362,7 @@ async function resolveDice() {
     // 4. Arousal
     //let arousalEffect = Math.floor(counts.AROUSAL / 2);
 	let arousalEffect = counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0;
-    if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; log(`Stoking Fires boosted Arousal!`); }
+    if (hasCard(activePlayerNum, 13) && counts.AROUSAL > 0) { arousalEffect += 1; queueCardTrigger(activePlayerNum, 13, "Boosted Arousal effect by 1"); log(`Stoking Fires boosted Arousal!`); }
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
             if (typeof increaseArousal === "function") {
@@ -3897,9 +4382,10 @@ async function resolveDice() {
         if (hasCard(activePlayerNum, 23)) { 
             if (typeof increaseArousal === "function") increaseArousal(oppP, 1, oppId, activePlayerNum); 
             else oppP.arousal = (oppP.arousal || 0) + 1;
+            queueCardTrigger(activePlayerNum, 23, "Opponent Arousal +1 on 3+ Submission");
             log("Submissive Flush triggered: Opp Arousal +1."); 
         }
-        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
+        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; queueCardTrigger(activePlayerNum, 24, "Earned an extra turn with 1 fewer die"); log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
     }
 
     // 6. Transform
@@ -3907,13 +4393,14 @@ async function resolveDice() {
         let effect = 1 + (counts.TRANSFORM - 3); 
         applyTransform(oppId, effect, activePlayerNum); 
         log(`Opp Transform +${effect}`);
-        if (hasCard(activePlayerNum, 2)) { applyTransform(oppId, 1, activePlayerNum); log(`Dream State actively boosted Transform damage by 1!`); }
-        if (hasCard(activePlayerNum, 22)) { pushSubmission(activePlayerNum === 1 ? 1 : -1, activePlayerNum); log("Mental Shackles triggered: Sub pushed +1."); }
+        if (hasCard(activePlayerNum, 2)) { applyTransform(oppId, 1, activePlayerNum); queueCardTrigger(activePlayerNum, 2, "Added 1 Transform damage"); log(`Dream State actively boosted Transform damage by 1!`); }
+        if (hasCard(activePlayerNum, 22)) { pushSubmission(activePlayerNum === 1 ? 1 : -1, activePlayerNum); queueCardTrigger(activePlayerNum, 22, "Pushed Submission +1 on 3+ Transform"); log("Mental Shackles triggered: Sub pushed +1."); }
     }
 
     // 7. Trigger Word Check
     if (hasCard(activePlayerNum, 3) && counts.SUBMISSION > 0 && counts.TRANSFORM > 0 && counts.AROUSAL > 0 && counts.SPIRAL > 0 && counts.LUCIDITY > 0 && counts.ENERGY > 0) {
         applyTransform(oppId, 5, activePlayerNum); 
+        queueCardTrigger(activePlayerNum, 3, "Combo bonus: opponent takes +5 Transform");
         log(`Trigger Word activated! Opponent takes +5 Transform!`);
     }
 
@@ -3922,23 +4409,42 @@ async function resolveDice() {
     updateUI();
 }
 
+function animateSubmissionOverflow(targetPlayerId, overflowAmount) {
+    const prefix = targetPlayerId === 1 ? 'p1' : 'p2';
+    const targets = [document.getElementById(`${prefix}-image`), document.getElementById(`${prefix}-transform-progress-wrap`), document.getElementById(`${prefix}-transform-progress-track`)];
+    // Progress wrapper currently has no id in older markup, so locate it through the progress track if needed.
+    const progressTrack = document.getElementById(`${prefix}-transform-progress-track`);
+    if (progressTrack && !targets.includes(progressTrack.parentElement)) targets.push(progressTrack.parentElement);
+    targets.filter(Boolean).forEach(el => {
+        el.classList.remove('transform-overflow-impact');
+        void el.offsetWidth;
+        el.classList.add('transform-overflow-impact');
+        window.setTimeout(() => el.classList.remove('transform-overflow-impact'), 850);
+    });
+    const fill = document.getElementById(`${prefix}-transform-progress`);
+    if (fill) {
+        fill.style.filter = 'brightness(1.8)';
+        window.setTimeout(() => { fill.style.filter = ''; }, 700);
+    }
+}
+
 function pushSubmission(amount, sourcePlayer = null) {
     if (amount === 0) return;
     if (Math.abs(amount) === 1 && sourcePlayer !== null) {
         let oppId = sourcePlayer === 1 ? 2 : 1;
-        if (hasCard(oppId, 35)) { log("Mesmerizing Rhythm blocked exactly 1 point of push!"); return; }
+        if (hasCard(oppId, 35)) { queueCardTrigger(oppId, 35, "Blocked a 1-point Submission push", "reaction"); log("Mesmerizing Rhythm blocked exactly 1 point of push!"); return; }
     }
     
     // Card 36 Check: Only push further if pushing TOWARDS opponent
     if (sourcePlayer !== null && hasCard(sourcePlayer, 36)) {
         if ((sourcePlayer === 1 && amount > 0) || (sourcePlayer === 2 && amount < 0)) {
-            amount += (sourcePlayer === 1 ? 1 : -1); log("Deeper Trance enhanced submission push!");
+            amount += (sourcePlayer === 1 ? 1 : -1); queueCardTrigger(sourcePlayer, 36, "Enhanced Submission push by 1"); log("Deeper Trance enhanced submission push!");
         }
     }
 
     let newSub = gameState.submission + amount;
-    if (newSub > 5) { let overflow = newSub - 5; gameState.submission = 5; applyTransform(2, overflow, 0); log(`Sub overflow! Player 2 takes ${overflow} Transform.`); } 
-    else if (newSub < -5) { let overflow = Math.abs(newSub - (-5)); gameState.submission = -5; applyTransform(1, overflow, 0); log(`Sub overflow! P1 takes ${overflow} Transform.`); } 
+    if (newSub > 5) { let overflow = newSub - 5; gameState.submission = 5; applyTransform(2, overflow, 0); animateSubmissionOverflow(2, overflow); log(`Sub overflow! Player 2 takes ${overflow} Transform.`); }
+    else if (newSub < -5) { let overflow = Math.abs(newSub - (-5)); gameState.submission = -5; applyTransform(1, overflow, 0); animateSubmissionOverflow(1, overflow); log(`Sub overflow! P1 takes ${overflow} Transform.`); }
     else gameState.submission = newSub;
 }
 
@@ -4065,6 +4571,7 @@ function buyCard(index) {
 
     if (hasCard(playerId, 46)) {
         pushSubmission(playerId === 1 ? 1 : -1, playerId);
+        queueCardTrigger(playerId, 46, "Deepened Submission when a card was purchased");
         log("Bondage triggered! Sub deepened upon buying card.");
     }
 
@@ -4112,6 +4619,7 @@ function endTurn() {
 
     if (hasCard(gameState.activePlayer, 27) && activeP.energy === 0) {
         activeP.energy += 1;
+        queueCardTrigger(gameState.activePlayer, 27, "Gained 1 Energy at end of turn");
         log("Endless Staircase granted 1 Energy.");
     }
 
@@ -4144,6 +4652,7 @@ function endTurn() {
         if (onOwnSide) {
             let direction = gameState.activePlayer === 1 ? 1 : -1;
             pushSubmission(direction, gameState.activePlayer);
+            queueCardTrigger(gameState.activePlayer, 34, "Pushed Submission +1 at end of turn");
             log("Cognitive Override pushed Sub +1.");
         }
     }
@@ -4461,6 +4970,35 @@ function executeCPUTurn() {
     }, 1000);
 }
 
+function syncFinalBoardPortrait(playerId) {
+    const key = playerId === 1 ? 'p1' : 'p2';
+    const player = playerId === 1 ? gameState.p1 : gameState.p2;
+    if (!player) return;
+    const level = Math.max(0, Math.min(10, Number(player.transform) || 0));
+    const fill = document.getElementById(`${key}-transform-progress`);
+    const label = document.getElementById(`${key}-transform-progress-label`);
+    const track = document.getElementById(`${key}-transform-progress-track`);
+    if (fill) fill.style.width = `${level * 10}%`;
+    if (label) label.textContent = `${level} / 10`;
+    if (track) track.setAttribute('aria-valuenow', String(level));
+    const stage = Math.min(11, Math.max(0, Number(player.transform) || 0));
+    const filename = `${player.name}_to_${player.transformTarget}_${stage}.jpg`;
+    const path = `images/avatars/${player.name}/${filename}`;
+    const container = document.getElementById(`${key}-image`);
+    if (!container) return;
+    let img = container.querySelector('img');
+    if (!img) {
+        img = document.createElement('img');
+        container.replaceChildren(img);
+    }
+    img.dataset.avatarPath = path;
+    img.alt = filename;
+    img.onclick = () => openImageModal(path);
+    img.onerror = () => { container.textContent = `Image Req: ${filename}`; };
+    // Assign even if an older stage is already on screen; updateUI intentionally stops after game end.
+    if (img.src !== new URL(path, document.baseURI).href) img.src = path;
+}
+
 function checkWinCondition() {
 	if (gameState.gameEnded) return true;
 
@@ -4540,6 +5078,10 @@ function checkWinCondition() {
     }
 
     gameState.gameEnded = true;
+    // updateUI intentionally returns after game end, so explicitly refresh the final board portraits
+    // and progress bars. This keeps the loser at stage 10 when the cinematic/game-over dialog closes.
+    syncFinalBoardPortrait(1);
+    syncFinalBoardPortrait(2);
 
     const p1Wins = winnerId === 1;
     const winner = winnerId === 1 ? gameState.p1 : gameState.p2;
@@ -4624,7 +5166,15 @@ function checkWinCondition() {
 
     recFinish(p1Wins ? 1 : 2);
     ["p1-image", "p2-image"].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove("active-portrait-glow-p1", "active-portrait-glow-p2"); });   // stop the turn glow at game over
-    document.getElementById("game-over-modal").style.display = "flex";
+    const gameOverModal = document.getElementById("game-over-modal");
+    if (ENABLE_FINAL_TRANSFORMATION_CINEMATIC) {
+        // The winner and game state are already final; this is a visual-only replay for the loser.
+        playFinalTransformationCinematic(p1Wins ? 2 : 1).finally(() => {
+            gameOverModal.style.display = "flex";
+        });
+    } else {
+        gameOverModal.style.display = "flex";
+    }
     return true;
 }
 
@@ -4663,17 +5213,17 @@ const HELP_CONTENT = {
             </div>
         </div>
 		<div class="help-section">
-			<h3>Online Play Setup</h3>
-			<p>Hypnotic Duel supports two-player online play using Firebase. One player is the <strong>Host</strong> and the other is the <strong>Guest</strong>.</p>
+			<h3>Online Play: Enter the Shared Trance</h3>
+			<p>Challenge another player remotely through Firebase. One player is the <strong>Host</strong> and the other is the <strong>Guest</strong>.</p>
 
-			<h4>Host</h4>
+			<h4>The Host Opens the Room</h4>
 			<ol>
 				<li>In the setup screen, select <strong>2 Player Online (Firebase)</strong> as the Game Mode.</li>
 				<li>In the <strong>Online Setup</strong> menu, select <strong>Host Online Game</strong>.</li>
 				<li>Click <strong>Generate</strong> to create a Room Code.</li>
-				<li>Give the Room Code to the other player.</li>
-				<li>Choose your player name, transformation target, and other game options.</li>
-				<li>Click <strong>Start Game</strong> to create and start the online game.</li>
+				<li>Share that Room Code with your opponent. They will need it to connect to your room.</li>
+				<li>Choose your character and other setup options, then click <strong>Start Game</strong>.</li>
+				<li>The Online Lobby opens. Wait for the Guest to appear, check the character and transformation choices, then click <strong>Ready</strong>.</li>
 			</ol>
 
 			<h4>Guest</h4>
@@ -4681,15 +5231,18 @@ const HELP_CONTENT = {
 				<li>In the setup screen, select <strong>2 Player Online (Firebase)</strong> as the Game Mode.</li>
 				<li>In the <strong>Online Setup</strong> menu, select <strong>Join Online Game</strong>.</li>
 				<li>Enter the <strong>Room Code</strong> provided by the Host.</li>
-				<li>Choose your player name, transformation target, and other game options.</li>
-				<li>Click <strong>Start Game</strong>.</li>
+				<li>Choose your character and setup options, then click <strong>Start Game</strong>.</li>
+				<li>In the Online Lobby, check the Host's character and transformation choices, then click <strong>Ready</strong>.</li>
 			</ol>
-
-			<p>Once both players have started, the game connects them through the shared Room Code. Game state, dice rolls, cards, resources, and turns are shared between the Host and Guest.</p>
+			
+			<h4>Synchronize and Begin</h4>
+			<p>The lobby displays your opponent's character and choices. Each player chooses the transformation they intend to inflict on the other character; the available transformations adjust to match the opponent. If a choice is unavailable for the selected character, the game may substitute an available option.</p> <p>Once both players are Ready, the lobby starts the shared match automatically. Dice, cards, resources, and turns are synchronized between both browsers.</p>
 
 			<div class="help-box">
 				<strong>Important:</strong> The Host should generate the Room Code first and give it to the Guest before the Guest attempts to join.
 			</div>
+			
+			<div class="help-box"> <strong>Need to change a choice?</strong> Use <strong>Cancel Ready</strong> before the match starts. You can also use <strong>Leave Lobby</strong> to exit. Make sure both players agree on the room code before starting. </div>
 		</div>
         <div class="help-section">
             <h3>The Six Dice</h3>
@@ -4706,11 +5259,11 @@ const HELP_CONTENT = {
     `,
     rules: `
         <div class="help-section">
-            <h3>Game Objective</h3>
+            <h3>Objective: The Final Transformation</h3>
             <p>Each player is trying to <strong>Completely transform the opponent to a target</strong>. The player whose opponent is completely transformed through the 10 stages of transformation first is the winner. If both players are completely transformed during the same active turn/effect, the active player wins the tie.</p>
         </div>
         <div class="help-section">
-            <h3>Turn Structure</h3>
+            <h3>The Ritual of Each Turn</h3>
             <ol>
                 <li><strong>Rolling phase:</strong> roll, lock useful dice, and reroll unkept dice.</li>
                 <li><strong>Resolve:</strong> apply the final roll's individual effects and combinations.</li>
@@ -4719,28 +5272,28 @@ const HELP_CONTENT = {
             </ol>
         </div>
         <div class="help-section">
-            <h3>Submission Track</h3>
+            <h3>The Pendulum of Submission</h3>
             <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions again and again.</p>
             <p>At Submission 3 or more, a roll of ⛓️ produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of push.</p>
         </div>
         <div class="help-section">
-            <h3>Trance</h3>
+            <h3>Trance 🌀</h3>
             <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You get to choose whether they are more submissive (+2) or more aroused (+2). Then they wake up with 0 Trance again.</p>
         </div>
         <div class="help-section">
-            <h3>Arousal & Rerolls</h3>
+            <h3>Arousal 🔥 & Rerolls</h3>
             <p>Two 🔥 dice produce 1 Arousal. Each one after produces one more. So 3 🔥 produce 2, 4 🔥 produce 3, etc., etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. Some cards add rerolls or other modifiers.</p>
         </div>
         <div class="help-section">
-            <h3>Transform</h3>
+            <h3>Transform 👁️</h3>
             <p>Three 👁️ dice produce 1 Transformation of the opponent, with each additional 👁️ adding another point. Cards can increase the number of Transformations. Transforming the opponent to 10+ ends the game in your favor.</p>
         </div>
         <div class="help-section">
-            <h3>Energy</h3>
+            <h3>Energy ⚡</h3>
             <p>Each ⚡ die gives 1 Energy. Energy is spent on cards and being able to wipe the cards in the market and refill it. The card <i>Power Boost</i> can increase Energy gained from dice.</p>
         </div>
         <div class="help-section">
-            <h3>Lucidity</h3>
+            <h3>Lucidity 💧</h3>
             <p>💧 Lucidity lets you reduce your own Trance, Arousal, and—when applicable—Vulnerability. <i>Deep Safeties</i> adds 1 extra point to spend. If the opponent has <i>Burning Intensity</i>, each Arousal point you remove costs 2💧. Human players distribute Lucidity manually in the allocation dialog.</p>
         </div>
         <div class="help-section">
@@ -4772,13 +5325,13 @@ const HELP_CONTENT = {
     cards: `
         <div class="help-section">
             <h3>Cards & Market</h3>
-            <p><strong>Keep</strong> cards stay active after purchase. <strong>Instant</strong> cards resolve immediately and are discarded afterward.</p>
+            <p><strong>Keep</strong> cards stay active after purchase. <strong>Instant</strong> cards resolve immediately and are discarded afterward. The deck's discard pile can be recycled when the draw deck runs out.</p>
             <p>The market contains three cards. Whenever a card is purchased, that market slot is immediately refilled when possible. There is no hand/inventory limit however you can only buy a card if it does not have the same name as another card in your inventory.</p>
             <input id="help-card-search" class="help-card-search" type="search" placeholder="Search cards by name or effect..." oninput="renderHelpCards(this.value)">
             <div id="help-card-list" class="help-card-list"></div>
         </div>
         <div class="help-section">
-            <h3>Buying Cards</h3>
+            <h3>Claiming New Powers (Cards)</h3>
             <p>You may buy multiple cards during your shop phase if you have enough Energy. Hypnotic Focus reduces the cost of only your first purchase that turn; later purchases use their normal modified cost.</p>
             <p><strong>Wipe Row</strong> costs 2 Energy, discards the current market cards, and replaces the row with new cards when available. If you think the opponent will get a powerful card and you
 			can't afford it, it is sometimes beneficial to wipe the market so they can't get it.</p>
@@ -4790,7 +5343,7 @@ const HELP_CONTENT = {
             <p>Some effects grant another turn. Somnambulism automatically grants another turn after rolling ⛓️⛓️⛓️, with one fewer die on that extra turn.</p>
         </div>
         <div class="help-section">
-            <h3>End-of-Turn Effects</h3>
+            <h3>Lingering Suggestions</h3>
             <p>Some Keep cards trigger at the end of your turn. This includes effects that interact with Submission, Energy, or the opponent's Trance.</p>
         </div>
         <div class="help-section">
@@ -4802,8 +5355,12 @@ const HELP_CONTENT = {
             <p>Rapid Pulse can spend 2 Energy during the roll phase to shield you from incoming Trance and Arousal for a turn. Other cards provide rerolls, healing, extra dice, or ways to manipulate the market.</p>
         </div>
         <div class="help-section">
-            <h3>New Identity</h3>
+            <h3>New Identity Card</h3>
             <p>If a transformed player has New Identity when they reach 10+ Transform, the card can prevent the immediate victory by reverting that player to Transform 5, setting Arousal to 5, and discarding their active cards.</p>
+        </div>
+		<div class="help-section">
+            <h3>Hypnotic Dominance Card</h3>
+            <p>This card lets a player buy cards from the other player. They can still buy cards from the market as well!</p>
         </div>
         <div class="help-section">
             <h3>Game Modes</h3>
@@ -4858,7 +5415,7 @@ function renderHelpCards(filter = '') {
 const GUIDED_TUTORIAL_STEPS = [
     {
         title: 'Welcome to Hypnotic Duel',
-        body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. You will make a few harmless practice actions so you can see how the controls work.</p>',
+        body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. This is a practice game. You will make a few actions here so you can see how the controls work.</p>',
         target: null, position: 'bottom', actionGate: 'none'
     },
     {
@@ -4883,12 +5440,12 @@ const GUIDED_TUTORIAL_STEPS = [
     },
     {
         title: '5. Build Your Resources',
-        body: '<p>After the roll resolves, your resources change. ⚡ Energy buys cards. 🌀 Trance pressures your opponent. 💧 Lucidity protects you. ⛓️ Submission moves the Submission track. 🔥 Arousal affects your rerolls. 👁️ Transform is your main offensive path to victory.</p>',
+        body: '<p>After the roll resolves, your resources change. ⚡ Energy buys cards. 🌀 Trance pressures your opponent. 💧 Lucidity protects you. ⛓️ Submission moves the Submission track. 🔥 Arousal affects how many rerolls the opponent is allowed. 👁️ Transform is your main offensive path to victory.</p>',
         target: '#p1-energy', position: 'top', actionGate: 'none'
     },
     {
         title: '6. Buy Cards',
-        body: '<p>The three cards in the <strong>Market</strong> are available during the Shop phase. You may buy multiple cards if you have enough Energy; each purchase immediately refills that market slot.</p><p><strong>Keep</strong> cards remain active and appear in your Active Cards area. <strong>Instant</strong> cards resolve immediately and are then discarded.</p>',
+        body: '<p>The three cards in the <strong>Market</strong> are available during the Shop phase. You may buy multiple cards if you have enough Energy; each purchase immediately refills that market slot.</p><p><strong>Keep</strong> cards remain active and appear in your Active Cards area. <strong>Instant</strong> cards resolve immediately and are then discarded. You may not have two Keep cards with the same name in your inventory.</p>',
         target: '#market-container', position: 'bottom', actionGate: 'none'
     },
     {
