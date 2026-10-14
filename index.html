@@ -1099,11 +1099,11 @@ let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
 let isSyncingFromFirebase = false;
 
 // Presentation-only state: never participates in game rules or online game-state sync.
-let soundEnabled = false;
+let soundEnabled = true;
 let soundAudioContext = null;
 // Presentation preferences are local to this browser, not shared game-state rules.
 let localShowDiceText = true;
-let localShowGameLog = true;
+let localShowGameLog = false;
 let localShowBrainComments = false;
 let gameOverSeen = false;
 let selectedHistoryIndex = -1; // -1 follows the newest available turn
