@@ -591,8 +591,8 @@
         /* Reserve a permanent alert slot so card notices never shift the board layout. */
         #card-trigger-toast {
             position: relative; z-index: 2; width: 100%; box-sizing: border-box;
-            height: 58px; min-height: 58px; flex: 0 0 58px; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: center; gap: 2px;
+            height: 58px; min-height: 58px; flex: 0 0 58px; overflow-x: hidden; overflow-y: auto;
+            display: flex; flex-direction: column; justify-content: flex-start; gap: 2px;
             margin: 7px auto 5px; padding: 6px 10px;
             border: 1px solid transparent; border-radius: 8px; background: rgba(28, 25, 38, .96);
             color: var(--text); font-size: .86rem; line-height: 1.25; text-align: center;
@@ -600,11 +600,9 @@
             transition: opacity .18s ease, visibility .18s ease, border-color .18s ease;
         }
         #card-trigger-toast.visible {
-            border-color: var(--accent); opacity: 1; visibility: visible;
+            border-color: var(--accent); opacity: 1; visibility: visible; pointer-events: auto;
         }
         #card-trigger-toast > div { overflow-wrap: anywhere; }
-        #card-trigger-toast > div:nth-child(n+4) { display: none; }
-        #card-trigger-toast .toast-player { font-weight: 700; }
         @media (prefers-reduced-motion: reduce) {
             .inv-card.active-keep-card, .inv-card.active-keep-card.card-triggered, #card-trigger-toast { animation: none !important; transition: none !important; }
         }
@@ -1052,7 +1050,7 @@ const KNOWN_CARDS = [
 	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
 	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
 	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {adaptive: 35, aggressive: 50, defensive: 50, v23low: 40} },
-	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you use 🔥 Arousal, increase opponent's arousal 1 level more.", ai: {adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
+	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
 	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
 	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
     { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
@@ -1123,6 +1121,7 @@ let localShowDiceText = true;
 let localShowGameLog = false;
 let localShowBrainComments = false;
 let gameOverSeen = false;
+let gameOverPresentationStarted = false;
 let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
@@ -1389,7 +1388,7 @@ function colorizePlayerNamesInElement(root) {
         let matches = [];
         players.forEach(player => {
             const escaped = player.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "giu");
+            const re = new RegExp(`(?<![\\p{L}\\p{N}])${nameTitlePrefixSource(player.cls)}${escaped}(?![\\p{L}\\p{N}])`, "giu");
             let m; while ((m = re.exec(text))) matches.push({ start: m.index, end: m.index + m[0].length, value: m[0], cls: player.cls });
         });
         matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
@@ -1487,7 +1486,7 @@ function historyPlayerLabelHtml(value) {
     ].filter(p => p.name).sort((a, b) => b.name.length - a.name.length);
     players.forEach(player => {
         const escaped = escapeHistoryHtml(player.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${escaped})((?:&#39;|&#x27;|['’])s)?(?![\\p{L}\\p{N}])`, "giu");
+        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${nameTitlePrefixSource(player.cls)}${escaped})((?:&#39;|&#x27;|['’])s)?(?![\\p{L}\\p{N}])`, "giu");
         html = html.replace(re, `<span class="${player.cls}">$1$2</span>`);
     });
     return html;
@@ -1520,7 +1519,7 @@ function historyEventHtml(value) {
     html = html.replace(/<button\b[^>]*class="history-card-link"[^>]*>[\s\S]*?<\/button>/gi, match => { const token = `ZZPLAYERLINK${protectedLinks.length}ZZ`; protectedLinks.push([token, match]); return token; });
     playerNames.forEach(player => {
         const escaped = escapeHistoryHtml(player.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${escaped})((?:&#39;|&#x27;|['’])s)?(?![\\p{L}\\p{N}])`, "giu");
+        const re = new RegExp(`(?<![\\p{L}\\p{N}])(${nameTitlePrefixSource(player.cls)}${escaped})((?:&#39;|&#x27;|['’])s)?(?![\\p{L}\\p{N}])`, "giu");
         html = html.replace(re, `<span class="${player.cls}">$1$2</span>`);
     });
     protectedLinks.forEach(([token, link]) => { html = html.replace(token, link); });
@@ -1895,6 +1894,10 @@ function closeGameOverToBoard() {
     const modal = document.getElementById("game-over-modal");
     if (modal) modal.style.display = "none";
     gameOverSeen = true;
+	if (gameState && gameState.gameEnded && typeof syncFinalBoardPortrait === "function") {
+        syncFinalBoardPortrait(1);
+        syncFinalBoardPortrait(2);
+    }
     const restart = document.getElementById("restart-game-toolbar-btn");
     if (restart) restart.style.display = "inline-block";
 }
@@ -2355,6 +2358,9 @@ function hasCard(playerId, cardId) {
 // ============================================================
 const CPU_DIFFICULTY_NAMES = { random: "Beginner", smart: "Easy", aggressive: "Normal", v23low: "Hard", defensive: "Expert", adaptive: "Master" };
 function getCpuDifficulty() { return gameState.p2.difficulty || "random"; }
+function cpuTitleActive() { return !!gameState && gameState.gameMode === "solo" && getCpuDifficulty() === "adaptive"; }
+// regex source for an optional "Master " / "Mistress " in front of the CPU's name, so the title is coloured with the name
+function nameTitlePrefixSource(cls) { return (cls === "player-name-p2" && cpuTitleActive()) ? "(?:(?:Master|Mistress) )?" : ""; }
 function cpuMasterTitle(cpuName) { return getGender(cpuName) === "female" ? "Mistress" : "Master"; }
 function getCpuDifficultyName() {
     const d = getCpuDifficulty();
@@ -2854,7 +2860,7 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     const leadKept = counts[lead] + ((counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) ? counts[sec] : 0);
     let minFree = counts[lead] >= 3 ? 0 : (counts[lead] === 2 ? 2 : 3);
     if (cpuBrain.plan === "energy" || cpuBrain.plan === "trance") minFree = Math.max(0, minFree - 1);
-    const arousalWanted = opp.arousal < 5 && (counts.AR >= 2 || (counts.AR >= 1 && hasCard(2, 13))) &&
+    const arousalWanted = opp.arousal < 5 && counts.AR >= 2 &&       // Arousal needs 2+ dice (Stoking Fires too)
                           (w.AR >= 0.75 || ([1, 2, 3, 4].includes(opp.arousal) && counts.AR >= 2));
     const linear = [{ k: "EN", w: w.EN }, { k: "SP", w: w.SP }];
     if (arousalWanted) linear.push({ k: "AR", w: Math.max(w.AR, 0.5) });
@@ -2907,8 +2913,7 @@ function cpuExtraRerollGain() {
 function cpuPickSimmeringDie() {
     const dice = gameState.dice;
     const counts = cpuCountsFromFaces(dice.map(d => d.face));
-    const hasStoking = hasCard(2, 13);
-    if (counts.AR === 0 && !hasStoking) return -1;       // one lone 🔥 does nothing without Stoking Fires
+    if (counts.AR === 0) return -1;       // a lone 🔥 does nothing (Arousal and Stoking Fires both need 2+ dice), so only convert a die when we already have one
     if (hasCard(2, 3) && Object.keys(counts).every(k => counts[k] > 0)) return -1;   // don't break a Trigger Word
     const w = cpuFaceWeights();
     let bestIdx = -1, bestVal = Infinity;
@@ -3234,14 +3239,13 @@ function cpuTierProblems(level) {
 function cpuReleaseUselessKeeps(keep, rerollsAvail) {
     const dice = gameState.dice, p = gameState.p2;
     const faces = dice.map(d => cpuFaceKey(d.face));
-    const stoking = hasCard(2, 13);
     const r = Math.max(1, rerollsAvail || 1);
     const lucidityNeed = (p.vulnerability || 0) + p.arousal * (hasCard(1, 48) ? 2 : 1) + p.trance;
     for (let pass = 0; pass < 5; pass++) {
         let changed = false;
         const free = keep.filter(k => !k).length;
         ["TR", "SU", "AR"].forEach(k => {
-            const need = k === "AR" ? (stoking ? 1 : 2) : 3;
+            const need = k === "AR" ? 2 : 3;
             const c = keep.reduce((sum, kp, i) => sum + (kp && faces[i] === k ? 1 : 0), 0);
             if (c === 0 || c >= need) return;
             let usable;
@@ -3292,7 +3296,7 @@ function cpuTierKeepPlan(level, r) {
         const aSyn = has(13) || has(49) || has(48), pSyn = has(0) || has(17) || has(31);
         if (counts.TR >= 3 || (tSyn && counts.TR >= 2)) keepFace("TR");
         if (counts.SU >= 3 || (sSyn && counts.SU >= 2)) keepFace("SU");
-        if (aSyn && (counts.AR >= 2 || has(13))) keepFace("AR");
+        if (aSyn && counts.AR >= 2) keepFace("AR");
         if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
     }
     // believable mistakes: second-guess a kept die and reroll it anyway (never one that is part of a finished triple)
@@ -3882,33 +3886,45 @@ async function playFinalTransformationCinematic(loserId) {
     overlay.style.display = "none";
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     portrait.classList.remove("is-fading");
+	
+	if (typeof syncFinalBoardPortrait === "function") {
+        syncFinalBoardPortrait(1);
+        syncFinalBoardPortrait(2);
+    }
 }
 
 function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     if (!container) return;
-    // Avoid reloading/replacing the image on every UI refresh; only update when its stage changes.
     const existing = container.querySelector("img");
-    if (existing && existing.dataset.avatarPath === imgPath) return;
+    let alreadyShowing = false;
+    try {
+        alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath && existing.src === new URL(imgPath, document.baseURI).href);
+    } catch (e) { alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath); }
+    if (alreadyShowing) return;
+
+    const token = String((Number(container.dataset.portraitToken) || 0) + 1);
+    container.dataset.portraitToken = token;
 
     const img = document.createElement("img");
-    img.src = imgPath;
     img.dataset.avatarPath = imgPath;
     img.alt = filename;
     img.onclick = () => openImageModal(imgPath);
-    img.onerror = () => {
-        container.textContent = `Image Req: ${filename}`;
-    };
-    img.onload = () => {
-        // Recheck that this image is still the desired stage before displaying it.
-        if (img.dataset.avatarPath !== imgPath) return;
+    const commit = () => {
+        if (container.dataset.portraitToken !== token) return;
+        if (!img.complete || img.naturalWidth === 0) return;
         container.replaceChildren(img);
         if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
             img.classList.add("art-stage-transition");
             window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
         }
     };
-    // Load first, then replace the old stage, so a missing image doesn't blank a valid portrait.
-    if (!existing) container.appendChild(img);
+    img.onload = commit;
+    img.onerror = () => {
+        if (container.dataset.portraitToken !== token) return;
+        container.textContent = `Image Req: ${filename}`;
+    };
+    img.src = imgPath;
+    if (img.complete) commit();
 }
 
 function pulseChangedStat(playerPrefix, statName, currentValue) {
@@ -3930,7 +3946,17 @@ function pulseChangedStat(playerPrefix, statName, currentValue) {
 }
 
 function updateUI() {
-    if (!gameState || gameState.gameEnded) return;
+    if (!gameState)
+		return;
+		
+	// A later match must be allowed to show its own ending
+	if (!gameState.gameEnded)
+		gameOverPresentationStarted = false;
+		
+	// Freeze only after this browser has already shown the ending.
+    // The first gameEnded snapshot still paints the final board.
+	if (gameState.gameEnded && gameOverPresentationStarted)
+		return;
 
     // Track transformation gained during the currently active player's turn, even when
     // multiple separate effects each add only one point.
@@ -4115,7 +4141,14 @@ function updateUI() {
     renderLog();
     renderTurnHistory();
     setGameLogVisible(localShowGameLog);
-    checkWinCondition();
+	if (gameState.gameEnded) {
+		presentFinishedGame();
+		return;
+	}
+	
+	// The other online player must not decide the winner. They wait for gameEnded.
+    if (gameState.gameMode === "online" && !isLocalPlayerTurn()) return;
+	checkWinCondition();
 }
 
 function renderDiceAndActions(isHumanTurn) {
@@ -4693,7 +4726,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
         const canClearAll = lCount >= lucidityClearCost(p, arousalCost);
         if (p.trance === 0 && p.arousal === 0 && p.vulnerability === 0) {
             log(`Lucidity rolled, but ${p.name} is clear-headed.`);
-        } else if (canClearAll) {
+        } else if (canClearAll || lucidityActiveStatCount(p) === 1) {
             const allocations = autoAllocateLucidity(lCount, p, arousalCost);
             const lucidityParts = lucidityResultParts(p, allocations, hasCard(oppId, 41));
             log(lucidityParts.length ? `${p.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${p.name} is clear-headed.`);
@@ -4780,7 +4813,14 @@ function startTurn() {
 		if (diceCount < 3) diceCount = 3;
         log(`Vulnerability restricts ${activeP.name} to ${diceCount} dice.`);
     }
-    if (gameState.somnambulismTurn) { diceCount = Math.max(3, diceCount - 1); gameState.somnambulismTurn = false; }
+    if (gameState.somnambulismTurn) {
+		const penalty = Math.max(1, Number(gameState.somnambulismPenalty) || 1);
+		diceCount = Math.max(3, diceCount - penalty);
+		gameState.somnambulismTurn = false;
+	}
+	else {
+		gameState.somnambulismPenalty = 0;
+	}
 	
 	console.log("LONG TRACE startTurn:", {
 	seed: window.__longTraceSeed,
@@ -4885,6 +4925,13 @@ function autoAllocateLucidity(points, playerObj, arousalCost = 1) {
     allocation.arousal = Math.min(playerObj.arousal || 0, Math.floor(rem / cost)); playerObj.arousal -= allocation.arousal; rem -= allocation.arousal * cost;
     allocation.trance = Math.min(playerObj.trance || 0, rem); playerObj.trance -= allocation.trance;
     return allocation;
+}
+function lucidityActiveStatCount(playerObj) {
+    let n = 0;
+    if ((Number(playerObj.trance) || 0) > 0) n++;
+    if ((Number(playerObj.arousal) || 0) > 0) n++;
+    if ((Number(playerObj.vulnerability) || 0) > 0) n++;
+    return n;
 }
 function lucidityClearCost(playerObj, arousalCost = 1) {
     return (Number(playerObj.vulnerability) || 0) + (Number(playerObj.arousal) || 0) * Math.max(1, Number(arousalCost) || 1) + (Number(playerObj.trance) || 0);
@@ -5022,7 +5069,7 @@ async function resolveDice() {
         const canClearAll = lCount >= lucidityClearCost(activeP, arousalCost);
         if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
             log(`Lucidity rolled, but ${activeP.name} is clear-headed.`);
-        } else if (canClearAll) {
+        } else if (canClearAll || lucidityActiveStatCount(activeP) === 1) {
             const allocations = autoAllocateLucidity(lCount, activeP, arousalCost);
             const lucidityParts = lucidityResultParts(activeP, allocations, hasCard(oppId, 41));
             log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
@@ -5075,7 +5122,12 @@ async function resolveDice() {
             queueCardTrigger(activePlayerNum, 23, "Opponent Arousal +1 on 3+ Submission");
             log(`${oppP.name}'s arousal increases +1 🔥 from Submissive Flush.`); 
         }
-        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; queueCardTrigger(activePlayerNum, 24, "Earned an extra turn with 1 fewer die"); log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
+        if (hasCard(activePlayerNum, 24)) {
+			gameState.somnambulismPenalty = (Number(gameState.somnambulismPenalty) || 0) + 1;
+			gameState.somnambulismTurn = true; 
+			const fewer = gameState.somnambulismPenalty;
+			queueCardTrigger(activePlayerNum, 24, `Earned an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}`);
+			log(`Somnambulism triggered: Taking an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}!`); }
     }
 
     // 6. Transform
@@ -5689,8 +5741,10 @@ function syncFinalBoardPortrait(playerId) {
     const stage = Math.min(11, Math.max(0, Number(player.transform) || 0));
     const filename = `${player.name}_to_${player.transformTarget}_${stage}.jpg`;
     const path = `images/avatars/${player.name}/${filename}`;
-    const container = document.getElementById(`${key}-image`);
+        const container = document.getElementById(`${key}-image`);
     if (!container) return;
+    const token = String((Number(container.dataset.portraitToken) || 0) + 1);
+    container.dataset.portraitToken = token;
     let img = container.querySelector('img');
     if (!img) {
         img = document.createElement('img');
@@ -5699,9 +5753,71 @@ function syncFinalBoardPortrait(playerId) {
     img.dataset.avatarPath = path;
     img.alt = filename;
     img.onclick = () => openImageModal(path);
-    img.onerror = () => { container.textContent = `Image Req: ${filename}`; };
-    // Assign even if an older stage is already on screen; updateUI intentionally stops after game end.
-    if (img.src !== new URL(path, document.baseURI).href) img.src = path;
+    img.onload = null;
+    img.onerror = () => {
+        if (container.dataset.portraitToken !== token) return;
+        container.textContent = `Image Req: ${filename}`;
+    };
+    img.src = path;
+}
+
+function winnerIdFromState() {
+    if (!gameState || !gameState.p1 || !gameState.p2) return null;
+    const p1Transformed = Number(gameState.p1.transform) >= 10;
+    const p2Transformed = Number(gameState.p2.transform) >= 10;
+    if (p1Transformed && p2Transformed) return Number(gameState.activePlayer) === 2 ? 2 : 1;
+    if (p1Transformed) return 2;
+    if (p2Transformed) return 1;
+    return null;
+}
+
+function presentFinishedGame() {
+    if (gameOverPresentationStarted || !gameState || !gameState.gameEnded) return;
+    const winnerId = winnerIdFromState();
+    if (!winnerId) return;
+    gameOverPresentationStarted = true;
+
+    syncFinalBoardPortrait(1);
+    syncFinalBoardPortrait(2);
+
+    const p1Wins = winnerId === 1;
+    const winner = p1Wins ? gameState.p1 : gameState.p2;
+    const gameOverModal = document.getElementById("game-over-modal");
+
+    document.getElementById("go-title").innerText = `${winner.name} Wins!`;
+    document.getElementById("go-p1-name").innerText = gameState.p1.name;
+    document.getElementById("go-p1-status").innerText = p1Wins ? "WINNER" : "TRANSFORMED";
+
+    const p1FinalT = Math.min(11, gameState.p1.transform);
+    const p1Path = `images/avatars/${gameState.p1.name}/${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
+    document.getElementById("go-p1-image").innerHTML =
+        `<img src="${p1Path}" onclick="openImageModal('${p1Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
+    document.getElementById("go-p1-panel").classList.remove("winner-highlight");
+    if (p1Wins) document.getElementById("go-p1-panel").classList.add("winner-highlight");
+
+    document.getElementById("go-p2-name").innerText = playerDisplayName(gameState.p2);
+    document.getElementById("go-p2-status").innerText = !p1Wins ? "WINNER" : "TRANSFORMED";
+
+    const p2FinalT = Math.min(11, gameState.p2.transform);
+    const p2Path = `images/avatars/${gameState.p2.name}/${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
+    document.getElementById("go-p2-image").innerHTML =
+        `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
+    document.getElementById("go-p2-panel").classList.remove("winner-highlight");
+    if (!p1Wins) document.getElementById("go-p2-panel").classList.add("winner-highlight");
+
+    recFinish(p1Wins ? 1 : 2);
+    ["p1-image", "p2-image"].forEach(id => {
+        const e = document.getElementById(id);
+        if (e) e.classList.remove("active-portrait-glow-p1", "active-portrait-glow-p2");
+    });
+
+    if (ENABLE_FINAL_TRANSFORMATION_CINEMATIC) {
+        playFinalTransformationCinematic(p1Wins ? 2 : 1).finally(() => {
+            gameOverModal.style.display = "flex";
+        });
+    } else {
+        gameOverModal.style.display = "flex";
+    }
 }
 
 function checkWinCondition() {
@@ -5782,106 +5898,18 @@ function checkWinCondition() {
         );
     }
 
-    gameState.gameEnded = true;
-    // updateUI intentionally returns after game end, so explicitly refresh the final board portraits
-    // and progress bars. This keeps the loser at stage 10 when the cinematic/game-over dialog closes.
-    syncFinalBoardPortrait(1);
-    syncFinalBoardPortrait(2);
-
-    const p1Wins = winnerId === 1;
-    const winner = winnerId === 1 ? gameState.p1 : gameState.p2;
-	
-	// Sync game state to cloud upon victory
-    if (typeof syncToFirebase === "function") {
-        syncToFirebase();
-    }
-
-	// ------------------------------------------------------------
-    // UI MODAL & AVATAR RENDERING
-    // ------------------------------------------------------------
-    document.getElementById("go-title").innerText =
-        `${winner.name} Wins!`;
-
-    // ------------------------------------------------------------
-    // PLAYER 1
-    // ------------------------------------------------------------
-    document.getElementById("go-p1-name").innerText =
-        gameState.p1.name;
-
-    document.getElementById("go-p1-status").innerText =
-        p1Wins ? "WINNER" : "TRANSFORMED";
-
-    // IMPORTANT:
-    // Show the player's ACTUAL transformation level.
-    // Cap only the image stage at 11 because 11 is the maximum
-    // available transformation image.
-    const p1FinalT = Math.min(11, gameState.p1.transform);
-
-    const p1Path =
-        `images/avatars/${gameState.p1.name}/` +
-        `${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
-
-    document.getElementById("go-p1-image").innerHTML =
-        `<img src="${p1Path}" ` +
-        `onclick="openImageModal('${p1Path}')" ` +
-        `onerror="this.outerHTML='Image Req:<br>` +
-        `${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
-
-    document
-        .getElementById("go-p1-panel")
-        .classList.remove("winner-highlight");
-
-    if (p1Wins) {
-        document
-            .getElementById("go-p1-panel")
-            .classList.add("winner-highlight");
-    }
-
-    // ------------------------------------------------------------
-    // PLAYER 2
-    // ------------------------------------------------------------
-    document.getElementById("go-p2-name").innerText =
-        playerDisplayName(gameState.p2);
-
-    document.getElementById("go-p2-status").innerText =
-        !p1Wins ? "WINNER" : "TRANSFORMED";
-
-    // Again, use the ACTUAL Transform level.
-    const p2FinalT = Math.min(11, gameState.p2.transform);
-
-    const p2Path =
-        `images/avatars/${gameState.p2.name}/` +
-        `${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
-
-    document.getElementById("go-p2-image").innerHTML =
-        `<img src="${p2Path}" ` +
-        `onclick="openImageModal('${p2Path}')" ` +
-        `onerror="this.outerHTML='Image Req:<br>` +
-        `${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
-
-    document
-        .getElementById("go-p2-panel")
-        .classList.remove("winner-highlight");
-
-    if (!p1Wins) {
-        document
-            .getElementById("go-p2-panel")
-            .classList.add("winner-highlight");
-    }
-
-    recFinish(p1Wins ? 1 : 2);
-    ["p1-image", "p2-image"].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove("active-portrait-glow-p1", "active-portrait-glow-p2"); });   // stop the turn glow at game over
-    const gameOverModal = document.getElementById("game-over-modal");
-    if (ENABLE_FINAL_TRANSFORMATION_CINEMATIC) {
-        // The winner and game state are already final; this is a visual-only replay for the loser.
-        playFinalTransformationCinematic(p1Wins ? 2 : 1).finally(() => {
-            gameOverModal.style.display = "flex";
-        });
-    } else {
-        gameOverModal.style.display = "flex";
-    }
+       gameState.gameEnded = true;
+    // If this runs while applying our own Firebase echo, wait until that
+    // apply finishes. Otherwise the gameEnded write is dropped.
+    const pushEndedState = () => {
+        if (isSyncingFromFirebase) { setTimeout(pushEndedState, 0); return; }
+        if (typeof syncToFirebase === "function") syncToFirebase();
+    };
+    pushEndedState();
+    updateUI();
     return true;
 }
+	
 
 function openImageModal(imgSrc) {
     if (!imgSrc) return;
