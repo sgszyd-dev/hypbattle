@@ -1050,7 +1050,7 @@ const KNOWN_CARDS = [
 	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
 	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
 	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {adaptive: 35, aggressive: 50, defensive: 50, v23low: 40} },
-	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you use 🔥 Arousal, increase opponent's arousal 1 level more.", ai: {adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
+	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
 	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
 	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
     { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
@@ -1662,9 +1662,26 @@ function updateLobbyUI(me, opp, note) {
     const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
+	let displayForm = opp.target;
+	if (opp.target === "Gender") {
+		if (getGender(opp) === "male") {
+			displayForm = "Woman";
+		} else if (getGender(opp) === "female") {
+			displayForm = "Man";
+		}
+	}
+	let youDisplayForm = document.getElementById("p1-transform-type").value;
+	if (youDisplayForm === "Gender") {
+		if (getGender(me) === "male") {
+			youDisplayForm = "Woman";
+		} else if (getGender(me) === "female") {
+			youDisplayForm = "Man";
+		}
+	}
+	
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
-    set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${opp.target}` : "Share the room code so they can join.");
-    set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${document.getElementById("p1-transform-type").value}` : "");
+    set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${displayForm}` : "Share the room code so they can join.");
+    set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${youDisplayForm}` : "");
     let msg = note || lobbyNote || "";
     if (sameName) msg = `You both picked ${myName}. One of you needs to choose a different character.`;
     set("lobby-note", msg);
@@ -2322,7 +2339,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261014.4"; // Update this label for each release.
+const GAME_VERSION = "20261015.1"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
