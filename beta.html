@@ -1663,6 +1663,7 @@ function updateLobbyUI(me, opp, note) {
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
 	let displayForm = opp?.target ?? "Gender";
+    alert("My name: " + myName + " sameName: " + sameName + " DF: " + displayForm + " opp: " + opp);
     if (displayForm === "Gender") {
         const gender = opp ? getGender(opp) : null;
         if (gender === "male") {
@@ -1673,6 +1674,7 @@ function updateLobbyUI(me, opp, note) {
     }
 
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
+    alert("me: " + me + " You DF: " + youDisplayForm);
 	if (youDisplayForm === "Gender") {
 		if (getGender(me) === "male") {
 			youDisplayForm = "Woman";
