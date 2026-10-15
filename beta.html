@@ -1664,10 +1664,10 @@ function updateLobbyUI(me, opp, note) {
     const sameName = !!(opp && opp.name === myName);
 	let displayForm = opp?.target ?? "Gender";
     alert("My name: " + myName + " sameName: " + sameName + " DF: " + displayForm + " opp: " + opp
-        + " gender: " + (opp ? getGender(opp) : "NA")
+        + " gender: " + (opp ? getGender(opp.name) : "NA")
     );
     if (displayForm === "Gender") {
-        const gender = opp ? getGender(opp) : null;
+        const gender = opp ? getGender(opp.name) : null;
         if (gender === "male") {
             displayForm = "Woman";
         } else if (gender === "female") {
@@ -1676,11 +1676,11 @@ function updateLobbyUI(me, opp, note) {
     }
 
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
-    alert("me: " + me + " You DF: " + youDisplayForm + " You gender: " + (me ? getGender(me) : "NA"));
+    alert("me: " + me + " You DF: " + youDisplayForm + " You gender: " + getGender(myName));
 	if (youDisplayForm === "Gender") {
-		if (getGender(me) === "male") {
+		if (getGender(myName) === "male") {
 			youDisplayForm = "Woman";
-		} else if (getGender(me) === "female") {
+		} else if (getGender(myName) === "female") {
 			youDisplayForm = "Man";
 		}
 	}
