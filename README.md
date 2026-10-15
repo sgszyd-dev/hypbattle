@@ -217,7 +217,7 @@ Transform targets (`TRANSFORMS`): Statue, Cow, Cat, Dog, Werewolf, Fox, Horse, P
 
 | Character | Local transform options |
 |---|---|
-| Alex | Bunny, Pig, Dog, Cat |
+| Alex | Bunny, Pig, Dog, Cat, Gender |
 | Roz | Werewolf, Cow, Eevee |
 | Siobhán | Horse, Cat, Bunny, Fox, Otter, Pig, Doll, Gender, Werewolf, Dog, Statue, Puppet |
 | Tex | Cow, Cat, Werewolf, Horse |
