@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hypnotic Duel - Beta V13.0</title>
-    <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
-    <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-    <meta name="theme-color" content="#ffffff">
+	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+	<link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/manifest.json">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1017,7 +1017,7 @@ function getGender(name) {
 const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon"];
 
 const CHARACTER_MANIFEST = {
-    "Alex": ["Bunny", "Pig","Dog","Cat"],
+    "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
     "Roz": ["Werewolf","Cow","Eevee"],
     "Victor": [],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
@@ -2321,7 +2321,7 @@ function log(msg, bold = false) {
 
 const GAME_VERSION = "20261013.23"; // Update this label for each release.
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Green.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
 }
 
@@ -3774,8 +3774,17 @@ async function playFinalTransformationCinematic(loserId) {
     const loser = loserId === 1 ? gameState.p1 : gameState.p2;
     const winner = loserId === 1 ? gameState.p2 : gameState.p1;
     const targetForm = loser.transformTarget || "new form";
-    const targetArticle = /^[AEIOU]/i.test(String(targetForm).trim()) ? "an" : "a";
-    const finalCaption = `${winner.name} has transformed ${loser.name} into ${targetArticle} ${targetForm}`;
+	const loserGender = getGender(loser.name);
+	let displayForm = targetForm;
+	if (targetForm === "Gender") {
+		if (loserGender === "male") {
+			displayForm = "Woman";
+		} else if (loserGender === "female") {
+			displayForm = "Man";
+		}
+	}
+    const targetArticle = /^[AEIOU]/i.test(String(displayForm).trim()) ? "an" : "a";
+    const finalCaption = `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;
     const overlay = document.getElementById("final-transform-cinematic");
     const portrait = document.getElementById("cinematic-avatar");
     const caption = document.getElementById("cinematic-caption");
