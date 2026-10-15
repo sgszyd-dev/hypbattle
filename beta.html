@@ -1021,7 +1021,7 @@ const CHARACTER_MANIFEST = {
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
-    "Zixuan": ["Dog","Fox","Pig"],
+    "Zixuan": ["Dog","Fox","Pig","Doll"],
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"],
     "Mark": ["Robot","Puppet","Statue","Gender"],
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
@@ -1091,18 +1091,31 @@ const KNOWN_CARDS = [
 	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
 	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
 	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
+    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {adaptive: 65, aggressive: 75, defensive: 55, v23low: 75, v33low: 75, trans: 90} },
+    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {adaptive: 55, aggressive: 60, defensive: 40, v23low: 75, v33low: 75, trans: 85} },
+    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {adaptive: 70, aggressive: 75, defensive: 50, v23low: 80, v33low: 80, trans: 100} },
+    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {adaptive: 55, aggressive: 30, defensive: 75, v23low: 45, v33low: 45, trans: 20} },
+    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {adaptive: 70, aggressive: 65, defensive: 75, v23low: 65, v33low: 65, trans: 65} },
+    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {adaptive: 70, aggressive: 50, defensive: 85, v23low: 70, v33low: 70, trans: 60} },
+    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {adaptive: 65, aggressive: 65, defensive: 60, v23low: 60, v33low: 60, trans: 50} },
+    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {adaptive: 65, aggressive: 55, defensive: 75, v23low: 65, v33low: 65, trans: 50} },
 ];
 
+// Put card IDs here to keep them out of the draw deck and market.
+// Example: const SUPPRESSED_CARD_IDS = [56, 61];
+const SUPPRESSED_CARD_IDS = [];
+
 // Emergency Submission Cards list
-const SUBMISSION_RECOVERY_CARDS = [10, 11, 15, 18, 34, 39, 53];
+const SUBMISSION_RECOVERY_CARDS = [10, 11, 15, 18, 34, 39, 53, 61];
+let cardResolvedThisTurn = new Set();
 
 let deck = [];
 let market = [];
 let discardPile = [];
 let gameState = {
     gameMode: "solo",
-    p1: { name: "", transformTarget: "", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
-    p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+    p1: { name: "", transformTarget: "", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, burningUpPending: 0 },
+    p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, burningUpPending: 0 },
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
     dice: Array(6).fill({ face: "-", kept: false }),
     rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
@@ -1663,23 +1676,23 @@ function updateLobbyUI(me, opp, note) {
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
 	let displayForm = opp?.target ?? "Gender";
-    if (displayForm === "Gender") {
-        const gender = opp ? getGender(opp.name) : null;
-        if (gender === "male") {
-            displayForm = "Man";
-        } else if (gender === "female") {
-            displayForm = "Woman";
-        }
-    }
-
-	let youDisplayForm = document.getElementById("p1-transform-type").value;
-	if (youDisplayForm === "Gender") {
-		if (getGender(myName) === "male") {
-			youDisplayForm = "Man";
-		} else if (getGender(myName) === "female") {
-			youDisplayForm = "Woman";
+	if (displayForm === "Gender") {
+		const gender = opp ? getGender(opp) : null;
+		if (gender === "male") {
+			displayForm = "Woman";
+		} else if (gender === "female") {
+			displayForm = "Man";
 		}
 	}
+	let youDisplayForm = document.getElementById("p1-transform-type").value;
+	if (youDisplayForm === "Gender") {
+		if (getGender(me) === "male") {
+			youDisplayForm = "Woman";
+		} else if (getGender(me) === "female") {
+			youDisplayForm = "Man";
+		}
+	}
+	
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${displayForm}` : "Share the room code so they can join.");
     set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${youDisplayForm}` : "");
@@ -2340,7 +2353,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261015.2.3"; // Update this label for each release.
+const GAME_VERSION = "20261015.6"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -4243,6 +4256,7 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
     if (!p) return;
     const inventory = Array.isArray(p.inventory) ? p.inventory : Object.values(p.inventory || {});
     const card = inventory.find(c => c && Number(c.id) === Number(cardId));
+    if (cardResolvedThisTurn instanceof Set) cardResolvedThisTurn.add(`${Number(playerId)}:${Number(cardId)}`);
     const cardName = card?.name || (typeof KNOWN_CARDS !== "undefined" ? (KNOWN_CARDS.find(c => Number(c.id) === Number(cardId)) || {}).name : "") || `Card ${cardId}`;
     pendingCardTriggerNotices.push({ playerId: Number(playerId), playerName: p.name || `Player ${playerId}`, cardId: Number(cardId), cardName, detail, kind });
     if (cardTriggerFlushTimer) return;
@@ -4321,6 +4335,7 @@ function renderInventory(playerId) {
             if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
             if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
             if (card.id === 49 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
+            if (card.id === 54 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.burningUpUsed) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (+2 Rerolls)</button>`;
         }
         if (canSteal) {
 			const owned = inventoryHasName(buyer, card.name);
@@ -4335,7 +4350,7 @@ function renderInventory(playerId) {
 
 function buyReroll(energyCost, cardId, pId) {
     let p = pId === 1 ? gameState.p1 : gameState.p2;
-    if (p.energy >= energyCost && hasCard(pId, cardId)) { p.energy -= energyCost; gameState.rerollsLeft += 1; log(`Bought reroll for ${energyCost}⚡.`); syncToFirebase(); updateUI(); }
+    if (p.energy >= energyCost && hasCard(pId, cardId)) { p.energy -= energyCost; gameState.rerollsLeft += 1; cardResolvedThisTurn.add(`${pId}:${cardId}`); log(`Bought reroll for ${energyCost}⚡.`); syncToFirebase(); updateUI(); }
 }
 function useAbsoluteFocus(idx, pId) {
     let p = pId === 1 ? gameState.p1 : gameState.p2;
@@ -4464,6 +4479,17 @@ function useFadingReality(pId) {
     }
 }
 
+function useBurningUp(pId) {
+    const p = pId === 1 ? gameState.p1 : gameState.p2;
+    if (!hasCard(pId, 54) || p.burningUpUsed || gameState.phase !== "rolling" || gameState.dice[0]?.face === "-") return;
+    p.burningUpUsed = true;
+    p.burningUpPending = 2;
+    gameState.rerollsLeft += 2;
+    queueCardTrigger(pId, 54, "Added up to 2 extra rerolls");
+    log(`${p.name} uses Burning Up: +2 rerolls, with escalating 🔥 after each.`);
+    syncToFirebase(); updateUI();
+}
+
 function useSimmeringArousal(pId) {
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     let idx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL" && !d.kept);
@@ -4482,6 +4508,7 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
     const before = targetObj.trance;
     targetObj.trance += amount;
     if (targetObj.trance <= before) return false;
+    if (sourcePlayerId && sourcePlayerId !== targetId && hasCard(targetId, 21)) cardResolvedThisTurn.add(`${targetId}:21`);
     const triggersSetback = before < 5 && targetObj.trance >= 5;
     if (triggersSetback) log(`${targetObj.name}'s 🌀 deepens +${amount} 🌀.`);
 
@@ -4587,14 +4614,35 @@ function increaseArousal(target, amount, recipientId, sourceId) {
 
 function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     let target = targetPlayerId === 1 ? gameState.p1 : gameState.p2;
-    target.transform += amount;
-    if (amount > 0 && target && Number(sourcePlayerId) !== 0) {
-        showTurnAlert(`${target.name} transforms +${amount} 👁️.`, targetPlayerId);
+    let finalAmount = amount;
+    // Transformation Sigil only reacts to an actual opponent's transformation, not neutral/system effects.
+    if (finalAmount > 0 && sourcePlayerId !== targetPlayerId && hasCard(targetPlayerId, 59)) {
+        const rolls = [FACES[Math.floor(Math.random() * FACES.length)], FACES[Math.floor(Math.random() * FACES.length)]];
+        const transformCount = rolls.filter(face => face === "👁️ TRANSFORM").length;
+        log(`Transformation Sigil rolls: ${rolls.map(face => face.split(" ")[0]).join(" and ")}.`);
+        if (transformCount >= 1) {
+            finalAmount = Math.max(0, finalAmount - 1);
+            queueCardTrigger(targetPlayerId, 59, "Reduced incoming transformation by 1");
+            log(`Transformation Sigil reduces incoming 👁️ by 1.`);
+        }
+        if (transformCount === 2) {
+            const reflectedTarget = (sourcePlayerId === 1 || sourcePlayerId === 2)
+                ? sourcePlayerId
+                : (targetPlayerId === 1 ? 2 : 1);
+            const reflectedName = reflectedTarget === 1 ? gameState.p1.name : gameState.p2.name;
+            log(`Transformation Sigil reflects 1 👁️ back at ${reflectedName}.`);
+            applyTransform(reflectedTarget, 1, 0);
+            queueCardTrigger(targetPlayerId, 59, "Reflected 1 transformation to the opponent");
+        }
+    }
+    target.transform += finalAmount;
+    if (finalAmount > 0 && target && Number(sourcePlayerId) !== 0) {
+        showTurnAlert(`${target.name} transforms +${finalAmount} 👁️.`, targetPlayerId);
     }
     
     // Only apply Vulnerability if the source is an actual opponent
     // Powerful Transform: max ONE vulnerability counter per turn, however many Transform points are dealt
-    if (amount > 0 && sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41) && !gameState.vulnGrantedThisTurn) { 
+    if (finalAmount > 0 && sourcePlayerId !== 0 && sourcePlayerId !== targetPlayerId && hasCard(sourcePlayerId, 41) && !gameState.vulnGrantedThisTurn) { 
         gameState.vulnGrantedThisTurn = true;
         target.vulnerability += 1; 
         queueCardTrigger(sourcePlayerId, 41, `Applied 1 Vulnerability to ${target.name}`);
@@ -4677,6 +4725,16 @@ function executeInstant(card, playerId) {
             log("I Will Not Obey! Submission returned to neutral.");
         }
     }
+    else if (card.id === 60) {
+        const oldTrance = p.trance, oldArousal = p.arousal;
+        p.trance = opp.trance; p.arousal = opp.arousal;
+        opp.trance = oldTrance; opp.arousal = oldArousal;
+        log(`Mirror Trance! 🌀 and 🔥 levels were swapped between ${p.name} and ${opp.name}.`);
+    }
+    else if (card.id === 61) {
+        p.trance = 0; p.arousal = 0; p.energy = 0; gameState.submission = 0;
+        log(`Blank! ${p.name}'s 🌀, 🔥, and ⚡ are now 0; ⛓️ returned to neutral. 👁️ is unchanged.`);
+    }
 
     syncToFirebase();
     updateUI();
@@ -4741,6 +4799,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
 
     if (lCount > 0) {
         const arousalCost = hasCard(oppId, 48) ? 2 : 1;
+        if (arousalCost > 1 && activeP.arousal > 0) cardResolvedThisTurn.add(`${oppId}:48`);
         const canClearAll = lCount >= lucidityClearCost(p, arousalCost);
         if (p.trance === 0 && p.arousal === 0 && p.vulnerability === 0) {
             log(`Lucidity rolled, but ${p.name} is clear-headed.`);
@@ -4806,6 +4865,16 @@ async function rollVirtualDice(playerId, count, sourceName) {
     updateUI();
 }
 
+function rollFaceForDie(playerId, dieIndex) {
+    const p = playerId === 1 ? gameState.p1 : gameState.p2;
+    const special = (p.inventory || []).find(c => Number(c.id) === 56 && c.chosenFace);
+    // Deeper Bargains replaces die slot 0 with a 3-in-6 chosen face / 3-in-6 blank die.
+    if (special && dieIndex === 0) {
+        return Math.random() < 0.5 ? special.chosenFace : "⬜ BLANK";
+    }
+    return FACES[Math.floor(Math.random() * FACES.length)];
+}
+
 function startTurn() {
     if (gameState.activePlayer === 1) log(`=== ROUND ${gameState.round} ===`, true);
     
@@ -4816,7 +4885,27 @@ function startTurn() {
     gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false; gameState.vulnGrantedThisTurn = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
     activeP.shieldActive = false; activeP.simmeringUsed = false;
+    activeP.burningUpUsed = false; activeP.burningUpPending = 0;
     activeP.lastRoll = [];
+    cardResolvedThisTurn = new Set();
+
+    if (hasCard(gameState.activePlayer, 55)) {
+        activeP.energy += 2;
+        queueCardTrigger(gameState.activePlayer, 55, "Gained 2 ⚡ at the start of the turn");
+        log(`${activeP.name}'s Transformation Ritual grants +2 ⚡.`);
+    }
+    if (hasCard(gameState.activePlayer, 57)) {
+        const beforeTrance = activeP.trance;
+        activeP.trance = Math.max(0, activeP.trance - 1);
+        queueCardTrigger(gameState.activePlayer, 57, `Reduced own 🌀 by ${beforeTrance - activeP.trance}`);
+        log(`${activeP.name}'s Mental Fortitude reduces 🌀 by ${beforeTrance - activeP.trance}.`);
+    }
+    // These effects have already been applied by the time Submissive Break could target them.
+    if (hasCard(gameState.activePlayer, 7)) cardResolvedThisTurn.add(`${gameState.activePlayer}:7`);
+    if (hasCard(gameState.activePlayer, 15)) cardResolvedThisTurn.add(`${gameState.activePlayer}:15`);
+    if (hasCard(gameState.activePlayer, 43)) cardResolvedThisTurn.add(`${gameState.activePlayer}:43`);
+    if (hasCard(gameState.activePlayer, 55)) cardResolvedThisTurn.add(`${gameState.activePlayer}:55`);
+    if (hasCard(gameState.activePlayer, 57)) cardResolvedThisTurn.add(`${gameState.activePlayer}:57`);
     
     if (activeP.arousal <= 2) gameState.rerollsLeft = 2; else if (activeP.arousal <= 4) gameState.rerollsLeft = 1; else gameState.rerollsLeft = 0;
     const mentalAwakeningActive = hasCard(gameState.activePlayer, 43);
@@ -4885,10 +4974,20 @@ function rollDiceAction() {
     if (typeof pendingCardTriggerNotices !== "undefined") pendingCardTriggerNotices = [];
     let isInitRoll = gameState.dice[0].face === "-";
     if (!isInitRoll && gameState.rerollsLeft <= 0) return;
+    const roller = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
     const animatedIndices = [];
     gameState.dice.forEach((die, index) => { if (!die.kept) animatedIndices.push(index); });
-    gameState.dice = gameState.dice.map(d => d.kept ? d : { face: FACES[Math.floor(Math.random() * FACES.length)], kept: false });
-    if (!isInitRoll) gameState.rerollsLeft--;
+    gameState.dice = gameState.dice.map((d, index) => d.kept ? d : { face: rollFaceForDie(gameState.activePlayer, index), kept: false });
+    if (!isInitRoll) {
+        gameState.rerollsLeft--;
+        if (roller.burningUpPending > 0) {
+            const arousalIncrease = roller.burningUpPending === 2 ? 1 : 2;
+            roller.burningUpPending--;
+            increaseArousal(roller, arousalIncrease, gameState.activePlayer, 0);
+            queueCardTrigger(gameState.activePlayer, 54, `Gained a reroll; 🔥 increased by ${arousalIncrease}`);
+            log(`Burning Up: 🔥 increased by ${arousalIncrease} after the reroll.`);
+        }
+    }
 
     // Keep the real result in gameState, but show independently cycling faces
     // until the animation ends so players cannot read the result early.
@@ -5039,8 +5138,24 @@ async function resolveDice() {
     activeP.arousal = activeP.arousal || 0;
     activeP.vulnerability = activeP.vulnerability || 0;
     activeP.energy = activeP.energy || 0;
+
+    if (hasCard(activePlayerNum, 55)) {
+        const keptTransform = gameState.dice.some(d => d && d.kept && d.face === "👁️ TRANSFORM");
+        if (!keptTransform) {
+            const lost = Math.min(3, activeP.energy);
+            activeP.energy = Math.max(0, activeP.energy - 3);
+            queueCardTrigger(activePlayerNum, 55, `Lost ${lost} ⚡ for not keeping an 👁️ die`);
+            log(`Transformation Ritual: no 👁️ die was kept; lost ${lost} ⚡.`);
+        } else {
+            queueCardTrigger(activePlayerNum, 55, "Kept an 👁️ die; avoided the Energy penalty");
+            log("Transformation Ritual: kept an 👁️ die; no Energy penalty.");
+        }
+    }
     oppP.trance = oppP.trance || 0;
     oppP.arousal = oppP.arousal || 0;
+
+    // Deeper Bargains' special die has already been used by the time the shop opens.
+    if (hasCard(activePlayerNum, 56)) cardResolvedThisTurn.add(`${activePlayerNum}:56`);
 
     // Save BOTH lastRoll and lastKeep
     const currentDiceFaces = gameState.dice.map(d => d.face);
@@ -5081,9 +5196,10 @@ async function resolveDice() {
 
     // 3. Lucidity
     let lCount = counts.LUCIDITY;
-    if (hasCard(activePlayerNum, 9) && lCount > 0) { lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
+    if (hasCard(activePlayerNum, 9) && lCount > 0) { cardResolvedThisTurn.add(`${activePlayerNum}:9`); lCount += 1; log(`Deep Safeties boosted Lucidity!`); }
     if (lCount > 0) {
         const arousalCost = hasCard(oppId, 48) ? 2 : 1;
+        if (arousalCost > 1 && activeP.arousal > 0) cardResolvedThisTurn.add(`${oppId}:48`);
         const canClearAll = lCount >= lucidityClearCost(activeP, arousalCost);
         if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
             log(`Lucidity rolled, but ${activeP.name} is clear-headed.`);
@@ -5222,7 +5338,7 @@ function pushSubmission(amount, sourcePlayer = null) {
 }
 
 function generateDeck() {
-    deck = [...KNOWN_CARDS];
+    deck = [...KNOWN_CARDS].filter(card => !SUPPRESSED_CARD_IDS.includes(Number(card.id)));
 
     // Fresh game: nothing is in the discard pile yet.
     discardPile = [];
@@ -5317,6 +5433,81 @@ function inventoryHasName(player, cardName) {
     return inv.some(c => c && c.name === cardName);
 }
 
+function chooseDeeperBargainsFace(playerId) {
+    const p = playerId === 1 ? gameState.p1 : gameState.p2;
+    const card = (p.inventory || []).find(c => Number(c.id) === 56);
+    if (!card) return;
+    const faces = [
+        { label: "🌀 Trance", value: "🌀 SPIRAL" },
+        { label: "💧 Lucidity", value: "💧 LUCIDITY" },
+        { label: "⚡ Energy", value: "⚡ ENERGY" },
+        { label: "⛓️ Submission", value: "⛓️ SUBMISSION" },
+        { label: "🔥 Arousal", value: "🔥 AROUSAL" },
+        { label: "👁️ Transform", value: "👁️ TRANSFORM" }
+    ];
+    if (playerId === 2 && gameState.gameMode === "solo") {
+        card.chosenFace = "👁️ TRANSFORM";
+        log("CPU chose 👁️ Transform for Deeper Bargains.");
+        return;
+    }
+    showChoiceDialog({
+        key: `deeper-bargains-${playerId}`,
+        title: "Deeper Bargains: Choose a Face",
+        message: "Your special die has three copies of the chosen face and three blank faces.",
+        options: faces.map(face => ({ label: face.label, onClick: () => {
+            const liveCard = (p.inventory || []).find(c => Number(c.id) === 56);
+            if (liveCard) liveCard.chosenFace = face.value;
+            log(`${p.name} chose ${face.label} for Deeper Bargains.`);
+            syncToFirebase(); updateUI();
+        }}))
+    });
+}
+
+function activateSubmissiveBreak(playerId) {
+    const candidates = [];
+    [1, 2].forEach(ownerId => {
+        const owner = ownerId === 1 ? gameState.p1 : gameState.p2;
+        (owner.inventory || []).forEach((card, index) => {
+            if (!card || card.type !== "Keep" || Number(card.id) === 58) return;
+            if (cardResolvedThisTurn.has(`${ownerId}:${Number(card.id)}`)) return;
+            candidates.push({ ownerId, index, card, owner });
+        });
+    });
+    if (!candidates.length) {
+        log("Submissive Break found no eligible Keep card that has not resolved this turn.");
+        return;
+    }
+    const removeCandidate = candidate => {
+        const owner = candidate.ownerId === 1 ? gameState.p1 : gameState.p2;
+        const index = owner.inventory.findIndex(c => c && Number(c.id) === Number(candidate.card.id));
+        if (index < 0 || cardResolvedThisTurn.has(`${candidate.ownerId}:${Number(candidate.card.id)}`)) {
+            log("Submissive Break: that card is no longer eligible.");
+            return;
+        }
+        const [removed] = owner.inventory.splice(index, 1);
+        owner.energy += 2;
+        discardCard(removed);
+        log(`Submissive Break discarded ${removed.name} from ${owner.name}; ${owner.name} gains 2 ⚡.`);
+        syncToFirebase(); updateUI();
+    };
+    if (playerId === 2 && gameState.gameMode === "solo") {
+        // CPU prioritizes removing the opponent's most expensive eligible Keep card.
+        const target = candidates.filter(c => c.ownerId === 1).sort((a,b) => b.card.cost-a.card.cost)[0]
+            || candidates.sort((a,b) => a.card.cost-b.card.cost)[0];
+        removeCandidate(target);
+        return;
+    }
+    showChoiceDialog({
+        key: `submissive-break-${playerId}`,
+        title: "Submissive Break",
+        message: "Choose an active Keep card that has not resolved this turn. Its owner gains 2 ⚡.",
+        options: candidates.map(c => ({
+            label: `${c.owner.name}: ${c.card.name} (owner gains 2 ⚡)`,
+            onClick: () => removeCandidate(c)
+        }))
+    });
+}
+
 function buyCard(index) {
     let card = market[index];
     if (!card) return false;
@@ -5331,6 +5522,8 @@ function buyCard(index) {
 
     let cost = getCardPurchaseCost(card, playerId);
     if (p.energy < cost) return false;
+    if (hasCard(playerId, 29)) cardResolvedThisTurn.add(`${playerId}:29`);
+    if (hasCard(playerId, 28) && !p.boughtCardThisTurn) cardResolvedThisTurn.add(`${playerId}:28`);
 
     p.energy -= cost;
     p.boughtCardThisTurn = true;
@@ -5348,7 +5541,10 @@ function buyCard(index) {
         log("Bondage triggered! Sub deepened upon buying card.");
     }
 
-    if (card.type === "Keep") {
+    if (Number(card.id) === 58) {
+        // Submissive Break is labelled Keep for the card pool, but resolves on purchase and is discarded.
+        discardCard(card);
+    } else if (card.type === "Keep") {
         p.inventory.push(JSON.parse(JSON.stringify(card)));
     } else {
         executeInstant(card, playerId);
@@ -5359,6 +5555,8 @@ function buyCard(index) {
     refillMarket();
     syncToFirebase();
     updateUI();
+    if (Number(card.id) === 56) chooseDeeperBargainsFace(playerId);
+    if (Number(card.id) === 58) activateSubmissiveBreak(playerId);
     return true;
 }
 
@@ -5393,12 +5591,14 @@ function endTurn() {
     }
 
     if (hasCard(gameState.activePlayer, 27) && activeP.energy === 0) {
+        cardResolvedThisTurn.add(`${gameState.activePlayer}:27`);
         activeP.energy += 1;
         queueCardTrigger(gameState.activePlayer, 27, "Gained 1 Energy at end of turn");
         log("Endless Staircase granted 1 Energy.");
     }
 
     if (hasCard(gameState.activePlayer, 31)) {
+        cardResolvedThisTurn.add(`${gameState.activePlayer}:31`);
 		let tPush = Math.floor(activeP.energy / 6) * 2;
 		if (tPush > 0) {
 			log(`Falling Sensation: ${oppP.name}'s trance deepens +${tPush} 🌀.`);
@@ -5517,10 +5717,14 @@ function executeCPUTurn() {
                 return;
             }
 			
-			if (cpuShouldUseHypnoticSuggestion(keptCount)) {
-				buyReroll(1, 16, 2);
-				return;
-			}
+            if (cpuShouldUseHypnoticSuggestion(keptCount)) {
+                buyReroll(1, 16, 2);
+                return;
+            }
+            if (hasCard(2, 54) && !gameState.p2.burningUpUsed) {
+                useBurningUp(2);
+                return;
+            }
 
             clearInterval(rInterval);
 
@@ -6236,8 +6440,8 @@ function clearTutorialHighlight() {
 function resetTutorialGameState() {
     gameState = {
         gameMode: 'solo',
-        p1: { name: '', transformTarget: '', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
-        p2: { name: '', transformTarget: '', difficulty: 'smart', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false },
+        p1: { name: '', transformTarget: '', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, burningUpPending: 0 },
+        p2: { name: '', transformTarget: '', difficulty: 'smart', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, burningUpPending: 0 },
         submission: 0, activePlayer: 1, round: 1, phase: 'waiting',
         dice: Array(6).fill({ face: '-', kept: false }),
         rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
