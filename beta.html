@@ -591,8 +591,8 @@
         /* Reserve a permanent alert slot so card notices never shift the board layout. */
         #card-trigger-toast {
             position: relative; z-index: 2; width: 100%; box-sizing: border-box;
-            height: 58px; min-height: 58px; flex: 0 0 58px; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: center; gap: 2px;
+            height: 58px; min-height: 58px; flex: 0 0 58px; overflow-x: hidden; overflow-y: auto;
+            display: flex; flex-direction: column; justify-content: flex-start; gap: 2px;
             margin: 7px auto 5px; padding: 6px 10px;
             border: 1px solid transparent; border-radius: 8px; background: rgba(28, 25, 38, .96);
             color: var(--text); font-size: .86rem; line-height: 1.25; text-align: center;
@@ -600,11 +600,9 @@
             transition: opacity .18s ease, visibility .18s ease, border-color .18s ease;
         }
         #card-trigger-toast.visible {
-            border-color: var(--accent); opacity: 1; visibility: visible;
+            border-color: var(--accent); opacity: 1; visibility: visible; pointer-events: auto;
         }
         #card-trigger-toast > div { overflow-wrap: anywhere; }
-        #card-trigger-toast > div:nth-child(n+4) { display: none; }
-        #card-trigger-toast .toast-player { font-weight: 700; }
         @media (prefers-reduced-motion: reduce) {
             .inv-card.active-keep-card, .inv-card.active-keep-card.card-triggered, #card-trigger-toast { animation: none !important; transition: none !important; }
         }
@@ -1896,6 +1894,10 @@ function closeGameOverToBoard() {
     const modal = document.getElementById("game-over-modal");
     if (modal) modal.style.display = "none";
     gameOverSeen = true;
+	if (gameState && gameState.gameEnded && typeof syncFinalBoardPortrait === "function") {
+        syncFinalBoardPortrait(1);
+        syncFinalBoardPortrait(2);
+    }
     const restart = document.getElementById("restart-game-toolbar-btn");
     if (restart) restart.style.display = "inline-block";
 }
@@ -3884,33 +3886,45 @@ async function playFinalTransformationCinematic(loserId) {
     overlay.style.display = "none";
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     portrait.classList.remove("is-fading");
+	
+	if (typeof syncFinalBoardPortrait === "function") {
+        syncFinalBoardPortrait(1);
+        syncFinalBoardPortrait(2);
+    }
 }
 
 function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     if (!container) return;
-    // Avoid reloading/replacing the image on every UI refresh; only update when its stage changes.
     const existing = container.querySelector("img");
-    if (existing && existing.dataset.avatarPath === imgPath) return;
+    let alreadyShowing = false;
+    try {
+        alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath && existing.src === new URL(imgPath, document.baseURI).href);
+    } catch (e) { alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath); }
+    if (alreadyShowing) return;
+
+    const token = String((Number(container.dataset.portraitToken) || 0) + 1);
+    container.dataset.portraitToken = token;
 
     const img = document.createElement("img");
-    img.src = imgPath;
     img.dataset.avatarPath = imgPath;
     img.alt = filename;
     img.onclick = () => openImageModal(imgPath);
-    img.onerror = () => {
-        container.textContent = `Image Req: ${filename}`;
-    };
-    img.onload = () => {
-        // Recheck that this image is still the desired stage before displaying it.
-        if (img.dataset.avatarPath !== imgPath) return;
+    const commit = () => {
+        if (container.dataset.portraitToken !== token) return;
+        if (!img.complete || img.naturalWidth === 0) return;
         container.replaceChildren(img);
         if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
             img.classList.add("art-stage-transition");
             window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
         }
     };
-    // Load first, then replace the old stage, so a missing image doesn't blank a valid portrait.
-    if (!existing) container.appendChild(img);
+    img.onload = commit;
+    img.onerror = () => {
+        if (container.dataset.portraitToken !== token) return;
+        container.textContent = `Image Req: ${filename}`;
+    };
+    img.src = imgPath;
+    if (img.complete) commit();
 }
 
 function pulseChangedStat(playerPrefix, statName, currentValue) {
@@ -4712,7 +4726,7 @@ async function rollVirtualDice(playerId, count, sourceName) {
         const canClearAll = lCount >= lucidityClearCost(p, arousalCost);
         if (p.trance === 0 && p.arousal === 0 && p.vulnerability === 0) {
             log(`Lucidity rolled, but ${p.name} is clear-headed.`);
-        } else if (canClearAll) {
+        } else if (canClearAll || lucidityActiveStatCount(p) === 1) {
             const allocations = autoAllocateLucidity(lCount, p, arousalCost);
             const lucidityParts = lucidityResultParts(p, allocations, hasCard(oppId, 41));
             log(lucidityParts.length ? `${p.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${p.name} is clear-headed.`);
@@ -4799,7 +4813,14 @@ function startTurn() {
 		if (diceCount < 3) diceCount = 3;
         log(`Vulnerability restricts ${activeP.name} to ${diceCount} dice.`);
     }
-    if (gameState.somnambulismTurn) { diceCount = Math.max(3, diceCount - 1); gameState.somnambulismTurn = false; }
+    if (gameState.somnambulismTurn) {
+		const penalty = Math.max(1, Number(gameState.somnambulismPenalty) || 1);
+		diceCount = Math.max(3, diceCount - penalty);
+		gameState.somnambulismTurn = false;
+	}
+	else {
+		gameState.somnambulismPenalty = 0;
+	}
 	
 	console.log("LONG TRACE startTurn:", {
 	seed: window.__longTraceSeed,
@@ -4904,6 +4925,13 @@ function autoAllocateLucidity(points, playerObj, arousalCost = 1) {
     allocation.arousal = Math.min(playerObj.arousal || 0, Math.floor(rem / cost)); playerObj.arousal -= allocation.arousal; rem -= allocation.arousal * cost;
     allocation.trance = Math.min(playerObj.trance || 0, rem); playerObj.trance -= allocation.trance;
     return allocation;
+}
+function lucidityActiveStatCount(playerObj) {
+    let n = 0;
+    if ((Number(playerObj.trance) || 0) > 0) n++;
+    if ((Number(playerObj.arousal) || 0) > 0) n++;
+    if ((Number(playerObj.vulnerability) || 0) > 0) n++;
+    return n;
 }
 function lucidityClearCost(playerObj, arousalCost = 1) {
     return (Number(playerObj.vulnerability) || 0) + (Number(playerObj.arousal) || 0) * Math.max(1, Number(arousalCost) || 1) + (Number(playerObj.trance) || 0);
@@ -5041,7 +5069,7 @@ async function resolveDice() {
         const canClearAll = lCount >= lucidityClearCost(activeP, arousalCost);
         if (activeP.trance === 0 && activeP.arousal === 0 && activeP.vulnerability === 0) {
             log(`Lucidity rolled, but ${activeP.name} is clear-headed.`);
-        } else if (canClearAll) {
+        } else if (canClearAll || lucidityActiveStatCount(activeP) === 1) {
             const allocations = autoAllocateLucidity(lCount, activeP, arousalCost);
             const lucidityParts = lucidityResultParts(activeP, allocations, hasCard(oppId, 41));
             log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
@@ -5094,7 +5122,12 @@ async function resolveDice() {
             queueCardTrigger(activePlayerNum, 23, "Opponent Arousal +1 on 3+ Submission");
             log(`${oppP.name}'s arousal increases +1 🔥 from Submissive Flush.`); 
         }
-        if (hasCard(activePlayerNum, 24)) { gameState.somnambulismTurn = true; queueCardTrigger(activePlayerNum, 24, "Earned an extra turn with 1 fewer die"); log("Somnambulism triggered: Taking an extra turn with 1 less die!"); }
+        if (hasCard(activePlayerNum, 24)) {
+			gameState.somnambulismPenalty = (Number(gameState.somnambulismPenalty) || 0) + 1;
+			gameState.somnambulismTurn = true; 
+			const fewer = gameState.somnambulismPenalty;
+			queueCardTrigger(activePlayerNum, 24, `Earned an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}`);
+			log(`Somnambulism triggered: Taking an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}!`); }
     }
 
     // 6. Transform
@@ -5708,8 +5741,10 @@ function syncFinalBoardPortrait(playerId) {
     const stage = Math.min(11, Math.max(0, Number(player.transform) || 0));
     const filename = `${player.name}_to_${player.transformTarget}_${stage}.jpg`;
     const path = `images/avatars/${player.name}/${filename}`;
-    const container = document.getElementById(`${key}-image`);
+        const container = document.getElementById(`${key}-image`);
     if (!container) return;
+    const token = String((Number(container.dataset.portraitToken) || 0) + 1);
+    container.dataset.portraitToken = token;
     let img = container.querySelector('img');
     if (!img) {
         img = document.createElement('img');
@@ -5718,9 +5753,13 @@ function syncFinalBoardPortrait(playerId) {
     img.dataset.avatarPath = path;
     img.alt = filename;
     img.onclick = () => openImageModal(path);
-    img.onerror = () => { container.textContent = `Image Req: ${filename}`; };
-    // Assign even if an older stage is already on screen; updateUI intentionally stops after game end.
-    if (img.src !== new URL(path, document.baseURI).href) img.src = path;
+    img.onload = null;
+    img.onerror = () => {
+        if (container.dataset.portraitToken !== token) return;
+        container.textContent = `Image Req: ${filename}`;
+    };
+    img.src = path;
+}
 }
 
 function winnerIdFromState() {
