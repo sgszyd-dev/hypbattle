@@ -1663,9 +1663,6 @@ function updateLobbyUI(me, opp, note) {
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
 	let displayForm = opp?.target ?? "Gender";
-    //alert("My name: " + myName + " sameName: " + sameName + " DF: " + displayForm + " opp: " + opp
-    //    + " gender: " + (opp ? getGender(opp.name) : "NA")
-    //);
     if (displayForm === "Gender") {
         const gender = opp ? getGender(opp.name) : null;
         if (gender === "male") {
@@ -1676,7 +1673,6 @@ function updateLobbyUI(me, opp, note) {
     }
 
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
-    //alert("me: " + me + " You DF: " + youDisplayForm + " You gender: " + getGender(myName));
 	if (youDisplayForm === "Gender") {
 		if (getGender(myName) === "male") {
 			youDisplayForm = "Man";
@@ -1684,7 +1680,6 @@ function updateLobbyUI(me, opp, note) {
 			youDisplayForm = "Woman";
 		}
 	}
-	
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${displayForm}` : "Share the room code so they can join.");
     set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${youDisplayForm}` : "");
