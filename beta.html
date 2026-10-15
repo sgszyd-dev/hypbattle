@@ -1662,14 +1662,16 @@ function updateLobbyUI(me, opp, note) {
     const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
-	let displayForm = opp.target;
-	if (opp.target === "Gender") {
-		if (getGender(opp) === "male") {
-			displayForm = "Woman";
-		} else if (getGender(opp) === "female") {
-			displayForm = "Man";
-		}
-	}
+	let displayForm = opp?.target ?? "Gender";
+    if (displayForm === "Gender") {
+        const gender = opp ? getGender(opp) : null;
+        if (gender === "male") {
+            displayForm = "Woman";
+        } else if (gender === "female") {
+            displayForm = "Man";
+        }
+    }
+
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
 	if (youDisplayForm === "Gender") {
 		if (getGender(me) === "male") {
