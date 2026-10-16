@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261016.2</title>
+    <title>Hypnotic Duel - Beta V20261016.3</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -834,9 +834,27 @@
         measurementId: "G-ENG86CT7J4"
       };
 
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
-      const db = getDatabase(app);
+		try {
+	  
+			const app = initializeApp(firebaseConfig);
+			const analytics = getAnalytics(app);
+			const db = getDatabase(app);
+			window.firebaseReady = true;
+		} catch (error) {
+			console.error('Firebase initialization failed:', error);
+			window.firebaseReady = false;
+			
+			const onlineOption = document.querySelector('#game-mode-option option[value="online"]');
+			if (onlineOption) {
+				onlineOption.disabled = true;
+				onlineOption.textContent = '2 Player Online (Unavailable - Connection Error)';
+			}
+			
+			if (document.readyState === 'complete') {
+				showPopup('Connection Error', 
+					'Online multiplayer is currently unavailable. You can still play solo or local multiplayer.');
+			}
+		}
 
       // Expose Firebase Database functions globally for game state integration
       window.db = db;
@@ -855,7 +873,7 @@
             <div class="settings-grid">
                <div class="modal-col" id="p1-setup-col">
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
-                    <div class="image-stub" id="setup-p1-image" class="setup-preview" style="height: 138px; margin-bottom: 5px;"></div>
+                    <div class="image-stub setup-preview" id="setup-p1-image" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
                     <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type" onchange="onTransformSelectChange('p1-transform-type')"></select>
                     <div id="p1-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
@@ -864,7 +882,7 @@
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
-                    <div class="image-stub" id="setup-cpu-image" class="setup-preview" style="height: 138px; margin-bottom: 5px;"></div>
+                    <div class="image-stub setup-preview" id="setup-cpu-image" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
                     <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type" onchange="onTransformSelectChange('cpu-transform-type')"></select>
                     <div id="cpu-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
@@ -1532,16 +1550,30 @@ let challengeCompleted = [];
 let challengeLastResult = null;
 let challengeTauntTimer = null;
 let challengeRunStartedAt = null;
+const safeStorage = {
+    get(key) {
+        try { return localStorage.getItem(key); }
+        catch { return null; }
+    },
+    set(key, value) {
+        try { localStorage.setItem(key, value); return true; }
+        catch { return false; }
+    },
+    remove(key) {
+        try { localStorage.removeItem(key); }
+        catch {}
+    }
+};
 const CHALLENGE_RECORD_KEY = "hypnoticDuel.sevenChallengeRecord.v1";
 function emptyChallengeRecord(){ return { runsStarted:0, runsCompleted:0, runsFailed:0, matchesWon:0, matchesLost:0, bestRivalIndex:0, lastOutcome:"Never played", lastPlayed:null }; }
-function loadChallengeRecord(){ try { const raw=localStorage.getItem(CHALLENGE_RECORD_KEY); return raw ? {...emptyChallengeRecord(),...JSON.parse(raw)} : emptyChallengeRecord(); } catch(e){ return emptyChallengeRecord(); } }
-function saveChallengeRecord(record){ try { localStorage.setItem(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
+function loadChallengeRecord(){ try { const raw=safeStorage.get(CHALLENGE_RECORD_KEY); return raw ? {...emptyChallengeRecord(),...JSON.parse(raw)} : emptyChallengeRecord(); } catch(e){ return emptyChallengeRecord(); } }
+function saveChallengeRecord(record){ try { safeStorage.set(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
 const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
 function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], savedAt:new Date().toISOString()}; }
 function saveChallengeProgress(){
     if(!challengeActive) return;
-    try { localStorage.setItem(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
+    try { safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
 }
 function applyChallengeSave(data){
     if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
@@ -1555,13 +1587,33 @@ function applyChallengeSave(data){
     showPopup("Challenge Progress Loaded", `Your challenge has been restored at <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong>.<p>To keep the save compact and portable, it restores your gauntlet position and bonuses, not an in-progress match's dice, cards, or stats. Start the current rival's match again.</p><button onclick="closePopup();renderChallengeScreen('roadmap')">Continue</button>`);
     saveChallengeProgress();
 }
+function copySaveCode() {
+    const textarea = document.getElementById('challenge-save-code');
+    textarea.select();
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textarea.value)
+            .then(() => showToast('Save code copied!'))
+            .catch(() => fallbackCopy(textarea));
+    } else {
+        fallbackCopy(textarea);
+    }
+}
+
+function fallbackCopy(textarea) {
+    try {
+        document.execCommand('copy');
+        showToast('Save code copied!');
+    } catch (e) {
+        showToast('Could not copy. Please select and copy manually.');
+    }
+}
 function exportChallengeSave(){
     let data;
-    try { data=localStorage.getItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+    try { data=safeStorage.get(CHALLENGE_SAVE_KEY); } catch(e) {}
     if(!data && challengeActive) data=JSON.stringify(challengeSavePayload());
     if(!data){ showPopup("No Challenge Save", "Start The Seven first. Your progress is saved automatically as you advance."); return; }
     const code=btoa(unescape(encodeURIComponent(data)));
-    showPopup("Export The Seven Save", `<p>Copy this save code, then use <strong>Load Challenge Save</strong> in another browser or on another computer.</p><textarea id="challenge-save-code" style="width:100%;min-height:110px;box-sizing:border-box;background:#17131f;color:#eee;border:1px solid #8b5cf6;border-radius:8px;padding:10px">${code}</textarea><button onclick="const e=document.getElementById('challenge-save-code');e.select();document.execCommand('copy');this.textContent='Copied (if clipboard permission allows)'">Copy Save Code</button>`);
+    showPopup("Export The Seven Save", `<p>Copy this save code, then use <strong>Load Challenge Save</strong> in another browser or on another computer.</p><textarea id="challenge-save-code" style="width:100%;min-height:110px;box-sizing:border-box;background:#17131f;color:#eee;border:1px solid #8b5cf6;border-radius:8px;padding:10px">${code}</textarea><button onclick="copySaveCode();">Copy Save Code</button>`);
 }
 function importChallengeSave(){
     const code=window.prompt("Paste your The Seven save code here:"); if(!code) return;
@@ -1664,16 +1716,78 @@ const CHALLENGE_RIVAL_TAUNTS = {
         AIAt9Transform:["One stage left? I reckon I'll make you work for the story.","This ranch ain't yours yet, partner. Not by a long shot."]
     },
     Siobhán: {
-        TransformPlayer:["The Cat form is an elegant fit. You do have a talent for inevitability.","I prefer a plan with several endings. You are discovering mine in the wrong order."],
-        AIGetsTransformed:["A rare miscalculation. Do not mistake it for an invitation.","You have earned a moment of satisfaction. I advise you not to grow attached to it."],
-        PlayerIsObedient:["How considerate. You have saved us both the trouble of pretending.","You followed the cue beautifully. I do appreciate a person who understands timing."],
-        AIIsObedient:["I allowed the moment to unfold. Your interpretation is your own problem.","A useful demonstration of how easily appearances can be arranged."],
-        BigRollAI:["A pleasing roll. Think of it as a glimpse of the ending I had prepared.","How dramatic. I almost admire your confidence in the dice."],
-        PlayerAt5Transform:["Five stages. Your former certainty is becoming rather decorative.","Halfway through, and already the old version of you feels like a rumor."],
-        PlayerAt8Transform:["Eight stages. I do hope you have considered what comes after resistance.","Two steps remain. It would be a shame to spoil such a carefully arranged ending."],
-        AIAt5Transform:["A setback, certainly. I rarely confuse a setback with danger.","Halfway altered. I assure you, I remain the one asking the questions."],
-        AIAt9Transform:["One stage. How impolite of you to make the conclusion so suspenseful.","The final move is always the most revealing. Do try to appreciate it."]
-    }
+    TransformPlayer: [
+        "Well, well. The claws are coming out. Do try not to scratch the furniture.",
+        "Darling, you wear transformation surprisingly well. I may have to take credit for your new look.",
+        "Another step toward your purr-fect little destiny. Oh, don't look so cross.",
+        "You can fight the change, sweetheart, but the cat always lands on her feet.",
+        "Mmm. A little mystery, a little danger, and a rather fetching new silhouette. My kind of evening."
+    ],
+
+    AIGetsTransformed: [
+        "Oh, this is a *disaster*. My hair, my dignity, my carefully curated feline mystique!",
+        "Careful, darling. You may have scratched me, but you haven't caught me.",
+        "A clever little trick. I do hope you enjoyed it, because revenge is such a satisfying hobby.",
+        "Well, there's a turn of events. I suppose even a cat has to land on the occasional cushion.",
+        "You've caught me off guard. Congratulations, sweetheart. Do try to look pleased while it lasts."
+    ],
+
+    PlayerIsObedient: [
+        "Good kitty. Oh, don't bristle. You know you rather enjoyed following that little cue.",
+        "Such a good listener! I may have to get you a collar. Something tasteful, naturally.",
+        "And down you go, following my lead. Honestly, darling, you make this almost too easy.",
+        "There's a clever cat. A little suggestion, a little sparkle, and look how nicely you cooperate.",
+        "You did exactly as I hoped. Now, was that your idea, or shall we let you keep believing it was?"
+    ],
+
+    AIIsObedient: [
+        "Oh, very clever. You think you've got the cat on a leash. How adorable.",
+        "I chose to play along, darling. Never mistake a performance for surrender.",
+        "A little cooperation makes the game so much more interesting. I do love a willing audience.",
+        "You give an order, and I follow? Oh, sweetheart, you're forgetting who writes the script.",
+        "Purrhaps I felt like indulging you. A lady is allowed a little mischief, isn't she?"
+    ],
+
+    BigRollAI: [
+        "Now *that* is how you make an entrance. Try not to applaud too loudly.",
+        "A magnificent roll! The dice do seem to have a weakness for a pretty face.",
+        "Oh, listen to that. Fate is purring, and I rather think it's purring for me.",
+        "Well, well! A little luck, a little style, and suddenly the whole room belongs to me.",
+        "Nine lives? Darling, I only need one when the dice are this cooperative."
+    ],
+
+    PlayerAt5Transform: [
+        "Five stages already? You're halfway to being the cat's pajamas. How exciting.",
+        "Look at you, darling. The old you is fading, and the new you is positively fascinating.",
+        "Halfway there! Do try to enjoy the view. The scenery only gets stranger from here.",
+        "Five steps closer to my favorite kind of mystery: someone who no longer knows what to expect.",
+        "You're beginning to look the part, sweetheart. Now we just need to work on that attitude."
+    ],
+
+    PlayerAt8Transform: [
+        "Eight stages, darling. You're practically purring already. Shall I find you a sunny windowsill?",
+        "Two little steps left. Isn't anticipation simply the most delicious part?",
+        "Oh, don't look so worried. You've nearly finished becoming the most interesting person in the room.",
+        "Eight stages! At this point, resisting is less a strategy and more a charming little habit.",
+        "Nearly there, sweetheart. The finish line is in sight, and it has the loveliest pair of ears."
+    ],
+
+    AIAt5Transform: [
+        "Five stages? Hmph. A cat can be pushed, darling, but never underestimate her claws.",
+        "Halfway altered, and still absolutely fabulous. I do make adversity look good.",
+        "Oh, how inconvenient. I was hoping to save this particular transformation for the grand finale.",
+        "Five stages down. I'm beginning to suspect someone here has been playing dirty. Naturally, I approve.",
+        "You may have changed the picture, sweetheart, but you haven't changed the artist."
+    ],
+
+    AIAt9Transform: [
+        "One stage left? Oh, darling, must we rush? The best things deserve a proper entrance.",
+        "So close! I can practically hear the curtain rising. Let's make the ending memorable.",
+        "The final step. How thrilling. I do hope you're ready for the encore.",
+        "One little stage between me and a new beginning. Isn't it rude to keep a lady waiting?",
+        "Well, sweetheart, this is the moment. Shall I land on my feet—or leave you wondering?"
+    ]
+}
 };
 function challengePortrait(name, initials, extraClass="") {
     const safe = String(name).replace(/[^a-z0-9 _-]/gi, "");
@@ -1735,7 +1849,7 @@ function renderChallengeScreen(kind, extra={}) {
 }
 function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
 function resumeSavedChallenge(){
-    try { const raw=localStorage.getItem(CHALLENGE_SAVE_KEY); if(!raw){showPopup("No Saved Challenge","There is no saved challenge on this browser. Use Export Challenge Save on the original browser, then load its code here.");return;} applyChallengeSave(JSON.parse(raw)); }
+    try { const raw=safeStorage.get(CHALLENGE_SAVE_KEY); if(!raw){showPopup("No Saved Challenge","There is no saved challenge on this browser. Use Export Challenge Save on the original browser, then load its code here.");return;} applyChallengeSave(JSON.parse(raw)); }
     catch(e){showPopup("Could Not Resume","The saved challenge could not be read. You can import a save code from another browser.");}
 }
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
@@ -1857,7 +1971,7 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===CHALLENGE_RIVALS.length-1) {
             challengeLastResult={won:true,final:true,message:`You defeated ${rival.name}, the final rival, and completed The Seven!`,modText:"All seven rivals defeated."};
             updateChallengeRecord(r=>{r.runsCompleted++;r.lastOutcome="Completed The Seven";});
-            try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
             return true;
         }
         challengeIndex=rivalIndex+1;
@@ -1868,7 +1982,7 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===0) {
             challengeLastResult={won:false,failed:true,message:"Roz has won. This run of The Seven is over.",modText:"The first rival is the gatekeeper. Losing here ends the run."};
             updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome="Run ended at Roz";});
-            try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
             return true;
         }
         challengeCompleted=challengeCompleted.filter(i=>i!==rivalIndex-1);
@@ -1882,7 +1996,7 @@ function handleChallengeMatchEnded(winnerId){
 function quitChallengeRun(){ if (window.confirm("Abandon The Seven challenge and return to setup?")) { updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";}); finishChallengeRun(); } }
 function finishChallengeRun(){
     challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null;
-    try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+    try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
     closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.classList.remove("visible","challenge-taunt-active");taunt.textContent="";taunt.style.display="none";}
@@ -2489,7 +2603,7 @@ function playSubmissionCrackleSound() {
 
 function applyDiceDisplay(value) {
     localShowDiceText = value !== "off";
-    try { localStorage.setItem("hypduel_show_dice_text", String(localShowDiceText)); } catch (e) {}
+    try { safeStorage.set("hypduel_show_dice_text", String(localShowDiceText)); } catch (e) {}
     // Keep the legacy field initialized for existing saves, but rendering uses this local preference.
     if (gameState && !gameState.gameEnded) {
         try { updateUI(); } catch (e) { /* Settings must not interrupt gameplay. */ }
@@ -2498,18 +2612,18 @@ function applyDiceDisplay(value) {
 
 function loadLocalDisplayPreferences() {
     try {
-        const savedDice = localStorage.getItem("hypduel_show_dice_text");
+        const savedDice = safeStorage.get("hypduel_show_dice_text");
         if (savedDice !== null) localShowDiceText = savedDice !== "false";
-        const savedLog = localStorage.getItem("hypduel_show_game_log");
+        const savedLog = safeStorage.get("hypduel_show_game_log");
         if (savedLog !== null) localShowGameLog = savedLog !== "false";
-        const savedBrain = localStorage.getItem("hypduel_show_brain_comments");
+        const savedBrain = safeStorage.get("hypduel_show_brain_comments");
         if (savedBrain !== null) localShowBrainComments = savedBrain === "true";
     } catch (e) { /* Storage may be unavailable for local files or private browsing. */ }
 }
 
 function setGameLogVisible(visible) {
     localShowGameLog = !!visible;
-    try { localStorage.setItem("hypduel_show_game_log", String(localShowGameLog)); } catch (e) {}
+    try { safeStorage.set("hypduel_show_game_log", String(localShowGameLog)); } catch (e) {}
     const logBox = document.getElementById("game-log");
     if (logBox) {
         logBox.classList.toggle("log-hidden", !localShowGameLog);
@@ -2523,7 +2637,7 @@ function setGameLogVisible(visible) {
 
 function setBrainCommentsVisible(visible) {
     localShowBrainComments = !!visible;
-    try { localStorage.setItem("hypduel_show_brain_comments", String(localShowBrainComments)); } catch (e) {}
+    try { safeStorage.set("hypduel_show_brain_comments", String(localShowBrainComments)); } catch (e) {}
     const toggle = document.getElementById("show-brain-comments-option");
     if (toggle) toggle.checked = localShowBrainComments;
     renderTurnHistory();
@@ -2843,7 +2957,7 @@ const logEl = document.getElementById("game-log");
 // ------------------------------------------------------------
 // Records every solo game: the full log (not just the last 50 lines), every roll with the dice you
 // kept, every purchase / action with before-and-after stats, a state snapshot at each turn start,
-// and the Master AI's plan. Games are saved in the browser (localStorage, newest REC_MAX_GAMES kept)
+// and the Master AI's plan. Games are saved in the browser (safeStorage --localStorage--, newest REC_MAX_GAMES kept)
 // and exported with the "Download Game Logs" button.
 // ============================================================
 const REC_STORAGE_KEY = "hypduel_recordings_v1";
@@ -2885,7 +2999,7 @@ function recFinish(winner) {
     recEvent("end", { winner });
     recSave();
 }
-function recLoadAll() { try { return JSON.parse(localStorage.getItem(REC_STORAGE_KEY) || "[]"); } catch (e) { return []; } }
+function recLoadAll() { try { return JSON.parse(safeStorage.get(REC_STORAGE_KEY) || "[]"); } catch (e) { return []; } }
 function recSave() {
     if (!gameRec) return;
     try {
@@ -2894,7 +3008,7 @@ function recSave() {
         while (all.length > REC_MAX_GAMES) all.shift();
         let json = JSON.stringify(all);
         while (json.length > REC_MAX_CHARS && all.length > 1) { all.shift(); json = JSON.stringify(all); }
-        localStorage.setItem(REC_STORAGE_KEY, json);
+        safeStorage.set(REC_STORAGE_KEY, json);
     } catch (e) { /* storage full or disabled: the game stays in memory and can still be downloaded */ }
 }
 function recScheduleSave() {
@@ -2925,7 +3039,7 @@ function recDownload() {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function recClear() { try { localStorage.removeItem(REC_STORAGE_KEY); } catch (e) {} }
+function recClear() { try { safeStorage.remove(REC_STORAGE_KEY); } catch (e) {} }
 
 // Wrap the game's own action functions so every call is recorded (behaviour is unchanged).
 function recWrap(name, describe, withDice) {
@@ -3012,7 +3126,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261016.2"; // Update this label for each release.
+const GAME_VERSION = "20261016.3"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -7370,7 +7484,7 @@ recInstall();
 
 <div id="image-modal" class="modal-overlay" onclick="closeImageModal(event)" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; cursor:pointer;">
     <div style="position:relative; max-width:90vw; max-height:90vh;">
-        <img id="image-modal-img" src="" style="max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow:0 0 20px rgba(255,255,255,0.2);" />
+        <img id="image-modal-img" src="" alt="" style="max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow:0 0 20px rgba(255,255,255,0.2);" />
         <span onclick="closeImageModal()" style="position:absolute; top:-15px; right:-15px; background:#fff; color:#000; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; cursor:pointer;">&times;</span>
     </div>
 </div>
