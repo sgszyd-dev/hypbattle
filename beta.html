@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261015.10</title>
+    <title>Hypnotic Duel - Beta V20261016.2</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -315,6 +315,9 @@
             display: flex; align-items: center; justify-content: center; word-break: break-word; flex-direction: column;
         }
         .die.kept { border-color: var(--accent); background: #443355; }
+        .die.special-die { border: 3px solid #f0b429; box-shadow: 0 0 8px rgba(240,180,41,.48), inset 0 0 5px rgba(240,180,41,.18); }
+        .die.special-die.kept { border-color: #ffd166; box-shadow: 0 0 11px rgba(255,209,102,.72), inset 0 0 7px rgba(255,209,102,.22); }
+        .die.special-die.cpu-kept { border-color: #ffd166; }
         .die.cpu-kept { border-color: var(--cpu); background: #553333; }
         .die.rolling-die {
             animation: dieTumble 620ms cubic-bezier(.18,.72,.25,1) both;
@@ -665,6 +668,152 @@
         @keyframes cvcNameFlash { 0% { opacity:0; transform:translateY(9px) scale(.9); filter:brightness(2); } 35% { opacity:1; transform:translateY(0) scale(1.06); } 100% { opacity:1; transform:translateY(0) scale(1); filter:brightness(1); } }
         @media(max-width:640px) { .challenge-dialog { padding:16px 12px; } .challenge-roadmap { grid-template-columns:64px minmax(0,1fr); gap:8px; } .challenge-route { gap:3px; } .challenge-rival-name { font-size:.63rem; } .challenge-rival-tier { font-size:.57rem; } .challenge-route::before { top:27px; } .challenge-rival .challenge-portrait { font-size:.78rem; } .challenge-opponent-card { align-items:flex-start; padding:9px; gap:10px; } .challenge-opponent-card .challenge-portrait { width:72px; flex-basis:72px; } .challenge-result-gallery { gap:3px; } }
 
+    
+
+        /* ============================================================
+           MOBILE RESPONSIVE LAYOUT (R6)
+           Presentation-only overrides: desktop rules and game logic stay intact.
+           ============================================================ */
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(8px, env(safe-area-inset-right));
+                align-items: stretch;
+                overflow-x: hidden;
+            }
+            .board {
+                width: 100%;
+                min-width: 0;
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            .board > .panel,
+            .board > .panel.center-board {
+                min-width: 0;
+                width: 100%;
+                box-sizing: border-box;
+                padding: 12px;
+                flex: none;
+            }
+            /* Keep the turn-critical controls near the top on portrait screens. */
+            .board > .center-board { order: 0; }
+            .board > .panel:not(.center-board) { order: 1; }
+            .board > .panel:not(.center-board) .image-stub {
+                height: clamp(145px, 48vw, 220px);
+                margin-bottom: 10px;
+            }
+            .board > .panel h2 { font-size: 1.15rem; margin-bottom: 8px; }
+            .stat { font-size: .98em; margin: 6px 0; }
+            .transform-progress-wrap { margin-bottom: 9px; }
+            .transform-progress-track { height: 12px; }
+            .inventory { max-height: 120px; }
+
+            .center-board { gap: 8px; }
+            .track-container { padding: 10px 8px; }
+            #track-labels { font-size: .76em !important; gap: 3px; }
+            .track-nodes { min-width: 0; }
+            .node { transform: scale(.88); transform-origin: center; }
+            .market-row {
+                display: flex;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                gap: 8px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                max-width: 100%;
+                padding: 2px 2px 10px;
+                margin: 0 0 10px;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-x: contain;
+                scroll-snap-type: x proximity;
+                scrollbar-width: thin;
+                scrollbar-color: var(--accent) #18151d;
+            }
+            .market-row .card {
+                flex: 0 0 clamp(142px, 43vw, 178px);
+                min-width: 0;
+                box-sizing: border-box;
+                padding: 9px;
+                scroll-snap-align: start;
+                overflow-wrap: anywhere;
+            }
+            .market-row .card button { min-height: 38px; padding: 7px 8px; font-size: .88em; }
+            .market-row .card-header { gap: 5px; font-size: .94em; }
+            .market-row .card-type { font-size: .74em; }
+
+            .dice-container {
+                gap: clamp(3px, 1.1vw, 6px);
+                justify-content: space-between;
+                width: 100%;
+                min-width: 0;
+                margin: 12px 0;
+            }
+            .die {
+                box-sizing: border-box;
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                height: clamp(47px, 14vw, 56px);
+                padding: 2px;
+                font-size: clamp(.62rem, 2.6vw, .76rem);
+                overflow-wrap: anywhere;
+            }
+            .actions-grid { gap: 7px; margin-bottom: 10px; }
+            .actions-grid button { min-height: 42px; padding: 8px 7px; font-size: .88em; }
+            .turn-status-block { margin-top: 7px; }
+            .turn-status-row { gap: 4px; }
+            .compact-end-turn { min-height: 38px; padding: 6px 7px; font-size: .68em; }
+            #turn-indicator { font-size: .82em; }
+            .rerolls-status { font-size: .78em; }
+            .turn-history-card { padding: 10px; }
+            .log { height: 145px; }
+            .log-toolbar button { min-height: 40px; }
+
+            /* Dialogs fit the phone viewport and scroll internally when needed. */
+            .modal-overlay { padding: 8px; box-sizing: border-box; }
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                max-height: calc(100dvh - 16px);
+                padding: 18px 13px;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+            .settings-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+            .setup-mode-section { grid-column: 1 / -1; }
+            .setup-footer-actions { flex-wrap: wrap; }
+            .setup-footer-actions button { min-width: 0; }
+            .options-tool-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+            .help-modal-content { max-height: calc(100dvh - 16px); padding: 14px; }
+            #final-transform-cinematic { padding: 12px; }
+            #final-transform-cinematic .cinematic-counter { width: min(82vw, 390px); }
+            button, select, input, textarea { max-width: 100%; }
+        }
+
+        @media (max-width: 380px) {
+            body { padding: 6px; }
+            .board > .panel,
+            .board > .panel.center-board { padding: 9px; }
+            .market-row .card { flex-basis: 138px; }
+            .track-container { padding: 8px 5px; }
+            #track-labels { font-size: .69em !important; }
+            .die { height: 45px; font-size: .6rem; }
+            .compact-end-turn { padding: 5px 4px; font-size: .61em; }
+            #turn-indicator { font-size: .75em; }
+            .actions-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+            .setup-modal-content { padding: 13px 10px; }
+            .setup-brand h2 { font-size: 1.2rem; }
+        }
+
+        /* In landscape on a phone, retain the same touch-friendly portrait-first flow. */
+        @media (max-height: 500px) and (max-width: 900px) {
+            .modal-content { max-height: 94dvh; }
+            .board > .panel:not(.center-board) .image-stub { height: 125px; }
+            #final-transform-cinematic { overflow-y: auto; align-items: flex-start; }
+        }
+
     </style>
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
@@ -838,7 +987,9 @@
                     <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
                     <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
                     <button type="button" onclick="showChallengeRecord()">✦ The Seven Record</button>
-                    <button type="button" onclick="resetChallengeRecord()">↻ Reset Seven Record</button>
+					<button type="button" onclick="resetChallengeRecord()">↻ Reset Seven Record</button>
+                    <button type="button" onclick="exportChallengeSave()">⇧ Export Challenge Save</button>
+                    <button type="button" onclick="importChallengeSave()">⇩ Load Challenge Save</button>
                     <button type="button" onclick="recDownload()">⇩ Download Game Logs</button>
                     <button type="button" onclick="showAboutBox()">ⓘ About</button>
                     <button type="button" class="danger-tool" onclick="confirmResetGame()">↻ Reset Game</button>
@@ -1084,7 +1235,7 @@ const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION"
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
     { name: "Roz",       gender: "female" },
-    { name: "Victor",    gender: "male" },
+    { name: "Xander",    gender: "male" },
     { name: "Siobhán",   gender: "female" },
     { name: "Tex",       gender: "male" },
     { name: "Cassandra", gender: "female" },
@@ -1103,7 +1254,7 @@ const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
     "Roz": ["Werewolf","Cow","Eevee"],
-    "Victor": [],
+    "Xander": ["Robot"],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
@@ -1117,7 +1268,7 @@ const CHARACTER_MANIFEST = {
 
 // --- DEBUG CONFIGURATION ---
 const cardDebugOn = false;
-const debugCards = [15, 36, 2]; // Set the 3 card IDs you want dealt first
+const debugCards = [56, 59, 2]; // Set the 3 card IDs you want dealt first
 
 // remove virtual dice: 5, 21
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
@@ -1372,7 +1523,7 @@ const CHALLENGE_RIVALS = [
     { name:"Mark", difficulty:"v23low", form:"Gender", initials:"MK", tier:"Hard", color:"#fb923c" },
     { name:"Hyeri", difficulty:"defensive", form:"Squirrel", initials:"HY", tier:"Expert", color:"#5eead4" },
     { name:"Tex", difficulty:"transformer", form:"Cow", initials:"TX", tier:"Virtuoso", color:"#facc15" },
-    { name:"Siobhán", difficulty:"adaptive", form:"Cat", initials:"SB", tier:"Master", color:"#c084fc" }
+    { name:"Siobhán", difficulty:"adaptive", form:"Cat", initials:"SB", tier:"Mistress", color:"#c084fc" }
 ];
 let challengeActive = false;
 let challengeIndex = 0;
@@ -1386,6 +1537,37 @@ function emptyChallengeRecord(){ return { runsStarted:0, runsCompleted:0, runsFa
 function loadChallengeRecord(){ try { const raw=localStorage.getItem(CHALLENGE_RECORD_KEY); return raw ? {...emptyChallengeRecord(),...JSON.parse(raw)} : emptyChallengeRecord(); } catch(e){ return emptyChallengeRecord(); } }
 function saveChallengeRecord(record){ try { localStorage.setItem(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
+const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
+function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], savedAt:new Date().toISOString()}; }
+function saveChallengeProgress(){
+    if(!challengeActive) return;
+    try { localStorage.setItem(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
+}
+function applyChallengeSave(data){
+    if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
+    challengeActive=true; challengeIndex=data.challengeIndex;
+    const modeSelect=document.getElementById("game-mode-option"); if(modeSelect){modeSelect.value="solo";toggleGameMode();}
+    challengeModifierNext=["none","bonus","handicap"].includes(data.challengeModifierNext)?data.challengeModifierNext:"none";
+    challengeCompleted=Array.isArray(data.challengeCompleted)?data.challengeCompleted.filter(i=>Number.isInteger(i)&&i>=0&&i<CHALLENGE_RIVALS.length):[];
+    challengeLastResult=null; challengeRunStartedAt=Date.now();
+    resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
+    closeChallengeScreen();
+    showPopup("Challenge Progress Loaded", `Your challenge has been restored at <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong>.<p>To keep the save compact and portable, it restores your gauntlet position and bonuses, not an in-progress match's dice, cards, or stats. Start the current rival's match again.</p><button onclick="closePopup();renderChallengeScreen('roadmap')">Continue</button>`);
+    saveChallengeProgress();
+}
+function exportChallengeSave(){
+    let data;
+    try { data=localStorage.getItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+    if(!data && challengeActive) data=JSON.stringify(challengeSavePayload());
+    if(!data){ showPopup("No Challenge Save", "Start The Seven first. Your progress is saved automatically as you advance."); return; }
+    const code=btoa(unescape(encodeURIComponent(data)));
+    showPopup("Export The Seven Save", `<p>Copy this save code, then use <strong>Load Challenge Save</strong> in another browser or on another computer.</p><textarea id="challenge-save-code" style="width:100%;min-height:110px;box-sizing:border-box;background:#17131f;color:#eee;border:1px solid #8b5cf6;border-radius:8px;padding:10px">${code}</textarea><button onclick="const e=document.getElementById('challenge-save-code');e.select();document.execCommand('copy');this.textContent='Copied (if clipboard permission allows)'">Copy Save Code</button>`);
+}
+function importChallengeSave(){
+    const code=window.prompt("Paste your The Seven save code here:"); if(!code) return;
+    try { const data=JSON.parse(decodeURIComponent(escape(atob(code.trim())))); applyChallengeSave(data); }
+    catch(e){ showPopup("Could Not Load Save", "That code is invalid or damaged. Copy the entire save code and try again."); }
+}
 function showChallengeRecord(){
     const r=loadChallengeRecord();
     const best=r.bestRivalIndex ? `${r.bestRivalIndex} / 7 — ${CHALLENGE_RIVALS[r.bestRivalIndex-1]?.name || "The Seven"}` : "Not yet reached";
@@ -1514,7 +1696,7 @@ function renderChallengeScreen(kind, extra={}) {
     if (kind === "rules") {
         title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
         html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. Lose and you'll be sent back one step, where you can fight your way forward again.</p><p><strong>One rule is absolute:</strong> losing at the first level ends the challenge. Defeat the Mistress to complete it.</p><p>Each victory makes the next match a little harder. Each loss grants a small boost for your next, easier rematch. You cannot choose your transformation in Challenge mode; the rival selects it at random from the available forms for your character.</p><p>Every rival has a distinct personality and strategy, and what you will transform them into. Your progress is shown on the roadmap.</p>`;
-        buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
+        buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
     } else if (kind === "roadmap") {
         title.textContent="✦ THE ROAD AHEAD ✦";
         html=`<p>Study the route, challenger. The marker shows your next opponent.</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd">Next up: <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong> · ${CHALLENGE_RIVALS[challengeIndex].tier}</p>`;
@@ -1523,13 +1705,23 @@ function renderChallengeScreen(kind, extra={}) {
         const r=CHALLENGE_RIVALS[challengeIndex];
         const modifier=challengeModifierNext;
         const modText=modifier==="handicap"?"Handicap: your rival starts with +1 bonus Energy this match.":modifier==="bonus"?"Challenge bonus: you start with +2 bonus Energy this match.":"No bonus or handicap this match.";
+		let displayForm = r?.form ?? "Gender";
+		if (displayForm === "Gender" || displayForm === "Cow") {
+			const gender = r ? getGender(r.name) : null;
+			if (gender === "male") {
+				displayForm === "Gender" ? displayForm = "Woman" : displayForm = "Bull";
+			} else if (gender === "female") {
+				displayForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
+			}
+		}
+	
         title.textContent=`RIVAL ${challengeIndex+1}: ${r.name.toUpperCase()}`;
-        html=`${challengeRoadmapHtml()}<div class="challenge-opponent-card">${challengePortrait(r.name,r.initials)}<div><h3 style="border:0;color:${r.color};margin:0 0 6px">${r.name} · ${r.tier}</h3><p style="margin:4px 0">Signature transformation: <strong>${r.form}</strong></p><p style="margin:4px 0">${modText}</p><p style="margin:4px 0;color:#b9a8ca;font-size:.88rem">The rival chooses your transformation from the forms available to your character.</p></div></div>`;
+        html=`${challengeRoadmapHtml()}<div class="challenge-opponent-card">${challengePortrait(r.name,r.initials)}<div><h3 style="border:0;color:${r.color};margin:0 0 6px">${r.name} · ${r.tier}</h3><p style="margin:4px 0">Signature transformation: <strong>${displayForm}</strong></p><p style="margin:4px 0">${modText}</p><p style="margin:4px 0;color:#b9a8ca;font-size:.88rem">The rival chooses your transformation from the forms available to your character.</p></div></div>`;
         buttons=`<button onclick="launchChallengeMatch()">Challenge ${r.name}</button><button class="challenge-cancel" onclick="quitChallengeRun()">Abandon Challenge</button>`;
     } else if (kind === "result") {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}<p style="text-align:center">${extra.modText}</p>`;
-        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`;
+        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
     } else if (kind === "victory") {
         title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
         html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
@@ -1542,15 +1734,21 @@ function renderChallengeScreen(kind, extra={}) {
     content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
 }
 function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
+function resumeSavedChallenge(){
+    try { const raw=localStorage.getItem(CHALLENGE_SAVE_KEY); if(!raw){showPopup("No Saved Challenge","There is no saved challenge on this browser. Use Export Challenge Save on the original browser, then load its code here.");return;} applyChallengeSave(JSON.parse(raw)); }
+    catch(e){showPopup("Could Not Resume","The saved challenge could not be read. You can import a save code from another browser.");}
+}
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
 function startChallengeRun(){
     challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now();
     updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
+    saveChallengeProgress();
     closeChallengeScreen(); renderChallengeScreen("roadmap");
 }
 function showChallengeIntro(){ renderChallengeScreen("intro"); }
 function randomChallengePlayerForm(playerName){ const list=CHARACTER_MANIFEST[playerName] || []; const choices=list.length?list:TRANSFORMS; return choices[Math.floor(Math.random()*choices.length)]; }
 function launchChallengeMatch(){
+    saveChallengeProgress();
     closeChallengeScreen(); clearChallengeMatchAlerts();
     const toast=document.getElementById("card-trigger-toast"); if(toast) toast.removeAttribute("aria-hidden");
     const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.textContent="";taunt.classList.remove("visible");taunt.classList.add("challenge-taunt-active");taunt.style.display="flex";}
@@ -1659,6 +1857,7 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===CHALLENGE_RIVALS.length-1) {
             challengeLastResult={won:true,final:true,message:`You defeated ${rival.name}, the final rival, and completed The Seven!`,modText:"All seven rivals defeated."};
             updateChallengeRecord(r=>{r.runsCompleted++;r.lastOutcome="Completed The Seven";});
+            try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
             return true;
         }
         challengeIndex=rivalIndex+1;
@@ -1669,6 +1868,7 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===0) {
             challengeLastResult={won:false,failed:true,message:"Roz has won. This run of The Seven is over.",modText:"The first rival is the gatekeeper. Losing here ends the run."};
             updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome="Run ended at Roz";});
+            try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
             return true;
         }
         challengeCompleted=challengeCompleted.filter(i=>i!==rivalIndex-1);
@@ -1676,11 +1876,14 @@ function handleChallengeMatchEnded(winnerId){
         challengeModifierNext="bonus";
         challengeLastResult={won:false,message:`${rival.name} defeats you. You fall back to ${CHALLENGE_RIVALS[challengeIndex].name} and must win your way forward again.`,modText:"Next match bonus: you receive +2 starting Energy."};
     }
+    saveChallengeProgress();
     return true;
 }
 function quitChallengeRun(){ if (window.confirm("Abandon The Seven challenge and return to setup?")) { updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";}); finishChallengeRun(); } }
 function finishChallengeRun(){
-    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; closeChallengeScreen();
+    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null;
+    try { localStorage.removeItem(CHALLENGE_SAVE_KEY); } catch(e) {}
+    closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.classList.remove("visible","challenge-taunt-active");taunt.textContent="";taunt.style.display="none";}
     const cont=document.getElementById("go-challenge-continue");if(cont)cont.style.display="none";
@@ -2809,12 +3012,13 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261015.10"; // Update this label for each release.
+const GAME_VERSION = "20261016.2"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
 }
 
+function closePopup(){ const e=document.getElementById("game-popup"); if(e)e.style.display="none"; }
 function showPopup(title, body) {
     document.getElementById("popup-title").innerText = title;
     document.getElementById("popup-body").innerHTML = body;
@@ -4331,7 +4535,7 @@ async function playFinalTransformationCinematic(loserId) {
     if (caption) caption.textContent = `${playerDisplayName(loser)} — transformation begins`;
     if (counterWrap) counterWrap.style.display = "block";
 
-    const stagePath = stage => `images/avatars/${loser.name}/${loser.name}_to_${loser.transformTarget}_${stage}.jpg`;
+    const stagePath = stage => `images/avatars/${loser.name}/${loser.name}_to_${loser.transformTarget}_${Math.min(10, Math.max(0, Number(stage) || 0))}.jpg`;
     let shownStage = null;
     // Begin at stage 0, then play the complete 1–10 sequence regardless of the actual finishing stage.
     for (let stage = 0; stage <= 10; stage++) {
@@ -4513,8 +4717,8 @@ function updateUI() {
 
         const previousTransform = lastDisplayedTransform[p];
         const transformDelta = previousTransform === null ? 0 : Number(pObj.transform) - previousTransform;
-        const stageChanged = previousTransform !== null && Math.min(11, Number(pObj.transform)) !== Math.min(11, previousTransform);
-        const filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(11, pObj.transform)}.jpg`;
+        const stageChanged = previousTransform !== null && Math.min(10, Number(pObj.transform)) !== Math.min(10, previousTransform);
+        const filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(10, pObj.transform)}.jpg`;
         const imgPath = `images/avatars/${pObj.name}/${filename}`;
         const container = document.getElementById(`${p}-image`);
         updateAvatarPortrait(container, imgPath, filename, stageChanged);
@@ -4672,7 +4876,9 @@ function renderDiceAndActions(isHumanTurn) {
         const visibleFace = isAnimating ? (diceAnimationFaces.get(index) || FACES[Math.floor(Math.random() * FACES.length)]) : die.face;
         const div = document.createElement("div");
         div.dataset.dieIndex = index;
-        div.className = `die ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}${isAnimating ? ' rolling-die' : ''}`;
+        const activeForDie = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+        const deeperBargainsDie = index === 0 && (activeForDie.inventory || []).some(c => Number(c.id) === 56 && c.chosenFace);
+        div.className = `die ${deeperBargainsDie ? 'special-die' : ''} ${die.kept ? (gameState.activePlayer === 1 ? 'kept' : 'cpu-kept') : ''}${isAnimating ? ' rolling-die' : ''}`;
         if (isAnimating) div.style.animationDelay = `${(index % 6) * 35}ms`;
         if (visibleFace === "-") div.innerText = "?";
         else {
@@ -5103,7 +5309,9 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     if (finalAmount > 0 && sourcePlayerId !== targetPlayerId && hasCard(targetPlayerId, 59)) {
         const rolls = [FACES[Math.floor(Math.random() * FACES.length)], FACES[Math.floor(Math.random() * FACES.length)]];
         const transformCount = rolls.filter(face => face === "👁️ TRANSFORM").length;
-        log(`Transformation Sigil rolls: ${rolls.map(face => face.split(" ")[0]).join(" and ")}.`);
+        const rollLabels = rolls.map(face => face.split(" ")[0]);
+        log(`Transformation Sigil rolls: ${rollLabels.join(" and ")}.`);
+        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p><button onclick="closePopup()">Continue</button>`);
         if (transformCount >= 1) {
             finalAmount = Math.max(0, finalAmount - 1);
             queueCardTrigger(targetPlayerId, 59, "Reduced incoming transformation by 1");
@@ -6458,7 +6666,7 @@ function syncFinalBoardPortrait(playerId) {
     if (fill) fill.style.width = `${level * 10}%`;
     if (label) label.textContent = `${level} / 10`;
     if (track) track.setAttribute('aria-valuenow', String(level));
-    const stage = Math.min(11, Math.max(0, Number(player.transform) || 0));
+    const stage = Math.min(10, Math.max(0, Number(player.transform) || 0));
     const filename = `${player.name}_to_${player.transformTarget}_${stage}.jpg`;
     const path = `images/avatars/${player.name}/${filename}`;
         const container = document.getElementById(`${key}-image`);
@@ -6517,7 +6725,7 @@ function presentFinishedGame() {
     document.getElementById("go-p1-name").innerText = gameState.p1.name;
     document.getElementById("go-p1-status").innerText = p1Wins ? "WINNER" : "TRANSFORMED";
 
-    const p1FinalT = Math.min(11, gameState.p1.transform);
+    const p1FinalT = Math.min(10, Math.max(0, Number(gameState.p1.transform) || 0));
     const p1Path = `images/avatars/${gameState.p1.name}/${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
     document.getElementById("go-p1-image").innerHTML =
         `<img src="${p1Path}" onclick="openImageModal('${p1Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
@@ -6527,7 +6735,7 @@ function presentFinishedGame() {
     document.getElementById("go-p2-name").innerText = playerDisplayName(gameState.p2);
     document.getElementById("go-p2-status").innerText = !p1Wins ? "WINNER" : "TRANSFORMED";
 
-    const p2FinalT = Math.min(11, gameState.p2.transform);
+    const p2FinalT = Math.min(10, Math.max(0, Number(gameState.p2.transform) || 0));
     const p2Path = `images/avatars/${gameState.p2.name}/${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
     document.getElementById("go-p2-image").innerHTML =
         `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
