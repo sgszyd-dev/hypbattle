@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V13.0</title>
+    <title>Hypnotic Duel - Beta V20261015.10</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -607,6 +607,64 @@
             .inv-card.active-keep-card, .inv-card.active-keep-card.card-triggered, #card-trigger-toast { animation: none !important; transition: none !important; }
         }
 
+
+        /* Solo Challenge: seven-rival roadmap, taunts, and interstitial screens. */
+        #challenge-launch-wrap { display:none; margin-top:9px; }
+        #challenge-launch-btn { width:100%; background:linear-gradient(100deg,#7b2cbf,#c084fc) !important; border:1px solid #e0b7ff; font-weight:800; letter-spacing:.04em; }
+        .challenge-overlay { position:fixed; inset:0; z-index:900; display:none; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; background:rgba(5,3,12,.91); backdrop-filter:blur(7px); }
+        .challenge-dialog { width:min(900px,97vw); max-height:92vh; overflow:auto; box-sizing:border-box; padding:24px; border:1px solid #a879d6; border-radius:14px; background:radial-gradient(ellipse at top,#392b4b,#191720 70%); box-shadow:0 0 40px rgba(157,78,221,.25); }
+        .challenge-dialog h2 { text-align:center; border:0; color:#e3c4ff; letter-spacing:.08em; margin-bottom:9px; }
+        .challenge-dialog p { line-height:1.5; color:#e1d9eb; }
+        .challenge-actions { display:flex; gap:10px; margin-top:18px; }
+        .challenge-actions button { margin:0; flex:1; }
+        .challenge-cancel { background:#39333f !important; border:1px solid #6c6275 !important; }
+        .challenge-roadmap { display:grid; grid-template-columns:104px minmax(0,1fr); gap:15px; align-items:center; margin:18px 0 12px; }
+        .challenge-player-portrait { text-align:center; min-width:0; }
+        .challenge-portrait { width:100%; aspect-ratio:2 / 3; border-radius:9px; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative; box-sizing:border-box; border:2px solid #675475; background:linear-gradient(145deg,#282033,#100e15); color:#e5d2ff; font-size:1.5rem; font-weight:800; }
+        .challenge-portrait img { width:100%; height:100%; object-fit:cover; object-position:center top; }
+        .challenge-portrait-label { font-size:.78rem; color:#d7c4e8; margin-top:5px; overflow-wrap:anywhere; }
+        .challenge-route { position:relative; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; padding-top:14px; }
+        .challenge-route::before { content:''; position:absolute; left:4%; right:4%; top:56px; height:5px; border-radius:99px; background:linear-gradient(90deg,#54d6f4,#a78bfa,#f472b6,#fbbf24); box-shadow:0 0 12px rgba(192,132,252,.35); }
+        .challenge-rival { min-width:0; position:relative; z-index:1; text-align:center; }
+        .challenge-rival .challenge-portrait { width:100%; border-radius:7px; border-color:#65526f; font-size:1rem; transition:transform .25s,border-color .25s,box-shadow .25s; }
+        .challenge-rival.current .challenge-portrait { border-color:#fff; box-shadow:0 0 0 2px #a855f7,0 0 17px #c084fc; transform:translateY(-4px); }
+        .challenge-rival.defeated .challenge-portrait { border-color:#5eead4; filter:saturate(.7); }
+        .challenge-rival.defeated .challenge-portrait::after { content:'✓'; position:absolute; right:3px; top:2px; border-radius:50%; width:19px; height:19px; background:#0f766e; color:white; font-size:13px; line-height:19px; }
+        .challenge-rival-name { font-size:.75rem; font-weight:800; margin-top:5px; overflow-wrap:anywhere; }
+        .challenge-rival-tier { color:#a99ab8; font-size:.66rem; margin-top:2px; }
+        .challenge-road-marker { position:absolute; z-index:4; left:0%; top:2px; width:16px; height:16px; margin-left:-8px; border-radius:50%; background:#fff; border:3px solid #a855f7; box-shadow:0 0 14px #e9d5ff; transition:left .55s cubic-bezier(.2,.8,.25,1); pointer-events:none; }
+        .challenge-status { text-align:center; color:#c4b5fd; font-size:.88rem; }
+        #challenge-taunt-box { display:none; flex:0 0 42px; margin:0 0 10px; min-height:42px; padding:8px 12px; box-sizing:border-box; border:1px solid #8356a5; border-radius:8px; background:linear-gradient(100deg,rgba(53,29,72,.95),rgba(25,20,36,.95)); color:#f0d9ff; text-align:center; font-weight:650; font-size:.92rem; box-shadow:inset 0 0 16px rgba(157,78,221,.12); }
+        #challenge-taunt-box.visible { display:flex; align-items:center; justify-content:center; animation:challengeTauntIn .28s ease-out; }
+        #challenge-taunt-box.challenge-taunt-active { display:flex; align-items:center; justify-content:center; }
+        .challenge-test-btn { min-width:34px !important; width:36px; padding:5px 7px !important; font-size:1rem !important; line-height:1.2; }
+        .challenge-test-win { border-color:#42c9a5 !important; } .challenge-test-lose { border-color:#e87979 !important; }
+        @keyframes challengeTauntIn { from { opacity:.25; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+        .challenge-opponent-card { display:flex; gap:16px; align-items:center; background:rgba(12,9,18,.45); border:1px solid #4d3a5c; border-radius:10px; padding:14px; margin-top:12px; }
+        .challenge-opponent-card .challenge-portrait { width:100px; flex:0 0 100px; }
+        .challenge-result-gallery { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px; margin:16px 0; }
+        .challenge-result-gallery .challenge-portrait { border-color:#5eead4; }
+        #challenge-taunt-box .challenge-board-continue { background:#7b2cbf; border:1px solid #d8b4fe; color:white; border-radius:6px; padding:5px 14px; font-weight:800; cursor:pointer; }
+        .challenge-result-gallery .challenge-rival-name { text-align:center; }
+        .challenge-result-gallery .challenge-portrait { cursor:zoom-in; transition:transform .2s, box-shadow .2s; }
+        .challenge-result-gallery .challenge-portrait:hover { transform:translateY(-3px); box-shadow:0 0 18px rgba(94,234,212,.3); }
+        #challenge-victory-cinematic { position:fixed; inset:0; z-index:11000; display:none; align-items:center; justify-content:center; padding:18px; box-sizing:border-box; overflow:hidden; background:radial-gradient(ellipse at 50% 30%,rgba(68,42,91,.98),rgba(5,3,12,.99) 72%); color:#fff; text-align:center; }
+        #challenge-victory-cinematic .cvc-inner { width:min(92vw,650px); display:flex; flex-direction:column; align-items:center; gap:12px; }
+        #challenge-victory-cinematic .cvc-kicker { color:#d8b5ff; font-size:.78rem; letter-spacing:.28em; text-transform:uppercase; }
+        #challenge-victory-cinematic .cvc-stage { width:min(70vw,430px); height:min(65vh,560px); min-height:250px; position:relative; overflow:hidden; border:3px solid #c084fc; border-radius:15px; background:#100d18; box-shadow:0 0 30px rgba(192,132,252,.4),0 0 90px rgba(157,78,221,.2); }
+        #challenge-victory-cinematic .cvc-stage img { width:100%; height:100%; object-fit:contain; object-position:center; opacity:1; transition:opacity .48s ease,filter .48s ease,transform .65s ease; }
+        #challenge-victory-cinematic .cvc-stage img.cvc-fade { opacity:0; filter:brightness(2.1) saturate(.6); transform:scale(1.035); }
+        #challenge-victory-cinematic .cvc-stage::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.65) 48%,transparent 72%); transform:translateX(-140%); }
+        #challenge-victory-cinematic.cvc-flash .cvc-stage::after { animation:cvcSweep .72s ease-out; }
+        #challenge-victory-cinematic .cvc-name { min-height:1.4em; color:#f3e8ff; font-size:clamp(1.65rem,5vw,2.6rem); font-weight:900; letter-spacing:.13em; text-transform:uppercase; text-shadow:0 0 18px rgba(216,180,254,.75); }
+        #challenge-victory-cinematic .cvc-name.cvc-name-flash { animation:cvcNameFlash .65s ease-out; }
+        #challenge-victory-cinematic .cvc-caption { color:#cbbbdc; min-height:1.3em; }
+        #challenge-victory-cinematic .cvc-controls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+        #challenge-victory-cinematic .cvc-controls button { padding:9px 18px; border:1px solid #a879d6; border-radius:8px; background:#352344; color:white; font-weight:750; cursor:pointer; }
+        @keyframes cvcSweep { from { transform:translateX(-140%); opacity:1; } to { transform:translateX(140%); opacity:0; } }
+        @keyframes cvcNameFlash { 0% { opacity:0; transform:translateY(9px) scale(.9); filter:brightness(2); } 35% { opacity:1; transform:translateY(0) scale(1.06); } 100% { opacity:1; transform:translateY(0) scale(1); filter:brightness(1); } }
+        @media(max-width:640px) { .challenge-dialog { padding:16px 12px; } .challenge-roadmap { grid-template-columns:64px minmax(0,1fr); gap:8px; } .challenge-route { gap:3px; } .challenge-rival-name { font-size:.63rem; } .challenge-rival-tier { font-size:.57rem; } .challenge-route::before { top:27px; } .challenge-rival .challenge-portrait { font-size:.78rem; } .challenge-opponent-card { align-items:flex-start; padding:9px; gap:10px; } .challenge-opponent-card .challenge-portrait { width:72px; flex-basis:72px; } .challenge-result-gallery { gap:3px; } }
+
     </style>
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
@@ -671,6 +729,7 @@
                             <option value="aggressive">Normal</option>
                             <option value="v23low">Hard</option>
                             <option value="defensive">Expert</option>
+							<option value="transformer">Virtuoso</option>
                             <option value="adaptive" id="cpu-diff-master-option" selected>Master</option>
                         </select>
                     </div>
@@ -682,6 +741,7 @@
                         <option value="pvp">2 Player Local</option>
                         <option value="online">2 Player Online (Firebase)</option>
                     </select>
+                    <div id="challenge-launch-wrap"><button type="button" id="challenge-launch-btn" onclick="openChallengeRules()">✦ Solo Challenge: The Seven ✦</button></div>
                    <div id="online-room-wrap" style="display:none; flex-direction:column; gap:10px; 		margin-top:10px; background: #222; padding: 12px; border-radius: 6px;">
                         <label style="font-weight: bold; color: var(--accent);">Online Setup:</label>
                         <div style="display: flex; gap: 8px;">
@@ -777,6 +837,8 @@
                 <div class="options-tool-grid">
                     <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
                     <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
+                    <button type="button" onclick="showChallengeRecord()">✦ The Seven Record</button>
+                    <button type="button" onclick="resetChallengeRecord()">↻ Reset Seven Record</button>
                     <button type="button" onclick="recDownload()">⇩ Download Game Logs</button>
                     <button type="button" onclick="showAboutBox()">ⓘ About</button>
                     <button type="button" class="danger-tool" onclick="confirmResetGame()">↻ Reset Game</button>
@@ -800,9 +862,30 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="start-btn" onclick="recDownload()" style="margin-top: 0; background: #2a9d8f !important;">💾 Download Game Log</button>
-                <button class="start-btn" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
+                <button class="start-btn" id="go-play-again" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
                 <button class="start-btn" onclick="closeGameOverToBoard()" style="margin-top: 0; background: #666 !important;">View Board</button>
+                <button class="start-btn" id="go-challenge-continue" onclick="continueFromChallengeGameOver()" style="display:none;margin-top:0;background:#7b2cbf !important;">✦ Continue Challenge</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Solo Challenge screens -->
+    <div id="challenge-overlay" class="challenge-overlay" role="dialog" aria-modal="true" aria-labelledby="challenge-title">
+        <div class="challenge-dialog">
+            <h2 id="challenge-title">✦ THE SEVEN ✦</h2>
+            <div id="challenge-content"></div>
+            <div class="challenge-actions" id="challenge-actions"></div>
+        </div>
+    </div>
+
+    <!-- Challenge completion cinematic: each rival's stage 0 fades into stage 10. -->
+    <div id="challenge-victory-cinematic" aria-live="polite" aria-label="The Seven victory cinematic">
+        <div class="cvc-inner">
+            <div class="cvc-kicker">The Seven · Final Reckoning</div>
+            <div id="cvc-name" class="cvc-name">The Rivals</div>
+            <div class="cvc-stage"><img id="cvc-image" alt="Challenge rival transformation" /></div>
+            <div id="cvc-caption" class="cvc-caption">Every rival has fallen.</div>
+            <div class="cvc-controls"><button type="button" id="cvc-skip" onclick="skipChallengeVictoryCinematic()">Skip Cinematic</button></div>
         </div>
     </div>
 
@@ -873,6 +956,8 @@
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
             <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Card Library" aria-label="Card Library">📚</button>
+            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-win" onclick="challengeTestFinish('win')" title="TEST ONLY: Auto-win this challenge match" aria-label="Test auto-win">🏆</button>
+            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-lose" onclick="challengeTestFinish('lose')" title="TEST ONLY: Auto-lose this challenge match" aria-label="Test auto-lose">💥</button>
             <button id="restart-game-toolbar-btn" class="themed-secondary-btn main-toolbar-btn restart-game-toolbar-btn" onclick="restartGameFromBoard()" title="Restart game" aria-label="Restart game">↻</button>
             <button class="help-btn themed-secondary-btn main-toolbar-btn" onclick="openOptionsModal('game')" title="Display, audio, help, logs, and game controls">⚙ Options &amp; Tools</button>
             <button type="button" class="themed-secondary-btn main-toolbar-btn" onclick="showAboutBox()" title="About Hypnotic Duel" aria-label="About Hypnotic Duel">ⓘ</button>
@@ -917,6 +1002,7 @@
 
         <!-- CENTER PANEL -->
         <div class="panel center-board">
+            <div id="challenge-taunt-box" role="status" aria-live="polite">Your rival is watching...</div>
             <div class="track-container">
                 <h3 style="border: none; margin: 0 0 5px 0; text-align: center; font-size: 1.2em;">Submission</h3>
                 <div style="display: flex; justify-content: space-between; color: #aaa; font-size: 0.9em;" id="track-labels">
@@ -1037,68 +1123,68 @@ const debugCards = [15, 36, 2]; // Set the 3 card IDs you want dealt first
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
 
 const KNOWN_CARDS = [
-    { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
-	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {adaptive: 30, aggressive: 30, defensive: 30, v23low: 30} },
-	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
-	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
-	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
-    { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {adaptive: 28, aggressive: 35, defensive: 15, v23low: 55} },
-	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {adaptive: 40, aggressive: 70, defensive: 10, v23low: 50} },
-	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {adaptive: 70, aggressive: 80, defensive: 80, v23low: 90} },
-	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {adaptive: 45, aggressive: 75, defensive: 15, v23low: 65} },
-	{ id: 9, name: "Deep Safeties", cost: 4, type: "Keep", desc: "When you use 💧 Lucidity, add 1 to its effect.", ai: {adaptive: 30, aggressive: 15, defensive: 85, v23low: 55} },
-	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
-	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
-	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {adaptive: 35, aggressive: 50, defensive: 50, v23low: 40} },
-	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
-	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
-	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
-    { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
-    { id: 17, name: "Physical Manipulation", cost: 7, type: "Keep", desc: "When you trance the opponent completely, you have the option to transform them.", ai: {adaptive: 50, aggressive: 85, defensive: 50, v23low: 90} },
-    { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {adaptive: 40, aggressive: 60, defensive: 20, v23low: 30} },
-    { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {adaptive: 40, aggressive: 20, defensive: 20, v23low: 20} },
-    { id: 20, name: "Absolute Focus", cost: 4, type: "Keep", desc: "Starts with 3 charges. Spend a charge for an extra reroll. Discard when spent.", charges: 3, ai: {adaptive: 42, aggressive: 50, defensive: 50, v23low: 50} },
-    { id: 21, name: "Switch Play", cost: 6, type: "Keep", desc: "When the opponent adds any amount of 🌀 to you, add 1 🌀 back to them.", ai: {adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {adaptive: 38, aggressive: 65, defensive: 15, v23low: 55} },
-    { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {adaptive: 35, aggressive: 60, defensive: 15, v23low: 45} },
-    { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {adaptive: 48, aggressive: 55, defensive: 45, v23low: 45} },
-    { id: 25, name: "Pendulum Swing", cost: 3, type: "Instant", desc: "Deepen your submission by 2 and transform the opponent 1.", ai: {adaptive: 45, aggressive: 30, defensive: 30, v23low: 30} },
-    { id: 26, name: "Waking Trance", cost: 4, type: "Keep", desc: "Gain an active button to Sell this card for +2 Energy.", ai: {adaptive: 15, aggressive: 50, defensive: 50, v23low: 40} },
-    { id: 27, name: "Endless Staircase", cost: 2, type: "Keep", desc: "At the end of your turn, if you have no ⚡, gain 1 ⚡.", ai: {adaptive: 25, aggressive: 35, defensive: 35, v23low: 25} },
-	{ id: 28, name: "Hypnotic Focus", cost: 5, type: "Keep", desc: "The first card you buy each turn costs 2 less energy.", ai: {adaptive: 45, aggressive: 50, defensive: 50, v23low: 60} },
-    { id: 29, name: "Compliant Mind", cost: 3, type: "Keep", desc: "Buying cards costs you 1 less ⚡.", ai: {adaptive: 45, aggressive: 30, defensive: 30, v23low: 40} },
-    { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {adaptive: 55, aggressive: 60, defensive: 20, v23low: 35} },
-    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {adaptive: 35, aggressive: 30, defensive: 5, v23low: 20} },
-    { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
-    { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {adaptive: 20, aggressive: 10, defensive: 40, v23low: 10} },
-    { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
-    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
-    { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {adaptive: 50, aggressive: 65, defensive: 20, v23low: 60} },
-    { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {adaptive: 25, aggressive: 25, defensive: 40, v23low: 20} },
-    { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {adaptive: 30, aggressive: 10, defensive: 80, v23low: 65} },
-    { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {adaptive: 50, aggressive: 60, defensive: 60, v23low: 55} },
-    { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {adaptive: 30, aggressive: 40, defensive: 40, v23low: 40} },
-    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Max 1 counter per turn. Removed by 💧.", ai: {adaptive: 58, aggressive: 80, defensive: 15, v23low: 75} },
-	{ id: 42, name: "Mirror Image", cost: 6, type: "Keep", desc: "On your turn, discard this card to buy any card from the card row for free.", ai: {adaptive: 38, aggressive: 25, defensive: 25, v23low: 55} },
-    { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {adaptive: 68, aggressive: 40, defensive: 40, v23low: 50} },
-    { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {adaptive: 25, aggressive: 25, defensive: 65, v23low: 50} },
-    { id: 45, name: "Power Boost", cost: 3, type: "Keep", desc: "When you gain any ⚡ from dice, gain 1 extra ⚡.", ai: {adaptive: 50, aggressive: 50, defensive: 30, v23low: 40} },
-    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card from the market.", ai: {adaptive: 42, aggressive: 70, defensive: 40, v23low: 55} },
-    { id: 47, name: "Fading Reality", cost: 4, type: "Keep", desc: "You can always reroll any 👁️ you have.", ai: {adaptive: 20, aggressive: 25, defensive: 30, v23low: 20} },
-    { id: 48, name: "Burning Intensity", cost: 6, type: "Keep", desc: "The opponent must now use a minimum of two 💧 to decrease their arousal.", ai: {adaptive: 30, aggressive: 15, defensive: 65, v23low: 45} },
-    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {adaptive: 38, aggressive: 50, defensive: 10, v23low: 30} },
-	{ id: 50, name: "Mutual Heat", cost: 6, type: "Keep", desc: "When the opponent adds any amount of arousal to you, increase their arousal by 1.", ai: {adaptive: 20,  aggressive: 15, defensive: 65, v23low: 55 } },
-	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
-	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
-	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {adaptive: 65, aggressive: 75, defensive: 55, v23low: 75, v33low: 75, trans: 90} },
-    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {adaptive: 55, aggressive: 60, defensive: 40, v23low: 75, v33low: 75, trans: 85} },
-    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {adaptive: 70, aggressive: 75, defensive: 50, v23low: 80, v33low: 80, trans: 100} },
-    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {adaptive: 55, aggressive: 30, defensive: 75, v23low: 45, v33low: 45, trans: 20} },
-    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {adaptive: 70, aggressive: 65, defensive: 75, v23low: 65, v33low: 65, trans: 65} },
-    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {adaptive: 70, aggressive: 50, defensive: 85, v23low: 70, v33low: 70, trans: 60} },
-    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {adaptive: 65, aggressive: 65, defensive: 60, v23low: 60, v33low: 60, trans: 50} },
-    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {adaptive: 65, aggressive: 55, defensive: 75, v23low: 65, v33low: 65, trans: 50} },
+    { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {transformer: 15, adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
+	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {transformer: 40, adaptive: 30, aggressive: 30, defensive: 30, v23low: 30} },
+	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {transformer: 80, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
+	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {transformer: 62, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
+	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {transformer: 60, adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
+    { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {transformer: 25, adaptive: 28, aggressive: 35, defensive: 15, v23low: 55} },
+	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {transformer: 15, adaptive: 40, aggressive: 70, defensive: 10, v23low: 50} },
+	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {transformer: 75, adaptive: 70, aggressive: 80, defensive: 80, v23low: 90} },
+	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {transformer: 12, adaptive: 45, aggressive: 75, defensive: 15, v23low: 65} },
+	{ id: 9, name: "Deep Safeties", cost: 4, type: "Keep", desc: "When you use 💧 Lucidity, add 1 to its effect.", ai: {transformer: 25, adaptive: 30, aggressive: 15, defensive: 85, v23low: 55} },
+	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 20, adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
+	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {transformer: 15, adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
+	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {transformer: 30, adaptive: 35, aggressive: 50, defensive: 50, v23low: 40} },
+	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {transformer: 10, adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
+	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {transformer: 10, adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
+	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {transformer: 20, adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
+    { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {transformer: 70, adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
+    { id: 17, name: "Physical Manipulation", cost: 7, type: "Keep", desc: "When you trance the opponent completely, you have the option to transform them.", ai: {transformer: 20, adaptive: 50, aggressive: 85, defensive: 50, v23low: 90} },
+    { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {transformer: 12, adaptive: 40, aggressive: 60, defensive: 20, v23low: 30} },
+    { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {transformer: 45, adaptive: 40, aggressive: 20, defensive: 20, v23low: 20} },
+    { id: 20, name: "Absolute Focus", cost: 4, type: "Keep", desc: "Starts with 3 charges. Spend a charge for an extra reroll. Discard when spent.", charges: 3, ai: {transformer: 55, adaptive: 42, aggressive: 50, defensive: 50, v23low: 50} },
+    { id: 21, name: "Switch Play", cost: 6, type: "Keep", desc: "When the opponent adds any amount of 🌀 to you, add 1 🌀 back to them.", ai: {transformer: 20, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
+    { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {transformer: 55, adaptive: 38, aggressive: 65, defensive: 15, v23low: 55} },
+    { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {transformer: 10, adaptive: 35, aggressive: 60, defensive: 15, v23low: 45} },
+    { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {transformer: 15, adaptive: 48, aggressive: 55, defensive: 45, v23low: 45} },
+    { id: 25, name: "Pendulum Swing", cost: 3, type: "Instant", desc: "Deepen your submission by 2 and transform the opponent 1.", ai: {transformer: 50, adaptive: 45, aggressive: 30, defensive: 30, v23low: 30} },
+    { id: 26, name: "Waking Trance", cost: 4, type: "Keep", desc: "Gain an active button to Sell this card for +2 Energy.", ai: {transformer: 15, adaptive: 15, aggressive: 50, defensive: 50, v23low: 40} },
+    { id: 27, name: "Endless Staircase", cost: 2, type: "Keep", desc: "At the end of your turn, if you have no ⚡, gain 1 ⚡.", ai: {transformer: 25, adaptive: 25, aggressive: 35, defensive: 35, v23low: 25} },
+	{ id: 28, name: "Hypnotic Focus", cost: 5, type: "Keep", desc: "The first card you buy each turn costs 2 less energy.", ai: {transformer: 55, adaptive: 45, aggressive: 50, defensive: 50, v23low: 60} },
+    { id: 29, name: "Compliant Mind", cost: 3, type: "Keep", desc: "Buying cards costs you 1 less ⚡.", ai: {transformer: 55, adaptive: 45, aggressive: 30, defensive: 30, v23low: 40} },
+    { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {transformer: 60, adaptive: 55, aggressive: 60, defensive: 20, v23low: 35} },
+    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {transformer: 15, adaptive: 35, aggressive: 30, defensive: 5, v23low: 20} },
+    { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {transformer: 15, adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
+    { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {transformer: 25, adaptive: 20, aggressive: 10, defensive: 40, v23low: 10} },
+    { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {transformer: 20, adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
+    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {transformer: 15, adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
+    { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {transformer: 15, adaptive: 50, aggressive: 65, defensive: 20, v23low: 60} },
+    { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {transformer: 25, adaptive: 25, aggressive: 25, defensive: 40, v23low: 20} },
+    { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {transformer: 30, adaptive: 30, aggressive: 10, defensive: 80, v23low: 65} },
+    { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 20, adaptive: 50, aggressive: 60, defensive: 60, v23low: 55} },
+    { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {transformer: 35, adaptive: 30, aggressive: 40, defensive: 40, v23low: 40} },
+    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Max 1 counter per turn. Removed by 💧.", ai: {transformer: 85, adaptive: 58, aggressive: 80, defensive: 15, v23low: 75} },
+	{ id: 42, name: "Mirror Image", cost: 6, type: "Keep", desc: "On your turn, discard this card to buy any card from the card row for free.", ai: {transformer: 40, adaptive: 38, aggressive: 25, defensive: 25, v23low: 55} },
+    { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {transformer: 78, adaptive: 68, aggressive: 40, defensive: 40, v23low: 50} },
+    { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {transformer: 30, adaptive: 25, aggressive: 25, defensive: 65, v23low: 50} },
+    { id: 45, name: "Power Boost", cost: 3, type: "Keep", desc: "When you gain any ⚡ from dice, gain 1 extra ⚡.", ai: {transformer: 65, adaptive: 50, aggressive: 50, defensive: 30, v23low: 40} },
+    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card from the market.", ai: {transformer: 15, adaptive: 42, aggressive: 70, defensive: 40, v23low: 55} },
+    { id: 47, name: "Fading Reality", cost: 4, type: "Keep", desc: "You can always reroll any 👁️ you have.", ai: {transformer: 35, adaptive: 20, aggressive: 25, defensive: 30, v23low: 20} },
+    { id: 48, name: "Burning Intensity", cost: 6, type: "Keep", desc: "The opponent must now use a minimum of two 💧 to decrease their arousal.", ai: {transformer: 15, adaptive: 30, aggressive: 15, defensive: 65, v23low: 45} },
+    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {transformer: 10, adaptive: 38, aggressive: 50, defensive: 10, v23low: 30} },
+	{ id: 50, name: "Mutual Heat", cost: 6, type: "Keep", desc: "When the opponent adds any amount of arousal to you, increase their arousal by 1.", ai: {transformer: 20, adaptive: 20,  aggressive: 15, defensive: 65, v23low: 55 } },
+	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {transformer: 55, adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
+	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {transformer: 20, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
+	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {transformer: 25, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
+    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {adaptive: 65, aggressive: 75, defensive: 55, v23low: 75, transformer: 90} },
+    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {adaptive: 55, aggressive: 60, defensive: 40, v23low: 75, transformer: 85} },
+    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {adaptive: 70, aggressive: 75, defensive: 50, v23low: 80, transformer: 100} },
+    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {adaptive: 55, aggressive: 30, defensive: 75, v23low: 45, transformer: 20} },
+    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {adaptive: 70, aggressive: 65, defensive: 75, v23low: 65, transformer: 65} },
+    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {adaptive: 70, aggressive: 50, defensive: 85, v23low: 70, transformer: 60} },
+    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {adaptive: 65, aggressive: 65, defensive: 60, v23low: 60, transformer: 50} },
+    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {adaptive: 65, aggressive: 55, defensive: 75, v23low: 65, transformer: 50} },
 ];
 
 // Put card IDs here to keep them out of the draw deck and market.
@@ -1168,6 +1254,7 @@ window.onload = () => {
     // Initial trigger to cross-link labels and options
     onP1NameChange();
     onCpuNameChange();
+    toggleGameMode();
 };
 
 // ---------- Lookup Transform ----------
@@ -1273,10 +1360,353 @@ function populateTransformDropdown(selectId, opposingCharName, preselect) {
     syncLookup(selectId);
 }
 
+// ============================================================
+// SOLO CHALLENGE: THE SEVEN
+// Wins advance to a harder rival; losses send the player back one rival.
+// Beating Roz is the first checkpoint. Losing to Roz ends the run.
+// ============================================================
+const CHALLENGE_RIVALS = [
+    { name:"Roz", difficulty:"random", form:"Eevee", initials:"RZ", tier:"Beginner", color:"#67e8f9" },
+    { name:"Zixuan", difficulty:"smart", form:"Doll", initials:"ZX", tier:"Easy", color:"#a78bfa" },
+    { name:"Fable", difficulty:"aggressive", form:"Otter", initials:"FB", tier:"Normal", color:"#f472b6" },
+    { name:"Mark", difficulty:"v23low", form:"Gender", initials:"MK", tier:"Hard", color:"#fb923c" },
+    { name:"Hyeri", difficulty:"defensive", form:"Squirrel", initials:"HY", tier:"Expert", color:"#5eead4" },
+    { name:"Tex", difficulty:"transformer", form:"Cow", initials:"TX", tier:"Virtuoso", color:"#facc15" },
+    { name:"Siobhán", difficulty:"adaptive", form:"Cat", initials:"SB", tier:"Master", color:"#c084fc" }
+];
+let challengeActive = false;
+let challengeIndex = 0;
+let challengeModifierNext = "none"; // none | handicap (CPU advantage) | bonus (player advantage)
+let challengeCompleted = [];
+let challengeLastResult = null;
+let challengeTauntTimer = null;
+let challengeRunStartedAt = null;
+const CHALLENGE_RECORD_KEY = "hypnoticDuel.sevenChallengeRecord.v1";
+function emptyChallengeRecord(){ return { runsStarted:0, runsCompleted:0, runsFailed:0, matchesWon:0, matchesLost:0, bestRivalIndex:0, lastOutcome:"Never played", lastPlayed:null }; }
+function loadChallengeRecord(){ try { const raw=localStorage.getItem(CHALLENGE_RECORD_KEY); return raw ? {...emptyChallengeRecord(),...JSON.parse(raw)} : emptyChallengeRecord(); } catch(e){ return emptyChallengeRecord(); } }
+function saveChallengeRecord(record){ try { localStorage.setItem(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
+function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
+function showChallengeRecord(){
+    const r=loadChallengeRecord();
+    const best=r.bestRivalIndex ? `${r.bestRivalIndex} / 7 — ${CHALLENGE_RIVALS[r.bestRivalIndex-1]?.name || "The Seven"}` : "Not yet reached";
+    const last=r.lastPlayed ? new Date(r.lastPlayed).toLocaleString() : "Never";
+    showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at Roz:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}</div>`);
+}
+function resetChallengeRecord(){ if(!window.confirm("Reset the saved The Seven challenge record on this browser?")) return; saveChallengeRecord(emptyChallengeRecord()); showChallengeRecord(); }
+function clearChallengeMatchAlerts(){ const toast=document.getElementById("card-trigger-toast"); if(toast){toast.innerHTML="";toast.classList.remove("visible");toast.removeAttribute("aria-hidden");} }
+function challengeTestFinish(result){
+    if(!challengeActive || !gameState || gameState.gameMode!=="solo" || gameState.gameEnded){ showPopup("Challenge Test Buttons","Start an active Solo Challenge match before using these test buttons."); return; }
+    if(!window.confirm(result==="win" ? "TEST: Instantly win this challenge match?" : "TEST: Instantly lose this challenge match?")) return;
+    if(result==="win"){ gameState.p2.transform=10; gameState.p1.transform=Math.min(9,Number(gameState.p1.transform)||0); }
+    else { gameState.p1.transform=10; gameState.p2.transform=Math.min(9,Number(gameState.p2.transform)||0); }
+    gameState.gameEnded=true;
+    gameState.activePlayer=result==="win"?1:2;
+    clearChallengeMatchAlerts(); updateUI(); presentFinishedGame();
+}
+const CHALLENGE_TAUNTS = {
+    TransformPlayer: ["There you go. One more step away from who you were.", "Feel that shift? I barely had to try.", "Your old shape is already starting to feel like a memory."],
+    AIGetsTransformed: ["Hey! That wasn't part of my plan!", "Careful. I can still turn this around.", "Enjoy that little victory while it lasts."],
+    PlayerIsObedient: ["Good. You followed the track exactly where I wanted.", "That was almost effortless. Thank you for cooperating.", "A little suggestion, and you simply obey."],
+    AIIsObedient: ["I... did not mean to do that.", "A temporary lapse. Don't get comfortable.", "You got lucky. I won't make that mistake twice."],
+    BigRollAI: ["Six dice, and the odds still adore me.", "Did you see that roll? Try keeping up.", "Now THAT is how you make the dice behave."],
+    PlayerAt5Transform: ["Halfway there. Starting to recognize yourself less?", "Five stages down. You can still pretend you're in control.", "You're changing faster than you can deny it."],
+    PlayerAt8Transform: ["Eight stages. This is where the panic usually starts.", "Almost finished. Try to enjoy the last few moments of the old you.", "Two more steps. You can practically see the new you."],
+    AIAt5Transform: ["Halfway transformed? Fine. I'm still in this.", "Five stages? That's a setback, not a defeat.", "I'm not done yet. Not even close."],
+    AIAt9Transform: ["One more and I lose. I refuse to make it easy.", "Nine? No. I am NOT becoming your victory lap.", "All right, you've got my attention. Don't waste it."]
+};
+const CHALLENGE_RIVAL_TAUNTS = {
+    Roz: {
+        TransformPlayer:["Whoa, you're changing! This is kind of amazing, actually.","I brought snacks for the victory party. Or the emergency. Hard to tell!"],
+        AIGetsTransformed:["Hey! Plot twist! I did not see that coming!","Oh no, my lucky streak just tripped over its own feet!"],
+        PlayerIsObedient:["Aw, thanks for listening! Teamwork makes the weird work!","See? A little cooperation and nobody has to make a spreadsheet!"],
+        AIIsObedient:["I was just testing whether that suggestion had manners!","Okay, my brain took a tiny detour. Happens to the best of us!"],
+        BigRollAI:["Did you SEE that? The dice are my new best friends!","That roll was so good I should name it and take it for ice cream!"],
+        PlayerAt5Transform:["Halfway! Should I make a banner? I love banners!","Five stages down. You're doing great! Probably! I think!"],
+        PlayerAt8Transform:["Eight already! This is going in the scrapbook!","Almost there! Deep breaths, and maybe a celebratory cupcake!"],
+        AIAt5Transform:["Five stages? Huh. That's less fun when it's me.","Okay, no panic. I am choosing not to panic. Mostly."],
+        AIAt9Transform:["One more and I'm toast. Is toast a transformation?","Oh crumbs. I need luck, a snack, and possibly a new plan!"]
+    },
+    Zixuan: {
+        TransformPlayer:["The Doll conversion is progressing within predicted tolerances.","Interesting. Your resistance curve is noisier than the preliminary model suggested."],
+        AIGetsTransformed:["Unexpected result. Logging the failure and revising the hypothesis.","That should not have happened. Excellent—an opportunity to isolate the variable."],
+        PlayerIsObedient:["Compliance confirmed. The behavioral response matches the trial model.","You followed the cue. Useful data, although hardly a surprising outcome."],
+        AIIsObedient:["An involuntary response. I will not be including that in the abstract.","The experiment briefly escaped the experimenter. Noted."],
+        BigRollAI:["A statistically satisfying roll. Observe the distribution carefully.","Probability is not luck when you know how to exploit the conditions."],
+        PlayerAt5Transform:["Stage five. Your baseline identity is becoming a less stable reference point.","Halfway through the process. The next measurements should be revealing."],
+        PlayerAt8Transform:["Stage eight. Only a narrow set of outcomes remains plausible.","The conversion is nearing completion. I recommend accepting the evidence."],
+        AIAt5Transform:["Halfway is not terminal. I have several contingency protocols.","This is a setback, not a conclusion. Recalculating."],
+        AIAt9Transform:["Stage nine. Emergency model revision in progress.","One step from failure. I dislike how compelling this data point is."]
+    },
+    Fable: {
+        TransformPlayer:["Class, eyes up here: today's lesson is applied transformation.","Excellent participation! The next stage is where the theory gets practical."],
+        AIGetsTransformed:["A teachable moment—and I am apparently the teaching aid.","That was not on the lesson plan. Everyone, please write that down anyway."],
+        PlayerIsObedient:["Very good. You followed the instruction precisely; gold star.","See how smoothly the exercise goes when we follow the directions?"],
+        AIIsObedient:["I have accidentally demonstrated the lesson on suggestibility.","Well, class, even the instructor can make an error. Moving on."],
+        BigRollAI:["Now that's an exemplary result! Five points for dramatic probability!","A perfect demonstration. Please hold your applause until the dice settle."],
+        PlayerAt5Transform:["Lesson checkpoint: five stages complete. How are we feeling?","Halfway through the curriculum, and the old form is losing its authority."],
+        PlayerAt8Transform:["Advanced lesson now. Two stages remain; pay attention.","Almost at the final assessment. I do hope you've studied."],
+        AIAt5Transform:["I refuse to become the cautionary example in my own classroom.","A midterm setback. There is still time to improve my grade."],
+        AIAt9Transform:["One stage from a failing grade. This is deeply unfair pedagogy.","Class dismissed? Absolutely not. I am appealing the result."]
+    },
+    Mark: {
+        TransformPlayer:["Transformation event detected. The model is behaving as expected.","I have a working theory, a test environment, and a very willing control group."],
+        AIGetsTransformed:["Unexpected branch. I will debug the cause before the next roll.","That outcome violates my assumptions. I will update the assumptions."],
+        PlayerIsObedient:["Input accepted. The hypnosis routine returned the expected response.","Compliance observed. Amateur hypnotism: one part suggestion, three parts timing."],
+        AIIsObedient:["That was a state-machine error, not a meaningful decision.","I followed the cue. This bug will be fixed in the next build."],
+        BigRollAI:["High-value roll. The probability distribution has been unusually cooperative.","The dice produced a clean result. I appreciate well-formed output."],
+        PlayerAt5Transform:["Stage five. Your available recovery paths are shrinking.","Midpoint reached. I have already mapped the likely end states."],
+        PlayerAt8Transform:["Stage eight. Two operations remain before terminal state.","You are approaching the threshold. No need to panic; the math is sufficient."],
+        AIAt5Transform:["Five stages is a recoverable exception. Continue processing.","I have not crashed. I am merely operating under adverse conditions."],
+        AIAt9Transform:["Stage nine. I refuse to terminate on an unhandled exception.","One step from defeat. I would like to file a bug report against these dice."]
+    },
+    Hyeri: {
+        TransformPlayer:["Breathe in. Let the old shape soften; breathe out.","Change is a river, not an enemy. You can stop bracing against the current."],
+        AIGetsTransformed:["Ah. Even a calm mind can be surprised. I will return to my breath.","The lesson comes to me now: release the need to control every turn."],
+        PlayerIsObedient:["There. You listened, and the struggle became lighter.","Accept the moment as it is. You need not fight every passing thought."],
+        AIIsObedient:["I became attached to my own advice. How wonderfully human.","Resistance rose, then passed. I will not cling to the embarrassment."],
+        BigRollAI:["A beautiful pattern. For one breath, even the dice seem enlightened.","The universe has a sense of rhythm, and today it favors me."],
+        PlayerAt5Transform:["Halfway along the path. Meet each change without judgment.","Five steps have passed. You may choose peace even while you change."],
+        PlayerAt8Transform:["Eight stages. Stay present; the final steps will arrive in their own time.","You are close to the threshold. Let the breath be your anchor."],
+        AIAt5Transform:["I have lost my balance, not my center. I can return to it.","Halfway changed. I will greet the next moment as it comes."],
+        AIAt9Transform:["One step remains. I acknowledge the fear without obeying it.","The outcome is near. I will meet it with an open mind."]
+    },
+    Tex: {
+        TransformPlayer:["Well now, partner, let's see if you can ride this change without buckin'.","A gentleman gives fair warning. Consider this your warning, with interest."],
+        AIGetsTransformed:["Well, butter my boots—that weren't how I drew it up.","You got the drop on me, friend. Don't go thinkin' it makes you the sheriff."],
+        PlayerIsObedient:["That's right, partner. A little manners goes a long way out here.","Much obliged. A good guest knows when to follow a gentleman's lead."],
+        AIIsObedient:["Now hold on. I meant to do that. Mostly.","Ain't a defeat of pride if I call it tactical cooperation, y'hear?"],
+        BigRollAI:["Now THAT'S a roll with a proper cowboy's swagger!","The dice tipped their hat to the best hand in the room."],
+        PlayerAt5Transform:["Halfway through, partner. Keep your boots under you.","Five stages down. You're still in my territory, and I know every trail."],
+        PlayerAt8Transform:["Eight stages? Well, the trail's getting mighty narrow now.","Two steps from the finish line. Don't mistake a long ride for a victory."],
+        AIAt5Transform:["I may be down halfway, but this cowboy's not ridin' off yet.","A little dust on the hat never ruined a good gentleman."],
+        AIAt9Transform:["One stage left? I reckon I'll make you work for the story.","This ranch ain't yours yet, partner. Not by a long shot."]
+    },
+    Siobhán: {
+        TransformPlayer:["The Cat form is an elegant fit. You do have a talent for inevitability.","I prefer a plan with several endings. You are discovering mine in the wrong order."],
+        AIGetsTransformed:["A rare miscalculation. Do not mistake it for an invitation.","You have earned a moment of satisfaction. I advise you not to grow attached to it."],
+        PlayerIsObedient:["How considerate. You have saved us both the trouble of pretending.","You followed the cue beautifully. I do appreciate a person who understands timing."],
+        AIIsObedient:["I allowed the moment to unfold. Your interpretation is your own problem.","A useful demonstration of how easily appearances can be arranged."],
+        BigRollAI:["A pleasing roll. Think of it as a glimpse of the ending I had prepared.","How dramatic. I almost admire your confidence in the dice."],
+        PlayerAt5Transform:["Five stages. Your former certainty is becoming rather decorative.","Halfway through, and already the old version of you feels like a rumor."],
+        PlayerAt8Transform:["Eight stages. I do hope you have considered what comes after resistance.","Two steps remain. It would be a shame to spoil such a carefully arranged ending."],
+        AIAt5Transform:["A setback, certainly. I rarely confuse a setback with danger.","Halfway altered. I assure you, I remain the one asking the questions."],
+        AIAt9Transform:["One stage. How impolite of you to make the conclusion so suspenseful.","The final move is always the most revealing. Do try to appreciate it."]
+    }
+};
+function challengePortrait(name, initials, extraClass="") {
+    const safe = String(name).replace(/[^a-z0-9 _-]/gi, "");
+    const rivalIndex = CHALLENGE_RIVALS.findIndex(r => r.name === name);
+    const transformed = rivalIndex >= 0 && challengeCompleted.includes(rivalIndex);
+    const suffix = transformed ? "_head_transformed" : "_head";
+    const path = `images/avatars/${safe}/${safe}${suffix}.jpg`;
+    return `<div class="challenge-portrait ${extraClass}"><span>${initials || safe.slice(0,2).toUpperCase()}</span><img src="${path}" alt="${name}${transformed ? ' transformed' : ''}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>`;
+}
+function challengeRoadmapHtml() {
+    const playerName = (document.getElementById("p1-name")?.value || gameState.p1.name || "Challenger").split(" ")[0];
+    const rivals = CHALLENGE_RIVALS.map((r,i) => `<div class="challenge-rival ${i===challengeIndex?'current':''} ${challengeCompleted.includes(i)?'defeated':''}">${challengePortrait(r.name,r.initials)}<div class="challenge-rival-name">${r.name}</div><div class="challenge-rival-tier">${r.tier}</div></div>`).join("");
+    const markerPct = CHALLENGE_RIVALS.length === 1 ? 50 : 7.14 + challengeIndex * (85.72 / 6);
+    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName,playerName.slice(0,2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex+1} of 7 · Wins move you forward · Losses send you back</div>`;
+}
+function renderChallengeScreen(kind, extra={}) {
+    const overlay=document.getElementById("challenge-overlay"), title=document.getElementById("challenge-title"), content=document.getElementById("challenge-content"), actions=document.getElementById("challenge-actions");
+    if (!overlay || !title || !content || !actions) return;
+    let html="", buttons="";
+    if (kind === "rules") {
+        title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
+        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. Lose and you'll be sent back one step, where you can fight your way forward again.</p><p><strong>One rule is absolute:</strong> losing at the first level ends the challenge. Defeat the Mistress to complete it.</p><p>Each victory makes the next match a little harder. Each loss grants a small boost for your next, easier rematch. You cannot choose your transformation in Challenge mode; the rival selects it at random from the available forms for your character.</p><p>Every rival has a distinct personality and strategy, and what you will transform them into. Your progress is shown on the roadmap.</p>`;
+        buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
+    } else if (kind === "roadmap") {
+        title.textContent="✦ THE ROAD AHEAD ✦";
+        html=`<p>Study the route, challenger. The marker shows your next opponent.</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd">Next up: <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong> · ${CHALLENGE_RIVALS[challengeIndex].tier}</p>`;
+        buttons=`<button onclick="showChallengeIntro()">Face ${CHALLENGE_RIVALS[challengeIndex].name}</button><button class="challenge-cancel" onclick="quitChallengeRun()">Abandon Challenge</button>`;
+    } else if (kind === "intro") {
+        const r=CHALLENGE_RIVALS[challengeIndex];
+        const modifier=challengeModifierNext;
+        const modText=modifier==="handicap"?"Handicap: your rival starts with +1 bonus Energy this match.":modifier==="bonus"?"Challenge bonus: you start with +2 bonus Energy this match.":"No bonus or handicap this match.";
+        title.textContent=`RIVAL ${challengeIndex+1}: ${r.name.toUpperCase()}`;
+        html=`${challengeRoadmapHtml()}<div class="challenge-opponent-card">${challengePortrait(r.name,r.initials)}<div><h3 style="border:0;color:${r.color};margin:0 0 6px">${r.name} · ${r.tier}</h3><p style="margin:4px 0">Signature transformation: <strong>${r.form}</strong></p><p style="margin:4px 0">${modText}</p><p style="margin:4px 0;color:#b9a8ca;font-size:.88rem">The rival chooses your transformation from the forms available to your character.</p></div></div>`;
+        buttons=`<button onclick="launchChallengeMatch()">Challenge ${r.name}</button><button class="challenge-cancel" onclick="quitChallengeRun()">Abandon Challenge</button>`;
+    } else if (kind === "result") {
+        title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
+        html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}<p style="text-align:center">${extra.modText}</p>`;
+        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`;
+    } else if (kind === "victory") {
+        title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
+        html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
+        buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
+    } else if (kind === "failed") {
+        title.textContent="✦ CHALLENGE ENDED ✦";
+        html=`<p style="text-align:center;font-size:1.12rem">Roz has defeated you. The gauntlet resets, and your run is over.</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Every champion starts somewhere. Try again when you're ready.</p>`;
+        buttons=`<button onclick="finishChallengeRun()">Return to Game Setup</button>`;
+    }
+    content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
+}
+function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
+function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
+function startChallengeRun(){
+    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now();
+    updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
+    closeChallengeScreen(); renderChallengeScreen("roadmap");
+}
+function showChallengeIntro(){ renderChallengeScreen("intro"); }
+function randomChallengePlayerForm(playerName){ const list=CHARACTER_MANIFEST[playerName] || []; const choices=list.length?list:TRANSFORMS; return choices[Math.floor(Math.random()*choices.length)]; }
+function launchChallengeMatch(){
+    closeChallengeScreen(); clearChallengeMatchAlerts();
+    const toast=document.getElementById("card-trigger-toast"); if(toast) toast.removeAttribute("aria-hidden");
+    const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.textContent="";taunt.classList.remove("visible");taunt.classList.add("challenge-taunt-active");taunt.style.display="flex";}
+    const cont=document.getElementById("go-challenge-continue"); if(cont)cont.style.display="none";
+    const go=document.getElementById("game-over-modal"); if(go)go.style.display="none";
+    resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false; challengeLastResult=null; initializeGame();
+}
+function continueFromChallengeGameOver(){
+    const modal=document.getElementById("game-over-modal"); if(modal)modal.style.display="none";
+    if(!challengeActive || !challengeLastResult) return;
+    const box=document.getElementById("challenge-taunt-box");
+    if(box){box.textContent="";box.classList.remove("visible");box.classList.add("challenge-taunt-active");box.style.display="flex";}
+    renderChallengeScreen("result",challengeLastResult);
+}
+function continueChallengeAfterResult(){
+    closeChallengeScreen();
+    if (challengeLastResult?.final) { playChallengeVictoryCinematic().then(()=>renderChallengeScreen("victory")); return; }
+    if (challengeLastResult?.failed) { renderChallengeScreen("failed"); return; }
+    renderChallengeScreen("roadmap");
+}
+
+let challengeVictoryCinematicSkip = false;
+let challengeVictoryCinematicResolve = null;
+function skipChallengeVictoryCinematic(){
+    challengeVictoryCinematicSkip = true;
+    if (challengeVictoryCinematicResolve) challengeVictoryCinematicResolve();
+}
+async function replayChallengeVictoryCinematic(){
+    closeChallengeScreen();
+    await playChallengeVictoryCinematic();
+    renderChallengeScreen("victory");
+}
+async function playChallengeVictoryCinematic(){
+    const overlay=document.getElementById("challenge-victory-cinematic");
+    const image=document.getElementById("cvc-image");
+    const name=document.getElementById("cvc-name");
+    const caption=document.getElementById("cvc-caption");
+    if(!overlay||!image||!name||!caption) return;
+    const reduced=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wait=ms=>new Promise(resolve=>window.setTimeout(resolve,reduced?Math.min(ms,80):ms));
+    challengeVictoryCinematicSkip=false;
+    overlay.style.display="flex";
+    overlay.classList.remove("cvc-flash");
+    image.classList.remove("cvc-fade");
+    document.getElementById("cvc-skip").textContent="Skip Cinematic";
+    try {
+        for(let i=0;i<CHALLENGE_RIVALS.length;i++){
+            if(challengeVictoryCinematicSkip) break;
+            const rival=CHALLENGE_RIVALS[i];
+            const base=`images/avatars/${rival.name}/${rival.name}_to_${rival.form}_`;
+            const zero=await preloadCinematicStage(base+"0.jpg") || await preloadCinematicStage(`images/avatars/${rival.name}/${rival.name}_baseline.jpg`);
+            const ten=await preloadCinematicStage(base+"10.jpg");
+            if(challengeVictoryCinematicSkip) break;
+            name.classList.remove("cvc-name-flash");
+            name.textContent=rival.name;
+            void name.offsetWidth;
+            name.classList.add("cvc-name-flash");
+            caption.textContent=`Rival ${i+1} of ${CHALLENGE_RIVALS.length} · ${rival.form} transformation`;
+            overlay.classList.remove("cvc-flash");
+            void overlay.offsetWidth;
+            overlay.classList.add("cvc-flash");
+            image.classList.remove("cvc-fade");
+            if(zero){image.src=zero.src;image.alt=`${rival.name} before transformation`;}
+            else if(ten){image.src=ten.src;image.alt=`${rival.name} transformed into ${rival.form}`;}
+            else {image.removeAttribute("src");image.alt=`Artwork unavailable for ${rival.name}`;}
+            await wait(1050);
+            if(challengeVictoryCinematicSkip) break;
+            if(ten){
+                image.classList.add("cvc-fade");
+                await wait(450);
+                if(challengeVictoryCinematicSkip) break;
+                image.src=ten.src;
+                image.alt=`${rival.name} transformed into ${rival.form}, stage 10`;
+                image.classList.remove("cvc-fade");
+                overlay.classList.remove("cvc-flash");
+                void overlay.offsetWidth;
+                overlay.classList.add("cvc-flash");
+                caption.textContent=`${rival.name} · transformation complete`;
+            } else {
+                caption.textContent=`Final artwork unavailable for ${rival.name}; continuing the victory procession.`;
+            }
+            await wait(1350);
+            if(i<CHALLENGE_RIVALS.length-1 && !challengeVictoryCinematicSkip){
+                image.classList.add("cvc-fade");
+                caption.textContent="The next rival steps into the light…";
+                await wait(480);
+            }
+        }
+    } finally {
+        overlay.style.display="none";
+        image.classList.remove("cvc-fade");
+        challengeVictoryCinematicSkip=false;
+        challengeVictoryCinematicResolve=null;
+    }
+}
+function handleChallengeMatchEnded(winnerId){
+    if (!challengeActive || gameState.gameMode!=="solo") return false;
+    const rivalIndex=challengeIndex, rival=CHALLENGE_RIVALS[rivalIndex], won=winnerId===1;
+    updateChallengeRecord(r=>{
+        if(won) r.matchesWon++; else r.matchesLost++;
+        r.bestRivalIndex=Math.max(r.bestRivalIndex,rivalIndex+1);
+        r.lastOutcome=won?`Defeated ${rival.name}`:`Lost to ${rival.name}`;
+    });
+    if (won) {
+        challengeCompleted=Array.from(new Set([...challengeCompleted,rivalIndex]));
+        if (rivalIndex===CHALLENGE_RIVALS.length-1) {
+            challengeLastResult={won:true,final:true,message:`You defeated ${rival.name}, the final rival, and completed The Seven!`,modText:"All seven rivals defeated."};
+            updateChallengeRecord(r=>{r.runsCompleted++;r.lastOutcome="Completed The Seven";});
+            return true;
+        }
+        challengeIndex=rivalIndex+1;
+        challengeModifierNext="handicap";
+        challengeLastResult={won:true,message:`${rival.name} has been defeated. The marker slides forward to ${CHALLENGE_RIVALS[challengeIndex].name}.`,modText:"Next match handicap: the next rival receives +1 starting Energy."};
+    } else {
+        // Falling back reopens the previously defeated rival: restore their normal portrait.
+        if (rivalIndex===0) {
+            challengeLastResult={won:false,failed:true,message:"Roz has won. This run of The Seven is over.",modText:"The first rival is the gatekeeper. Losing here ends the run."};
+            updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome="Run ended at Roz";});
+            return true;
+        }
+        challengeCompleted=challengeCompleted.filter(i=>i!==rivalIndex-1);
+        challengeIndex=rivalIndex-1;
+        challengeModifierNext="bonus";
+        challengeLastResult={won:false,message:`${rival.name} defeats you. You fall back to ${CHALLENGE_RIVALS[challengeIndex].name} and must win your way forward again.`,modText:"Next match bonus: you receive +2 starting Energy."};
+    }
+    return true;
+}
+function quitChallengeRun(){ if (window.confirm("Abandon The Seven challenge and return to setup?")) { updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";}); finishChallengeRun(); } }
+function finishChallengeRun(){
+    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; closeChallengeScreen();
+    resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
+    const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.classList.remove("visible","challenge-taunt-active");taunt.textContent="";taunt.style.display="none";}
+    const cont=document.getElementById("go-challenge-continue");if(cont)cont.style.display="none";
+    const playAgain=document.getElementById("go-play-again");if(playAgain)playAgain.style.display="inline-block";
+    const modal=document.getElementById("game-over-modal");if(modal)modal.style.display="none";
+    document.getElementById("settings-modal").style.display="flex";
+}
+function showChallengeTaunt(eventName, forcedText=null){
+    if (!challengeActive) return;
+    const box=document.getElementById("challenge-taunt-box"); if(!box)return;
+    const rival=CHALLENGE_RIVALS[challengeIndex];
+    const personal=CHALLENGE_RIVAL_TAUNTS[rival.name]?.[eventName];
+    const lines=CHALLENGE_TAUNTS[eventName]||[];
+    const text=forcedText || (Array.isArray(personal)?personal[Math.floor(Math.random()*personal.length)]:(personal || (lines.length?lines[Math.floor(Math.random()*lines.length)]:"")));
+    if(!text)return;
+    if(challengeTauntTimer) clearTimeout(challengeTauntTimer);
+    box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: “${text}”`;
+    box.classList.remove("visible");void box.offsetWidth;box.classList.add("visible");
+    challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
+}
+
 function toggleGameMode() {
     let mode = document.getElementById("game-mode-option").value;
     document.getElementById("cpu-diff-wrap").style.display = mode === "solo" ? "flex" : "none";
     document.getElementById("online-room-wrap").style.display = mode === "online" ? "flex" : "none";
+    const challengeWrap = document.getElementById("challenge-launch-wrap"); if (challengeWrap) challengeWrap.style.display = mode === "solo" ? "block" : "none";
     
     const p1Col = document.getElementById("p1-setup-col");
     const p2Col = document.getElementById("p2-setup-col");
@@ -1676,20 +2106,20 @@ function updateLobbyUI(me, opp, note) {
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
 	let displayForm = opp?.target ?? "Gender";
-	if (displayForm === "Gender") {
+	if (displayForm === "Gender" || displayForm === "Cow") {
 		const gender = opp ? getGender(opp) : null;
 		if (gender === "male") {
-			displayForm = "Woman";
+			displayForm === "Gender" ? displayForm = "Woman" : displayForm = "Bull";
 		} else if (gender === "female") {
-			displayForm = "Man";
+			displayForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
 		}
 	}
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
-	if (youDisplayForm === "Gender") {
+	if (youDisplayForm === "Gender" || youDisplayForm === "Cow") {
 		if (getGender(me) === "male") {
-			youDisplayForm = "Woman";
+			youDisplayForm === "Gender" ? youDisplayForm = "Woman" : youDisplayForm = "Bull";
 		} else if (getGender(me) === "female") {
-			youDisplayForm = "Man";
+			youDisplayForm === "Gender" ? youDisplayForm = "Man" : youDisplayForm = "Cow";
 		}
 	}
 	
@@ -1925,12 +2355,24 @@ function closeGameOverToBoard() {
     const modal = document.getElementById("game-over-modal");
     if (modal) modal.style.display = "none";
     gameOverSeen = true;
-	if (gameState && gameState.gameEnded && typeof syncFinalBoardPortrait === "function") {
+    if (gameState && gameState.gameEnded && typeof syncFinalBoardPortrait === "function") {
         syncFinalBoardPortrait(1);
         syncFinalBoardPortrait(2);
     }
     const restart = document.getElementById("restart-game-toolbar-btn");
     if (restart) restart.style.display = "inline-block";
+    // When the player chooses View Board in a challenge, leave a clear way back
+    // to the challenge interstitial in the taunt area's reserved space.
+    if (challengeActive && challengeLastResult) {
+        if (challengeTauntTimer) { clearTimeout(challengeTauntTimer); challengeTauntTimer = null; }
+        const box = document.getElementById("challenge-taunt-box");
+        if (box) {
+            box.classList.remove("visible");
+            box.classList.add("challenge-taunt-active");
+            box.style.display = "flex";
+            box.innerHTML = '<button type="button" class="challenge-board-continue" onclick="continueFromChallengeGameOver()">✦ Continue Challenge ✦</button>';
+        }
+    }
 }
 function restartGameFromBoard() {
     if (window.confirm("Restart Hypnotic Duel? The current match will be lost.")) window.location.reload();
@@ -2029,6 +2471,7 @@ function initializeGame() {
     let p1N = document.getElementById("p1-name").value.trim();
     let cpuN = document.getElementById("cpu-name").value.trim();
     let cpuNFinal = cpuN;
+    if (challengeActive) { cpuNFinal = CHALLENGE_RIVALS[challengeIndex].name; cpuN = cpuNFinal; }
     if (cpuN === "Random") {
         const wanted = document.getElementById("p1-transform-type").value;      // the transformation chosen for the CPU's character
         let pool = NAMES.filter(n => n !== p1N && (CHARACTER_MANIFEST[n] || []).includes(wanted));
@@ -2036,10 +2479,11 @@ function initializeGame() {
         cpuNFinal = pool[Math.floor(Math.random() * pool.length)];
     }
 
-    if (p1N === cpuNFinal) { alert("Players cannot have the same name."); return; }
+    if (p1N === cpuNFinal && !challengeActive) { alert("Players cannot have the same name."); return; }
 
     let p1T = document.getElementById("p1-transform-type").value;
     let cpuT = document.getElementById("cpu-transform-type").value;
+    if (challengeActive) { p1T = randomChallengePlayerForm(p1N); cpuT = CHALLENGE_RIVALS[challengeIndex].form; }
 
     cpuBrainReset(); choiceQueue = []; choiceActive = null; endTurnAfterChoice = false; document.getElementById("choice-dialog").style.display = "none";
     gameState.gameMode = gameMode;
@@ -2050,6 +2494,11 @@ function initializeGame() {
     gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
     gameState.p2.name = cpuNFinal.split(" ")[0]; 
     gameState.p2.transformTarget = p1T;
+    if (challengeActive) {
+        // The rival chooses the form imposed on the human; the human's assigned form is random.
+        gameState.p1.transformTarget = randomChallengePlayerForm(gameState.p1.name);
+        gameState.p2.transformTarget = CHALLENGE_RIVALS[challengeIndex].form;
+    }
 
     if (gameMode === "pvp") {
         document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
@@ -2057,11 +2506,18 @@ function initializeGame() {
         document.getElementById("p1-last-keep-section").style.display = "block";
     } else {
         document.getElementById("p1-last-keep-section").style.display = "none";
-        gameState.p2.difficulty = document.getElementById("cpu-difficulty").value;
+        gameState.p2.difficulty = challengeActive ? CHALLENGE_RIVALS[challengeIndex].difficulty : document.getElementById("cpu-difficulty").value;
     }
 
-    gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
+    gameState.activePlayer = challengeActive ? 1 : (Math.random() < 0.5 ? 1 : 2);
     if (gameState.activePlayer === 1) gameState.p2.energy = 1; else gameState.p1.energy = 1;
+    if (challengeActive) {
+        if (challengeModifierNext === "bonus") gameState.p1.energy += 2;
+        else if (challengeModifierNext === "handicap") gameState.p2.energy += 1;
+        challengeModifierNext = "none";
+        const taunt=document.getElementById("challenge-taunt-box"); if(taunt) taunt.style.display="";
+        showChallengeTaunt("TransformPlayer");
+    } else { const taunt=document.getElementById("challenge-taunt-box"); if(taunt) {taunt.classList.remove("visible"); taunt.style.display="none";} }
     
     refillMarket(); 
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
@@ -2353,7 +2809,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261015.6"; // Update this label for each release.
+const GAME_VERSION = "20261015.10"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -2387,7 +2843,7 @@ function hasCard(playerId, cardId) {
 // ============================================================
 // CPU AI DIFFICULTY SYSTEM
 // ============================================================
-const CPU_DIFFICULTY_NAMES = { random: "Beginner", smart: "Easy", aggressive: "Normal", v23low: "Hard", defensive: "Expert", adaptive: "Master" };
+const CPU_DIFFICULTY_NAMES = { random: "Beginner", smart: "Easy", aggressive: "Normal", v23low: "Hard", defensive: "Expert", transformer: "Virtuoso", adaptive: "Master" };
 function getCpuDifficulty() { return gameState.p2.difficulty || "random"; }
 function cpuTitleActive() { return !!gameState && gameState.gameMode === "solo" && getCpuDifficulty() === "adaptive"; }
 // regex source for an optional "Master " / "Mistress " in front of the CPU's name, so the title is coloured with the name
@@ -2495,6 +2951,7 @@ function cpuShouldUseQuietMind() {
         case "defensive":  return p.arousal >= 3 || p.trance >= 3;     // wants Arousal at 2 or less
         case "aggressive": return p.arousal >= 4 || p.trance >= 4;     // only one step from max (or at it)
         case "v23low":     return p.arousal >= 4 || p.trance >= 4;
+        case "transformer": return p.arousal >= 3 || p.trance >= 4;     // Arousal from 3; barely cares about its own Trance
         case "random":     return Math.random() > 0.5;
         default:           return p.arousal > 2 || p.trance >= 4; // smart
     }
@@ -2534,6 +2991,7 @@ function cpuShouldUseRapidPulse() {
         case "smart": return p.trance >= 3 || p.arousal >= 3;
         case "aggressive": return p.trance >= 4 || p.arousal >= 4;
         case "v23low": return p.trance >= 4 || p.arousal >= 4 || p.vulnerability >= 1;
+        case "transformer": return p.arousal >= 3 || p.vulnerability >= 1;
         case "adaptive": {
             const th = cpuObservedThreats();
             if (p.arousal >= 3 && p.energy >= 2) return true;                 // protect the little rerolls we have left
@@ -2555,6 +3013,7 @@ function cpuShouldUseFadingReality(tCount) {
         case "random": return Math.random() > 0.75;
         case "smart": case "v23low": case "defensive": return tCount < 2;
         case "aggressive": return tCount < 3;
+        case "transformer": return tCount < 3;                    // always chase 👁️
         default: return false;
     }
 }
@@ -2582,6 +3041,7 @@ function cpuShouldUseHypnoticSuggestion(keptCount) {
         case "smart":      return keptCount < 3 && p.energy >= 2;
         case "aggressive": return keptCount < 4 && p.energy >= 4;     // keeps a little more energy back for cards
         case "v23low":     return keptCount < 3 && p.energy >= 5;     // energy theme: spends it on cards, not rerolls
+        case "transformer": return keptCount < 4 && p.energy >= 3;    // rerolls are how it finds 👁️👁️👁️
         case "defensive":  return keptCount < 3 && p.energy >= 2 && (p.trance >= 2 || p.arousal >= 2 || p.vulnerability > 0);
         default:           return false;
     }
@@ -3250,6 +3710,10 @@ const CPU_TIERS = {
                   slip: { keep: 0.5, noise: 22, trouble: 0.4, deny: 0.7 }, maxRerolls: 1, capChance: 0.45 },
     defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
                   slip: { keep: 0.32, noise: 16, trouble: 0.1, deny: 0.5 } },
+    // Transformer: 👁️ dice first, Energy second (to buy cards that boost that plan). Defends Submission only one step from the end,
+    // Arousal from 3, barely cares about its own Trance. Wipes the market to deny the human's strategy cards (never Transform cards).
+    transformer: { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 20, idleWipe: 7, excessWipe: 9, danger: { sub: 4, arousal: 3, trance: 4 }, target: { arousal: 2, trance: 3 },
+                  slip: {} },
     v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
                   slip: { keep: 0.35, noise: 18, trouble: 0.35, deny: 0.5 } }
 };
@@ -3321,6 +3785,13 @@ function cpuTierKeepPlan(level, r) {
         keepFace("EN");
         if (opp.trance >= 3) keepFace("SP");
         if (opp.arousal >= 3) keepFace("AR");
+    } else if (level === "transformer") {
+        // 👁️ first; then Energy, but keep enough dice free to chase the third 👁️ while we hold one or two
+        keepFace("TR");
+        const minFree = counts.TR >= 3 ? 0 : (counts.TR === 2 ? 2 : 3);
+        let keptNow = keep.filter(Boolean).length;
+        faces.forEach((f, i) => { if (f === "EN" && !keep[i] && n - keptNow > minFree) { keep[i] = true; keptNow++; } });
+        if (counts.SU >= 3) keepFace("SU");        // a finished triple is free value; otherwise ⛓️ is only for defending (above)
     } else {   // v23low: energy theme. Other faces only when they finish a triple or feed a card we own
         keepFace("EN");
         const tSyn = has(2) || has(41) || has(22), sSyn = has(36) || has(24) || has(23);
@@ -3369,10 +3840,12 @@ function cpuTierCardScore(card, level) {
     }
     if ((pr.trance > 0 || pr.vuln > 0) && [9, 12, 33, 44].includes(card.id)) score += (level === "defensive") ? 35 : 20;
     // the human is close to losing: offensive cards
-    if ((p1.transform >= 6 || gameState.submission <= -3) && [2, 4, 10, 17, 24, 30, 39, 41, 52].includes(card.id)) score += (level === "defensive") ? 15 : 30;
+    const pressureCards = level === "transformer" ? [2, 4, 25, 30, 40, 41, 51] : [2, 4, 10, 17, 24, 30, 39, 41, 52];
+    if ((p1.transform >= 6 || gameState.submission <= -3) && pressureCards.includes(card.id)) score += (level === "defensive") ? 15 : 30;
+    if (level === "transformer" && (CPU_STRATEGIES.transform.cards[card.id] || [7, 16, 43, 20].includes(card.id))) score += 10;   // cards that go with the plan
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
-    if (level === "v23low" && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
+    if ((level === "v23low" || level === "transformer") && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
     const noise = (CPU_TIERS[level].slip && CPU_TIERS[level].slip.noise) || 0;
     if (noise > 0) {                                  // misjudgement: fixed for the whole turn
         if (!cpuBrain.noise) cpuBrain.noise = {};
@@ -3424,6 +3897,13 @@ function cpuTierNextAction(level) {
     // 1) a liked card we can afford: take the best one
     const likedBuy = liked.find(canPay);
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
+    // 2a) Transformer: wipe the market when the human could buy a card that fits THEIR strategy (never Transform cards: we want those)
+    if (level === "transformer" && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) {
+        const target = info.filter(i => i.humanCanAfford && !CPU_STRATEGIES.transform.cards[i.card.id] && cpuDenyScore(i.card) >= cfg.denyMin &&
+                                        !(i.passes && i.score >= cfg.like))        // not a card we like ourselves
+                           .sort((a, b) => cpuDenyScore(b.card) - cpuDenyScore(a.card))[0];
+        if (target) return { type: "wipe", why: `deny ${target.card.name}` };
+    }
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
     const threat = liked.find(i => !canPay(i) && i.humanCanAfford && i.score >= cfg.denyMin);
     if (threat && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
@@ -3448,6 +3928,7 @@ function cpuTierNextAction(level) {
 function cpuTierShopPhase(level) {
     cpuBrain.wipes = 0;
     const p = gameState.p2;
+    if (level === "transformer") cpuReplan();      // read the human's strategy (their cards, rolls and what they did to us)
     for (let g = 0; g < 10 && !gameState.gameEnded; g++) {
         const act = cpuTierNextAction(level);
         if (!act) break;
@@ -3811,11 +4292,12 @@ async function playFinalTransformationCinematic(loserId) {
     const targetForm = loser.transformTarget || "new form";
 	const loserGender = getGender(loser.name);
 	let displayForm = targetForm;
-	if (targetForm === "Gender") {
+	
+	if (targetForm === "Gender" || targetForm === "Cow") {
 		if (loserGender === "male") {
-			displayForm = "Woman";
+			targetForm === "Gender" ? displayForm = "Woman" : displayForm = "Bull";
 		} else if (loserGender === "female") {
-			displayForm = "Man";
+			targetForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
 		}
 	}
     const targetArticle = /^[AEIOU]/i.test(String(displayForm).trim()) ? "an" : "a";
@@ -3977,6 +4459,7 @@ function pulseChangedStat(playerPrefix, statName, currentValue) {
 }
 
 function updateUI() {
+    if (challengeActive) { const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.style.display="flex";taunt.classList.add("challenge-taunt-active");} }
     if (!gameState)
 		return;
 		
@@ -4535,7 +5018,8 @@ function cpuShouldTransformOnSetback() {
     switch (getCpuDifficulty()) {
         case "random": return Math.random() > 0.5;
         case "aggressive":
-        case "v23low": return true;
+        case "v23low":
+        case "transformer": return true;
         case "adaptive": return gameState.submission < 2;   // when the marker is sliding, use the setback to push it back
         case "defensive": return gameState.p1.transform >= 6;
         default: return gameState.p1.transform >= 4;
@@ -4635,7 +5119,17 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
             queueCardTrigger(targetPlayerId, 59, "Reflected 1 transformation to the opponent");
         }
     }
+    const beforeTransform = Number(target.transform) || 0;
     target.transform += finalAmount;
+    if (challengeActive && finalAmount > 0) {
+        if (targetPlayerId === 1) showChallengeTaunt("TransformPlayer");
+        else showChallengeTaunt("AIGetsTransformed");
+        const afterTransform = Number(target.transform) || 0;
+        if (targetPlayerId === 1 && beforeTransform < 5 && afterTransform >= 5) showChallengeTaunt("PlayerAt5Transform");
+        if (targetPlayerId === 1 && beforeTransform < 8 && afterTransform >= 8) showChallengeTaunt("PlayerAt8Transform");
+        if (targetPlayerId === 2 && beforeTransform < 5 && afterTransform >= 5) showChallengeTaunt("AIAt5Transform");
+        if (targetPlayerId === 2 && beforeTransform < 9 && afterTransform >= 9) showChallengeTaunt("AIAt9Transform");
+    }
     if (finalAmount > 0 && target && Number(sourcePlayerId) !== 0) {
         showTurnAlert(`${target.name} transforms +${finalAmount} 👁️.`, targetPlayerId);
     }
@@ -5176,6 +5670,8 @@ async function resolveDice() {
         else if (f.includes("TRANSFORM")) counts.TRANSFORM++;
     });
 
+    if (challengeActive && activePlayerNum === 2 && Math.max(...Object.values(counts)) >= 4) showChallengeTaunt("BigRollAI");
+
     // 1. Energy
     if (counts.ENERGY > 0) { 
         let gain = counts.ENERGY;
@@ -5581,12 +6077,14 @@ function endTurn() {
     if (gameState.activePlayer === 1 && gameState.submission === -5) {
         applyTransform(1, 1, 0);
         log(`${gameState.p1.name} obeys and transforms 1 👁️.`);
+        if (challengeActive) showChallengeTaunt("PlayerIsObedient");
         showTurnAlert(`${gameState.p1.name} obeys and transforms 1 👁️.`, 1);
     }
 
     if (gameState.activePlayer === 2 && gameState.submission === 5) {
         applyTransform(2, 1, 0);
         log(`${gameState.p2.name} obeys and transforms 1 👁️.`);
+        if (challengeActive) showChallengeTaunt("AIIsObedient");
         showTurnAlert(`${gameState.p2.name} obeys and transforms 1 👁️.`, 2);
     }
 
@@ -5657,7 +6155,7 @@ function endTurn() {
 function executeCPUTurn() {
     if (gameState.gameMode !== "solo") return;
 
-    if (cpuIsAdaptive()) cpuBrainBeginTurn();
+    if (cpuIsAdaptive() || getCpuDifficulty() === "transformer") cpuBrainBeginTurn();
     cpuBrain.rerollsUsed = 0;
     if (cpuIsTier()) {                               // decide this turn's mistakes once, so behaviour doesn't flicker
         const sl = CPU_TIERS[getCpuDifficulty()].slip || {};
@@ -5998,6 +6496,15 @@ function presentFinishedGame() {
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
+    const challengeMatch = challengeActive && gameState.gameMode === "solo";
+    if (challengeMatch) handleChallengeMatchEnded(winnerId);
+    const challengeContinue = document.getElementById("go-challenge-continue");
+    if (challengeContinue) {
+        challengeContinue.style.display = challengeMatch ? "block" : "none";
+        challengeContinue.textContent = "✦ Continue Challenge";
+    }
+    const playAgain = document.getElementById("go-play-again");
+    if (playAgain) playAgain.style.display = challengeMatch ? "none" : "inline-block";
 
     syncFinalBoardPortrait(1);
     syncFinalBoardPortrait(2);
