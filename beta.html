@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261016.4</title>
+    <title>Hypnotic Duel - Beta V20261016.5</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -840,6 +840,13 @@
 			const analytics = getAnalytics(app);
 			const db = getDatabase(app);
 			window.firebaseReady = true;
+			
+			// Expose Firebase Database functions globally for game state integration
+			  window.db = db;
+			  window.dbRef = ref;
+			  window.dbSet = set;
+			  window.dbOnValue = onValue;
+			  window.dbUpdate = update;
 		} catch (error) {
 			console.error('Firebase initialization failed:', error);
 			window.firebaseReady = false;
@@ -856,12 +863,7 @@
 			}
 		}
 
-      // Expose Firebase Database functions globally for game state integration
-      window.db = db;
-      window.dbRef = ref;
-      window.dbSet = set;
-      window.dbOnValue = onValue;
-      window.dbUpdate = update;
+      
     </script>
 </head>
 <body>
@@ -1272,7 +1274,7 @@ const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
     "Roz": ["Werewolf","Cow","Eevee"],
-    "Xander": ["Robot","Werewolf"],
+    "Xander": ["Robot","Werewolf","Otter"],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
@@ -1292,68 +1294,68 @@ const debugCards = [56, 59, 2]; // Set the 3 card IDs you want dealt first
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
 
 const KNOWN_CARDS = [
-    { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {transformer: 15, adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
+    { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {transformer: 12, adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
 	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {transformer: 40, adaptive: 30, aggressive: 30, defensive: 30, v23low: 30} },
-	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {transformer: 80, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
-	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {transformer: 62, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
-	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {transformer: 60, adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
+	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {transformer: 85, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
+	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {transformer: 30, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
+	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {transformer: 55, adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
     { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {transformer: 25, adaptive: 28, aggressive: 35, defensive: 15, v23low: 55} },
-	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {transformer: 15, adaptive: 40, aggressive: 70, defensive: 10, v23low: 50} },
-	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {transformer: 75, adaptive: 70, aggressive: 80, defensive: 80, v23low: 90} },
-	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {transformer: 12, adaptive: 45, aggressive: 75, defensive: 15, v23low: 65} },
+	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {transformer: 12, adaptive: 40, aggressive: 70, defensive: 10, v23low: 50} },
+	{ id: 7, name: "Trance Anchor", cost: 7, type: "Keep", desc: "You get one extra die.", ai: {transformer: 80, adaptive: 70, aggressive: 80, defensive: 80, v23low: 90} },
+	{ id: 8, name: "Mind Fog", cost: 6, type: "Instant", desc: "Deepen the opponent's trance by 2 and submission by 2.", ai: {transformer: 10, adaptive: 45, aggressive: 75, defensive: 15, v23low: 65} },
 	{ id: 9, name: "Deep Safeties", cost: 4, type: "Keep", desc: "When you use 💧 Lucidity, add 1 to its effect.", ai: {transformer: 25, adaptive: 30, aggressive: 15, defensive: 85, v23low: 55} },
-	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 20, adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
-	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {transformer: 15, adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
+	{ id: 10, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 15, adaptive: 50, aggressive: 70, defensive: 70, v23low: 70} },
+	{ id: 11, name: "Sluggish Mind", cost: 4, type: "Instant", desc: "Deepen the opponent's submission by 2.", ai: {transformer: 12, adaptive: 32, aggressive: 40, defensive: 40, v23low: 30} },
 	{ id: 12, name: "Rapid Pulse", cost: 6, type: "Keep", desc: "Spend 2⚡ during your roll phase to negate Trance and Arousal to you for a turn.", ai: {transformer: 30, adaptive: 35, aggressive: 50, defensive: 50, v23low: 40} },
-	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {transformer: 10, adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
-	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {transformer: 10, adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
-	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {transformer: 20, adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
-    { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {transformer: 70, adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
-    { id: 17, name: "Physical Manipulation", cost: 7, type: "Keep", desc: "When you trance the opponent completely, you have the option to transform them.", ai: {transformer: 20, adaptive: 50, aggressive: 85, defensive: 50, v23low: 90} },
-    { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {transformer: 12, adaptive: 40, aggressive: 60, defensive: 20, v23low: 30} },
-    { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {transformer: 45, adaptive: 40, aggressive: 20, defensive: 20, v23low: 20} },
+	{ id: 13, name: "Stoking Fires", cost: 4, type: "Keep", desc: "When you increase the opponent's 🔥, increase their 🔥 1 level more.", ai: {transformer: 8, adaptive: 45, aggressive: 60, defensive: 10, v23low: 40} },
+	{ id: 14, name: "Spiral Descent", cost: 3, type: "Instant", desc: "Deepen the opponent's trance by 2.", ai: {transformer: 8, adaptive: 38, aggressive: 55, defensive: 50, v23low: 40} },
+	{ id: 15, name: "Altered State", cost: 6, type: "Keep", desc: "Deepen the opponent's submission by 1 each turn.", ai: {transformer: 15, adaptive: 58, aggressive: 50, defensive: 50, v23low: 40} },
+    { id: 16, name: "Hypnotic Suggestion", cost: 4, type: "Keep", desc: "Spend 1 energy to get 1 extra reroll when rolling.", ai: {transformer: 72, adaptive: 65, aggressive: 40, defensive: 40, v23low: 35} },
+    { id: 17, name: "Physical Manipulation", cost: 7, type: "Keep", desc: "When you trance the opponent completely, you have the option to transform them.", ai: {transformer: 15, adaptive: 50, aggressive: 85, defensive: 50, v23low: 90} },
+    { id: 18, name: "Pulsing Light", cost: 5, type: "Instant", desc: "Deepen the opponent's submission by 2 and their trance by 1.", ai: {transformer: 10, adaptive: 40, aggressive: 60, defensive: 20, v23low: 30} },
+    { id: 19, name: "Primal Surge", cost: 8, type: "Instant", desc: "Gain 9 ⚡", ai: {transformer: 40, adaptive: 40, aggressive: 20, defensive: 20, v23low: 20} },
     { id: 20, name: "Absolute Focus", cost: 4, type: "Keep", desc: "Starts with 3 charges. Spend a charge for an extra reroll. Discard when spent.", charges: 3, ai: {transformer: 55, adaptive: 42, aggressive: 50, defensive: 50, v23low: 50} },
-    { id: 21, name: "Switch Play", cost: 6, type: "Keep", desc: "When the opponent adds any amount of 🌀 to you, add 1 🌀 back to them.", ai: {transformer: 20, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {transformer: 55, adaptive: 38, aggressive: 65, defensive: 15, v23low: 55} },
-    { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {transformer: 10, adaptive: 35, aggressive: 60, defensive: 15, v23low: 45} },
-    { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {transformer: 15, adaptive: 48, aggressive: 55, defensive: 45, v23low: 45} },
-    { id: 25, name: "Pendulum Swing", cost: 3, type: "Instant", desc: "Deepen your submission by 2 and transform the opponent 1.", ai: {transformer: 50, adaptive: 45, aggressive: 30, defensive: 30, v23low: 30} },
-    { id: 26, name: "Waking Trance", cost: 4, type: "Keep", desc: "Gain an active button to Sell this card for +2 Energy.", ai: {transformer: 15, adaptive: 15, aggressive: 50, defensive: 50, v23low: 40} },
+    { id: 21, name: "Switch Play", cost: 6, type: "Keep", desc: "When the opponent adds any amount of 🌀 to you, add 1 🌀 back to them.", ai: {transformer: 15, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
+    { id: 22, name: "Mental Shackles", cost: 3, type: "Keep", desc: "When you roll 👁️👁️👁️ also deepen the opponent's submission by 1.", ai: {transformer: 50, adaptive: 38, aggressive: 65, defensive: 15, v23low: 55} },
+    { id: 23, name: "Submissive Flush", cost: 4, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ also increase the opponent's arousal by 1.", ai: {transformer: 8, adaptive: 35, aggressive: 60, defensive: 15, v23low: 45} },
+    { id: 24, name: "Somnambulism", cost: 5, type: "Keep", desc: "When you roll ⛓️⛓️⛓️ you automatically gain another turn with one less die.", ai: {transformer: 12, adaptive: 48, aggressive: 55, defensive: 45, v23low: 45} },
+    { id: 25, name: "Pendulum Swing", cost: 3, type: "Instant", desc: "Deepen your submission by 2 and transform the opponent 1.", ai: {transformer: 45, adaptive: 45, aggressive: 30, defensive: 30, v23low: 30} },
+    { id: 26, name: "Waking Trance", cost: 4, type: "Keep", desc: "Gain an active button to Sell this card for +2 Energy.", ai: {transformer: 12, adaptive: 15, aggressive: 50, defensive: 50, v23low: 40} },
     { id: 27, name: "Endless Staircase", cost: 2, type: "Keep", desc: "At the end of your turn, if you have no ⚡, gain 1 ⚡.", ai: {transformer: 25, adaptive: 25, aggressive: 35, defensive: 35, v23low: 25} },
 	{ id: 28, name: "Hypnotic Focus", cost: 5, type: "Keep", desc: "The first card you buy each turn costs 2 less energy.", ai: {transformer: 55, adaptive: 45, aggressive: 50, defensive: 50, v23low: 60} },
     { id: 29, name: "Compliant Mind", cost: 3, type: "Keep", desc: "Buying cards costs you 1 less ⚡.", ai: {transformer: 55, adaptive: 45, aggressive: 30, defensive: 30, v23low: 40} },
-    { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {transformer: 60, adaptive: 55, aggressive: 60, defensive: 20, v23low: 35} },
-    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {transformer: 15, adaptive: 35, aggressive: 30, defensive: 5, v23low: 20} },
-    { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {transformer: 15, adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
+    { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {transformer: 55, adaptive: 55, aggressive: 60, defensive: 20, v23low: 35} },
+    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {transformer: 12, adaptive: 35, aggressive: 30, defensive: 5, v23low: 20} },
+    { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
     { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {transformer: 25, adaptive: 20, aggressive: 10, defensive: 40, v23low: 10} },
-    { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {transformer: 20, adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
-    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {transformer: 15, adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
-    { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {transformer: 15, adaptive: 50, aggressive: 65, defensive: 20, v23low: 60} },
-    { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {transformer: 25, adaptive: 25, aggressive: 25, defensive: 40, v23low: 20} },
+    { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {transformer: 18, adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
+    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
+    { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {transformer: 12, adaptive: 50, aggressive: 65, defensive: 20, v23low: 60} },
+    { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {transformer: 22, adaptive: 25, aggressive: 25, defensive: 40, v23low: 20} },
     { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {transformer: 30, adaptive: 30, aggressive: 10, defensive: 80, v23low: 65} },
-    { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 20, adaptive: 50, aggressive: 60, defensive: 60, v23low: 55} },
-    { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {transformer: 35, adaptive: 30, aggressive: 40, defensive: 40, v23low: 40} },
-    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Max 1 counter per turn. Removed by 💧.", ai: {transformer: 85, adaptive: 58, aggressive: 80, defensive: 15, v23low: 75} },
+    { id: 39, name: "Subconscious Prompt", cost: 7, type: "Instant", desc: "Deepen the opponent's submission by 4.", ai: {transformer: 15, adaptive: 50, aggressive: 60, defensive: 60, v23low: 55} },
+    { id: 40, name: "Global Change", cost: 4, type: "Instant", desc: "Both you and your opponent take a transformation.", ai: {transformer: 30, adaptive: 30, aggressive: 40, defensive: 40, v23low: 40} },
+    { id: 41, name: "Powerful Transform", cost: 6, type: "Keep", desc: "When you transform the opponent, give them a vulnerability counter (rolls 1 less die). Max 1 counter per turn. Removed by 💧.", ai: {transformer: 88, adaptive: 58, aggressive: 80, defensive: 15, v23low: 75} },
 	{ id: 42, name: "Mirror Image", cost: 6, type: "Keep", desc: "On your turn, discard this card to buy any card from the card row for free.", ai: {transformer: 40, adaptive: 38, aggressive: 25, defensive: 25, v23low: 55} },
-    { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {transformer: 78, adaptive: 68, aggressive: 40, defensive: 40, v23low: 50} },
-    { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {transformer: 30, adaptive: 25, aggressive: 25, defensive: 65, v23low: 50} },
+    { id: 43, name: "Mental Awakening", cost: 5, type: "Keep", desc: "You have 1 extra reroll each turn.", ai: {transformer: 80, adaptive: 68, aggressive: 40, defensive: 40, v23low: 50} },
+    { id: 44, name: "Flow Reversal", cost: 4, type: "Instant", desc: "Reduce your transformation by 1.", ai: {transformer: 28, adaptive: 25, aggressive: 25, defensive: 65, v23low: 50} },
     { id: 45, name: "Power Boost", cost: 3, type: "Keep", desc: "When you gain any ⚡ from dice, gain 1 extra ⚡.", ai: {transformer: 65, adaptive: 50, aggressive: 50, defensive: 30, v23low: 40} },
-    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card from the market.", ai: {transformer: 15, adaptive: 42, aggressive: 70, defensive: 40, v23low: 55} },
+    { id: 46, name: "Bondage", cost: 3, type: "Keep", desc: "Deepen your opponent's submission whenever you buy a card from the market.", ai: {transformer: 12, adaptive: 42, aggressive: 70, defensive: 40, v23low: 55} },
     { id: 47, name: "Fading Reality", cost: 4, type: "Keep", desc: "You can always reroll any 👁️ you have.", ai: {transformer: 35, adaptive: 20, aggressive: 25, defensive: 30, v23low: 20} },
-    { id: 48, name: "Burning Intensity", cost: 6, type: "Keep", desc: "The opponent must now use a minimum of two 💧 to decrease their arousal.", ai: {transformer: 15, adaptive: 30, aggressive: 15, defensive: 65, v23low: 45} },
-    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {transformer: 10, adaptive: 38, aggressive: 50, defensive: 10, v23low: 30} },
-	{ id: 50, name: "Mutual Heat", cost: 6, type: "Keep", desc: "When the opponent adds any amount of arousal to you, increase their arousal by 1.", ai: {transformer: 20, adaptive: 20,  aggressive: 15, defensive: 65, v23low: 55 } },
-	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {transformer: 55, adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
-	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {transformer: 20, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
+    { id: 48, name: "Burning Intensity", cost: 6, type: "Keep", desc: "The opponent must now use a minimum of two 💧 to decrease their arousal.", ai: {transformer: 12, adaptive: 30, aggressive: 15, defensive: 65, v23low: 45} },
+    { id: 49, name: "Simmering Arousal", cost: 3, type: "Keep", desc: "You can change one of your dice to a 🔥 each turn.", ai: {transformer: 8, adaptive: 38, aggressive: 50, defensive: 10, v23low: 30} },
+	{ id: 50, name: "Mutual Heat", cost: 6, type: "Keep", desc: "When the opponent adds any amount of arousal to you, increase their arousal by 1.", ai: {transformer: 18, adaptive: 20,  aggressive: 15, defensive: 65, v23low: 55 } },
+	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {transformer: 50, adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
+	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {transformer: 15, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
 	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {transformer: 25, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {adaptive: 65, aggressive: 75, defensive: 55, v23low: 75, transformer: 90} },
-    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {adaptive: 55, aggressive: 60, defensive: 40, v23low: 75, transformer: 85} },
-    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {adaptive: 70, aggressive: 75, defensive: 50, v23low: 80, transformer: 100} },
-    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {adaptive: 55, aggressive: 30, defensive: 75, v23low: 45, transformer: 20} },
-    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {adaptive: 70, aggressive: 65, defensive: 75, v23low: 65, transformer: 65} },
-    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {adaptive: 70, aggressive: 50, defensive: 85, v23low: 70, transformer: 60} },
-    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {adaptive: 65, aggressive: 65, defensive: 60, v23low: 60, transformer: 50} },
-    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {adaptive: 65, aggressive: 55, defensive: 75, v23low: 65, transformer: 50} },
+    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
+    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 98, adaptive: 95, aggressive: 95, defensive: 90, v23low: 95} },
+    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {transformer: 100, adaptive: 65, aggressive: 70, defensive: 80, v23low: 60} },
+    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {transformer: 15, adaptive: 55, aggressive: 25, defensive: 60, v23low: 35} },
+    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {transformer: 45, adaptive: 55, aggressive: 45, defensive: 55, v23low: 50} },
+    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {transformer: 30, adaptive: 50, aggressive: 30, defensive: 55, v23low: 35} },
+    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {transformer: 35, adaptive: 45, aggressive: 40, defensive: 45, v23low: 40} },
+    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {transformer: 25, adaptive: 45, aggressive: 35, defensive: 55, v23low: 40} },
 ];
 
 // Put card IDs here to keep them out of the draw deck and market.
@@ -3384,6 +3386,7 @@ function recExport() {
         exportedAt: new Date().toISOString(),
         note: "faces: SP=Spiral LU=Lucidity EN=Energy SU=Submission AR=Arousal TR=Transform. Stat arrays are [energy, trance, arousal, transform, vulnerability]. sub > 0 means the marker is on Player 2/CPU's side. winner 1 = Player 1 (human), 2 = Player 2 (CPU). outcome null = game was abandoned.",
         cardIndex: KNOWN_CARDS.map(c => ({ id: c.id, name: c.name, cost: c.cost, type: c.type })),
+        progress: getDefeatProgress(),
         games: games.map(g => Object.assign({}, g, { transcript: recTranscript(g) }))
     };
 }
@@ -3397,7 +3400,33 @@ function recDownload() {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function recClear() { try { safeStorage.remove(REC_STORAGE_KEY); } catch (e) {} }
+// ---------- progress: which difficulty levels the human has beaten ----------
+const DEFEATS_KEY = "hypduel_defeats_v1";
+const DIFFICULTY_ORDER = ["random", "smart", "aggressive", "defensive", "v23low", "trans", "adaptive"];
+function loadDefeats() { try { return JSON.parse(localStorage.getItem(DEFEATS_KEY) || "{}"); } catch (e) { return {}; } }
+function recordDifficultyResult(difficulty, humanWon) {
+    try {
+        const all = loadDefeats();
+        const r = all[difficulty] || { games: 0, wins: 0, losses: 0, firstWin: null, lastWin: null, lastPlayed: null };
+        const now = new Date().toISOString();
+        r.games++; r.lastPlayed = now;
+        if (humanWon) { r.wins++; if (!r.firstWin) r.firstWin = now; r.lastWin = now; } else r.losses++;
+        all[difficulty] = r;
+        localStorage.setItem(DEFEATS_KEY, JSON.stringify(all));
+    } catch (e) { /* storage disabled: progress simply isn't saved */ }
+}
+function hasDefeated(difficulty) { const r = loadDefeats()[difficulty]; return !!(r && r.wins > 0); }
+// one row per level, in ladder order: { difficulty, label, games, wins, losses, defeated, firstWin, lastWin }
+function getDefeatProgress() {
+    const all = loadDefeats();
+    return DIFFICULTY_ORDER.map(d => {
+        const r = all[d] || { games: 0, wins: 0, losses: 0, firstWin: null, lastWin: null };
+        return { difficulty: d, label: CPU_DIFFICULTY_NAMES[d] || d, games: r.games, wins: r.wins, losses: r.losses, defeated: r.wins > 0, firstWin: r.firstWin, lastWin: r.lastWin };
+    });
+}
+function clearDefeats() { try { localStorage.removeItem(DEFEATS_KEY); } catch (e) {} }
+window.hypDuelProgress = getDefeatProgress;      // try it in the console: console.table(hypDuelProgress())
+function recClear() { try { localStorage.removeItem(REC_STORAGE_KEY); } catch (e) {} }
 
 // Wrap the game's own action functions so every call is recorded (behaviour is unchanged).
 function recWrap(name, describe, withDice) {
@@ -3484,7 +3513,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261016.4"; // Update this label for each release.
+const GAME_VERSION = "20261016.5"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -3753,7 +3782,7 @@ const CPU_DEBUG_LOG = true;   // true = the CPU explains its plan in the game lo
 // strategy -> which faces matter and which cards support it (1 = helpful, 3 = core piece)
 const CPU_STRATEGIES = {
     transform: { label: "Transform Rush",     faces: { TR: 1.0, SU: 0.7 },
-                 cards: { 2: 3, 41: 3, 22: 2, 17: 1, 4: 1, 3: 1, 30: 2, 25: 2, 47: 1 } },
+                 cards: { 55: 2, 56: 2, 2: 3, 41: 3, 22: 2, 17: 1, 4: 1, 3: 1, 30: 2, 25: 2, 47: 1 } },
     submission: { label: "Submission Squeeze", faces: { SU: 1.0, TR: 0.7 },
                  cards: { 36: 3, 15: 3, 46: 2, 24: 2, 23: 1, 10: 2, 39: 2, 11: 1, 18: 1, 8: 1, 52: 2, 34: 1 } },
     arousal:   { label: "Arousal Lock",       faces: { AR: 1.0, TR: 0.5 },
@@ -3947,6 +3976,7 @@ function cpuFaceWeights() {
     const has = id => hasCard(2, id);
     if (has(2)) w.TR += 0.3;
     if (has(41)) w.TR += 0.2;
+    if (has(56)) w.TR += 0.3;       // Deeper Bargains: a 👁️-heavy special die
     if (has(36)) w.SU += 0.25;
     if (has(24)) w.SU += 0.2;
     if (has(13)) w.AR += 0.35;
@@ -4044,6 +4074,7 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
 function cpuAdaptiveChooseKeep() {
     const plan = cpuAdaptiveKeepPlan(gameState.rerollsLeft);
     cpuBrain.hunting = plan.hunting;
+    if (hasCard(2, 55) && !plan.keep.some((kp, i) => kp && cpuFaceKey(gameState.dice[i].face) === "TR")) { const i = gameState.dice.findIndex(d => cpuFaceKey(d.face) === "TR"); if (i >= 0) plan.keep[i] = true; }
     recEvent("cpu_keep", { dice: recFaces(gameState.dice), keep: plan.keep.map(k => (k ? 1 : 0)).join(""), hunting: !!plan.hunting, crisis: !!plan.crisis, rerolls: gameState.rerollsLeft });
     gameState.dice.forEach((d, i) => { d.kept = plan.keep[i]; });
 }
@@ -4114,7 +4145,7 @@ function cpuDenyScore(card) {
         }
     });
     // Reroll engines and the Trigger Word hunt are dangerous whatever the human's plan is
-    const rerollKit = [7, 16, 43, 20].filter(id => hasCard(1, id)).length;
+    const rerollKit = [7, 16, 43, 20, 54].filter(id => hasCard(1, id)).length;
     if (card.id === 3 && rerollKit >= 1) deny += 15 + rerollKit * 8;
     if ([7, 16, 43, 20].includes(card.id) && hasCard(1, 3)) deny += 20;
     // we are close to being transformed: don't let them have burst damage
@@ -4386,13 +4417,27 @@ const CPU_TIERS = {
                   slip: { keep: 0.5, noise: 22, trouble: 0.4, deny: 0.7 }, maxRerolls: 1, capChance: 0.45 },
     defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
                   slip: { keep: 0.32, noise: 16, trouble: 0.1, deny: 0.5 } },
-    // Transformer: 👁️ dice first, Energy second (to buy cards that boost that plan). Defends Submission only one step from the end,
+    // Virtuoso: 👁️ dice first, Energy second (to buy cards that boost that plan). Defends Submission only one step from the end,
     // Arousal from 3, barely cares about its own Trance. Wipes the market to deny the human's strategy cards (never Transform cards).
-    transformer: { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 20, idleWipe: 7, excessWipe: 9, danger: { sub: 4, arousal: 3, trance: 4 }, target: { arousal: 2, trance: 3 },
+    transformer: { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 12, idleWipe: 7, excessWipe: 9, danger: { sub: 4, arousal: 3, trance: 4 }, target: { arousal: 2, trance: 3 },
                   slip: {} },
     v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
                   slip: { keep: 0.35, noise: 18, trouble: 0.35, deny: 0.5 } }
 };
+// Virtuoso "burst finishing": cards that deal Transform straight away, and how much damage they do
+const CPU_BURST = { 4: 1, 25: 1, 30: 2, 51: 1, 40: 1 };
+function cpuBurstPlan() {
+    const p = gameState.p2, opp = gameState.p1;
+    const cards = market.filter(c => c && CPU_BURST[c.id] && passesCardSpecificConditions(c))
+                        .map(c => ({ id: c.id, dmg: CPU_BURST[c.id], cost: getCardPurchaseCost(c, 2) }));
+    let best = { dmg: 0, ids: [] };
+    for (let mask = 1; mask < (1 << cards.length); mask++) {          // best combination we can pay for right now
+        let cost = 0, dmg = 0; const ids = [];
+        cards.forEach((c, i) => { if (mask & (1 << i)) { cost += c.cost; dmg += c.dmg; ids.push(c.id); } });
+        if (cost <= p.energy && dmg > best.dmg) best = { dmg, ids };
+    }
+    return { remaining: Math.max(0, 10 - opp.transform), best };
+}
 function cpuIsTier() { return !!CPU_TIERS[getCpuDifficulty()]; }
 
 // How much trouble the CPU is in, in steps beyond where this level starts to worry (0 = not worried)
@@ -4430,6 +4475,7 @@ function cpuReleaseUselessKeeps(keep, rerollsAvail) {
         if (luKept > lucidityNeed) keep.forEach((kp, i) => { if (luKept > lucidityNeed && kp && faces[i] === "LU") { keep[i] = false; luKept--; changed = true; } });
         if (!changed) break;
     }
+    if (hasCard(2, 55) && !keep.some((kp, i) => kp && faces[i] === "TR")) { const i = faces.indexOf("TR"); if (i >= 0) keep[i] = true; }   // Transformation Ritual wants a kept 👁️
     return keep;
 }
 
@@ -4462,15 +4508,25 @@ function cpuTierKeepPlan(level, r) {
         if (opp.trance >= 3) keepFace("SP");
         if (opp.arousal >= 3) keepFace("AR");
     } else if (level === "transformer") {
-        // 👁️ first; then Energy, but keep enough dice free to chase the third 👁️ while we hold one or two
+        // 👁️ is the plan: keep every 👁️. Then decide how many ⚡ to keep by comparing what a die is worth as a kept ⚡
+        // against what the dice we would free up could become (another 👁️ for the triple).
         keepFace("TR");
-        const minFree = counts.TR >= 3 ? 0 : (counts.TR === 2 ? 2 : 3);
-        let keptNow = keep.filter(Boolean).length;
-        faces.forEach((f, i) => { if (f === "EN" && !keep[i] && n - keptNow > minFree) { keep[i] = true; keptNow++; } });
+        const keptOther = keep.filter(Boolean).length - counts.TR;           // dice already kept for trouble (💧 / defensive ⛓️)
+        const bonusTR = has(2) ? 1 : 0;
+        const wTR = has(41) ? 1.25 : 1;                                       // Powerful Transform: each hit also costs them a die
+        const wEN = (has(45) ? 0.45 : 0.3) + (has(55) ? 0.1 : 0);            // Power Boost / Ritual make ⚡ worth more
+        let bestK = 0, bestVal = -1;
+        for (let k = 0; k <= counts.EN; k++) {
+            const free = Math.max(0, n - counts.TR - keptOther - k);
+            const val = wTR * cpuThresholdEV(counts.TR, free, r, bonusTR) + wEN * (k + free / 6);
+            if (val > bestVal + 1e-9) { bestVal = val; bestK = k; }
+        }
+        let kEN = bestK;
+        faces.forEach((f, i) => { if (f === "EN" && !keep[i] && kEN > 0) { keep[i] = true; kEN--; } });
         if (counts.SU >= 3) keepFace("SU");        // a finished triple is free value; otherwise ⛓️ is only for defending (above)
     } else {   // v23low: energy theme. Other faces only when they finish a triple or feed a card we own
         keepFace("EN");
-        const tSyn = has(2) || has(41) || has(22), sSyn = has(36) || has(24) || has(23);
+        const tSyn = has(2) || has(41) || has(22) || has(56), sSyn = has(36) || has(24) || has(23);
         const aSyn = has(13) || has(49) || has(48), pSyn = has(0) || has(17) || has(31);
         if (counts.TR >= 3 || (tSyn && counts.TR >= 2)) keepFace("TR");
         if (counts.SU >= 3 || (sSyn && counts.SU >= 2)) keepFace("SU");
@@ -4518,7 +4574,13 @@ function cpuTierCardScore(card, level) {
     // the human is close to losing: offensive cards
     const pressureCards = level === "transformer" ? [2, 4, 25, 30, 40, 41, 51] : [2, 4, 10, 17, 24, 30, 39, 41, 52];
     if ((p1.transform >= 6 || gameState.submission <= -3) && pressureCards.includes(card.id)) score += (level === "defensive") ? 15 : 30;
-    if (level === "transformer" && (CPU_STRATEGIES.transform.cards[card.id] || [7, 16, 43, 20].includes(card.id))) score += 10;   // cards that go with the plan
+    if (level === "trans" && CPU_BURST[card.id]) {       // burst cards are for the final push, not for the middle of the game
+        const bp = cpuBurstPlan();
+        if (bp.best.dmg >= bp.remaining && bp.best.ids.includes(card.id)) score += 90;      // this finishes the game
+        else if (bp.remaining <= 4) score += 30;                                            // within reach: spend the energy
+        else score -= 25;                                                                   // too early: keep the energy, the dice do the work
+    }
+    if (level === "trans" && (CPU_STRATEGIES.transform.cards[card.id] || [7, 16, 43, 20].includes(card.id))) score += 10;   // cards that go with the plan
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
     if ((level === "v23low" || level === "transformer") && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
@@ -4553,7 +4615,8 @@ function cpuTierNextAction(level) {
         if (!card) return null;
         const passes = passesCardSpecificConditions(card) && cpuTierExtraConditions(card, level);
         return { idx, card, passes, cost: getCardPurchaseCost(card, 2), score: passes ? cpuTierCardScore(card, level) : 0,
-                 humanCanAfford: human.energy >= getCardPurchaseCost(card, 1) };
+                 humanCanAfford: human.energy >= getCardPurchaseCost(card, 1),
+                 humanNear: human.energy + 2 >= getCardPurchaseCost(card, 1) };      // about to be able to afford it (their income is ~2 per turn)
     }).filter(Boolean);
     const canPay = i => i.cost <= p.energy || gameState.freeBuyActive;
     const liked = info.filter(i => i.passes && i.score >= cfg.like).sort((a, b) => b.score - a.score);
@@ -4573,16 +4636,16 @@ function cpuTierNextAction(level) {
     // 1) a liked card we can afford: take the best one
     const likedBuy = liked.find(canPay);
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
-    // 2a) Transformer: wipe the market when the human could buy a card that fits THEIR strategy (never Transform cards: we want those)
-    if (level === "transformer" && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) {
-        const target = info.filter(i => i.humanCanAfford && !CPU_STRATEGIES.transform.cards[i.card.id] && cpuDenyScore(i.card) >= cfg.denyMin &&
+    // 2a) Virtuoso: wipe the market when the human could buy a card that fits THEIR strategy (never Transform cards: we want those)
+    if (level === "transformer" && !cpuBrain.denyBlind && cpuBrain.wipes < 2 && p.energy >= 2 && deck.length > 0) {
+        const target = info.filter(i => (i.humanCanAfford || i.humanNear) && !CPU_STRATEGIES.transform.cards[i.card.id] && cpuDenyScore(i.card) >= cfg.denyMin &&
                                         !(i.passes && i.score >= cfg.like))        // not a card we like ourselves
                            .sort((a, b) => cpuDenyScore(b.card) - cpuDenyScore(a.card))[0];
         if (target) return { type: "wipe", why: `deny ${target.card.name}` };
     }
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
-    const threat = liked.find(i => !canPay(i) && i.humanCanAfford && i.score >= cfg.denyMin);
-    if (threat && !cpuBrain.denyBlind && cpuBrain.wipes < 1 && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
+    const threat = liked.find(i => !canPay(i) && (i.humanCanAfford || (level === "trans" && i.humanNear)) && i.score >= cfg.denyMin);
+    if (threat && !cpuBrain.denyBlind && cpuBrain.wipes < (level === "trans" ? 2 : 1) && p.energy >= 2 && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
     let best = info.filter(i => i.passes && canPay(i) && i.score >= cfg.buy).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
@@ -4633,8 +4696,83 @@ function cpuTierShopPhase(level) {
         }
     }
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
+    if (level === "transformer") cpuNoteEndOfTurn();
     while (gameState.showEnergyActions == true && cpuShouldBuyTransformWithEnergy()) buyAction("transform", 2);
     while (gameState.showEnergyActions == true && cpuShouldBuySubmissionWithEnergy()) buyAction("submission", 2);
+}
+
+// ============================================================
+// CPU decisions for cards 54-61
+// ============================================================
+function cpuCardValueProxy(card) { return (card && card.ai && card.ai.adaptive != null) ? card.ai.adaptive : 30; }   // "how strong is this card in general"
+// how bad a Trance / Arousal level is for its owner (Arousal 3 and 5 each cost a reroll)
+function cpuHarmOfStats(arousal, trance) {
+    const bands = arousal <= 2 ? 0 : (arousal <= 4 ? 1 : 2);
+    return bands * 0.8 + arousal * 0.1 + trance * 0.15 + (trance >= 4 ? 0.5 : 0);
+}
+function cpuMirrorTranceSwing() {            // Mirror Trance: how much better off we are after swapping 🌀 and 🔥 with the human
+    const me = gameState.p2, opp = gameState.p1;
+    return 2 * (cpuHarmOfStats(me.arousal, me.trance) - cpuHarmOfStats(opp.arousal, opp.trance));
+}
+function cpuBlankUseful() {                  // Blank: clears our 🌀 🔥 ⚡ and resets ⛓️ - only when we are in real trouble and have little ⚡ to lose
+    const me = gameState.p2;
+    const trouble = (gameState.submission >= 3 ? 1.5 : 0) + cpuHarmOfStats(me.arousal, me.trance);
+    const lost = Math.max(0, me.energy - 7) * 0.3;
+    return trouble - lost >= 1.6;
+}
+function cpuBreakTargetWorthIt() {           // Submissive Break gives the owner 2 ⚡, so only use it on a strong Keep card of the human
+    return gameState.p1.inventory.some(c => c && c.type === "Keep" && cpuCardValueProxy(c) >= 50);
+}
+function cpuChooseBreakTarget(targets, pid) {
+    const oppId = oppIdOf(pid);
+    let best = null, bestV = -1;
+    targets.filter(t => t.owner === oppId).forEach(t => { const v = cpuCardValueProxy(t.card); if (v > bestV) { bestV = v; best = t; } });
+    return best;
+}
+function cpuChooseSpecialFace() {            // Deeper Bargains: which face the special die should show
+    const d = getCpuDifficulty();
+    if (d === "adaptive") {
+        const byPlan = { transform: 5, submission: 3, arousal: 4, trance: 0, energy: 2 };
+        return FACES[byPlan[cpuBrain.plan] !== undefined ? byPlan[cpuBrain.plan] : 5];
+    }
+    return FACES[5];                         // 👁️ for everyone else (tested: a 👁️ die is strong, 💧 and ⚡ dice hurt because the blank faces waste the die)
+}
+function cpuArousalBand(a) { return a <= 2 ? 0 : (a <= 4 ? 1 : 2); }
+function cpuBurningUpCost() {                // what the 🔥 rise costs in lost rerolls, scaled by how much this level cares
+    const p = gameState.p2;
+    const rise = (p.burningUpUses || 0) === 0 ? 1 : 2;
+    const lost = cpuArousalBand(Math.min(5, p.arousal + rise)) - cpuArousalBand(p.arousal);
+    let cost = lost * 0.3 + rise * 0.03;
+    const d = getCpuDifficulty();
+    if (d === "defensive") cost *= 2.5; else if (d === "aggressive") cost *= 0.7; else if (d === "trans") cost *= 0.8;
+    return cost;
+}
+// value of one more reroll for Normal / Hard / Expert / Virtuoso, using their own keep plan
+function cpuTierExtraRerollGain(level) {
+    const dice = gameState.dice, plan = cpuTierKeepPlan(level, 1);
+    const free = plan.filter(k => !k).length;
+    if (free === 0) return 0;
+    const counts = cpuCountsFromFaces(dice.map(d => d.face));
+    const keptOf = k => dice.filter((d, i) => plan[i] && cpuFaceKey(d.face) === k).length;
+    let gain = 0;
+    [["TR", 1, hasCard(2, 2) ? 1 : 0], ["SU", 0.6, hasCard(2, 36) ? 1 : 0]].forEach(([k, scale, b]) => {
+        const now = counts[k] >= 3 ? 1 + (counts[k] - 3) + b : 0;
+        gain = Math.max(gain, (cpuThresholdEV(keptOf(k), free, 1, b) - now) * scale);
+    });
+    return gain + 0.03 * free;
+}
+function cpuShouldUseBurningUp() {
+    if (!canUseBurningUp(2) || gameState.rerollsLeft > 0) return false;       // spend the normal rerolls first
+    const gain = cpuIsAdaptive() ? cpuExtraRerollGain() : (cpuIsTier() ? cpuTierExtraRerollGain(getCpuDifficulty()) : (gameState.dice.some(d => !d.kept) ? 0.3 : 0));
+    return gain >= 0.25 + cpuBurningUpCost();
+}
+// Transformation Ritual: we lose 3 ⚡ if no 👁️ die is kept after rolling, so make sure one is
+function cpuEnsureRitualKeep() {
+    if (!hasCard(2, 55)) return;
+    const isTR = d => String(d.face).toUpperCase().includes("TRANSFORM");
+    if (gameState.dice.some(d => d.kept && isTR(d))) return;
+    const d = gameState.dice.find(isTR);
+    if (d) d.kept = true;
 }
 
 function cpuCardPurchaseScore(card) {
@@ -4708,6 +4846,9 @@ function passesCardSpecificConditions(card) {
 	if (card.id === 53) {
 		if (gameState.submission <= 0) return false;
 	}
+	if (card.id === 58 && !cpuBreakTargetWorthIt()) return false;
+	if (card.id === 60 && cpuMirrorTranceSwing() < 0.7) return false;
+	if (card.id === 61 && !cpuBlankUseful()) return false;
 
     // (1) Cards 25 and 30: Don't buy if submission is on the CPU side of the board
     // Note: Assuming positive submission value indicates CPU side (adjust polarity if negative is CPU side in your setup)
@@ -5824,6 +5965,69 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     }
 }
 
+// ============================================================
+// CARDS 54-61 (engine side). The CPU and the tests use these; your own implementation may differ in details.
+// ============================================================
+const BLANK_FACE = "⬜ BLANK";
+function playerById(pid) { return pid === 1 ? gameState.p1 : gameState.p2; }
+function oppIdOf(pid) { return pid === 1 ? 2 : 1; }
+function isHumanActor(pid) { return pid === 1 || gameState.gameMode !== "solo"; }
+function specialDieFace(pObj) { return Math.random() < 0.5 ? pObj.specialFace : BLANK_FACE; }   // 3 faces of the chosen kind, 3 blanks
+
+// 54 Burning Up: up to 2 extra rerolls per turn; your 🔥 rises by 1 after the first and by 2 after the second
+function canUseBurningUp(pid) {
+    const p = playerById(pid);
+    return hasCard(pid, 54) && (p.burningUpUses || 0) < 2 && gameState.phase === "rolling" && gameState.dice.length > 0 && gameState.dice[0].face !== "-";
+}
+function useBurningUp(pid) {
+    if (!canUseBurningUp(pid)) return false;
+    const p = playerById(pid);
+    const rise = (p.burningUpUses || 0) === 0 ? 1 : 2;
+    p.burningUpUses = (p.burningUpUses || 0) + 1;
+    gameState.rerollsLeft += 1;
+    p.arousal = Math.min(5, p.arousal + rise);
+    log(`${p.name} used Burning Up: +1 reroll, 🔥 +${rise}.`);
+    queueCardTrigger(pid, 54, `+1 reroll, 🔥 +${rise}`);
+    syncToFirebase(); updateUI();
+    return true;
+}
+// 56 Deeper Bargains: one die becomes 3 x chosen face + 3 blanks
+function applyDeeperBargains(pid, face) {
+    const p = playerById(pid);
+    p.specialFace = face;
+    log(`${p.name}'s Deeper Bargains: one die now shows ${face} on three faces and blank on three.`);
+    queueCardTrigger(pid, 56, `Special die: ${face}`);
+    syncToFirebase(); updateUI();
+}
+function chooseDeeperBargains(pid) {
+    if (!isHumanActor(pid)) { applyDeeperBargains(pid, cpuChooseSpecialFace()); return; }
+    showChoiceDialog({ key: "deeperbargains", title: "Deeper Bargains", message: "Choose the face for your special die (three copies of it, three blanks):",
+        options: FACES.map(f => ({ label: f, onClick: () => applyDeeperBargains(pid, f) })) });
+}
+// 58 Submissive Break: discard one Keep card belonging to either player; its owner gains 2 ⚡
+function submissiveBreakTargets() {
+    const out = [];
+    [1, 2].forEach(owner => playerById(owner).inventory.forEach(c => { if (c && c.type === "Keep") out.push({ owner, card: c }); }));
+    return out;
+}
+function applySubmissiveBreak(ownerId, cardId) {
+    const owner = playerById(ownerId);
+    const idx = owner.inventory.findIndex(c => c && c.id === cardId);
+    if (idx < 0) return;
+    const removed = owner.inventory.splice(idx, 1)[0];
+    discardCard(removed);
+    owner.energy += 2;
+    log(`Submissive Break discarded ${owner.name}'s ${removed.name}. ${owner.name} gains 2 ⚡.`);
+    syncToFirebase(); updateUI();
+}
+function resolveSubmissiveBreak(pid) {
+    const targets = submissiveBreakTargets();
+    if (!targets.length) { log("Submissive Break found no Keep card to discard."); return; }
+    if (!isHumanActor(pid)) { const t = cpuChooseBreakTarget(targets, pid); if (t) applySubmissiveBreak(t.owner, t.card.id); return; }
+    showChoiceDialog({ key: "submissivebreak", title: "Submissive Break", message: "Discard which Keep card? Its owner gains 2 ⚡.",
+        options: targets.map(t => ({ label: `${playerById(t.owner).name}: ${t.card.name}`, onClick: () => applySubmissiveBreak(t.owner, t.card.id) })).concat([{ label: "Cancel", secondary: true }]) });
+}
+
 function executeInstant(card, playerId) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
     let opp = playerId === 1 ? gameState.p2 : gameState.p1;
@@ -6928,6 +7132,7 @@ function executeCPUTurn() {
                     }
                 }
 
+                cpuEnsureRitualKeep();
                 if (cpuIsAdaptive()) cpuBrainRecordRoll();
                 resolveDice();
                 if (cpuIsAdaptive()) { cpuAdaptiveShopPhase(); endTurn(); return; }
