@@ -1269,12 +1269,12 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon","Bat"];
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
     "Roz": ["Werewolf","Cow","Eevee"],
-    "Xander": ["Robot","Werewolf","Otter"],
+    "Xander": ["Robot","Werewolf","Otter","Bat"],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
     "Cassandra": [],
