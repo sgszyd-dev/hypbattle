@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261016.6</title>
+    <title>Hypnotic Duel - Beta V20261016.10</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -254,7 +254,20 @@
             #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation-duration:1ms !important; transition-duration:1ms !important; }
         }
 
-        .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; }
+        .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; position: relative; }
+        .transform-progress-wrap, .track-container { position: relative; }
+        .stat-float {
+            position: absolute; right: 0; top: -2px; z-index: 6; pointer-events: none;
+            font-weight: 800; font-size: .82rem; letter-spacing: .02em; white-space: nowrap;
+            animation: statFloat .9s ease-out forwards;
+        }
+        .stat-float-up { color: #e7d4ff; text-shadow: 0 0 8px rgba(192,132,252,.65); }
+        .stat-float-down { color: #ffb4a2; text-shadow: 0 0 8px rgba(255,120,90,.45); }
+        @keyframes statFloat {
+            0% { opacity: 0; transform: translateY(6px); }
+            18% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-18px); }
+        }
         .track-container { background: #111; padding: 15px; border-radius: 5px; text-align: center; }
         /* Keep the middle Submission label mathematically centered, independent of side-label lengths. */
         #track-labels { display: grid !important; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 6px; }
@@ -301,8 +314,87 @@
         }
         .card-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
         .card-type { font-size: 0.8em; color: #aaa; }
+        /* Phase tint: rolling highlights the dice; shop highlights the market. Presentation only. */
+        .board.phase-rolling .dice-container,
+        .board.phase-rolling .actions-grid {
+            background: rgba(76, 201, 240, 0.07);
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 1px rgba(157, 78, 221, 0.38);
+        }
+        .board.phase-rolling .market-row { opacity: .72; filter: saturate(.75); }
+        .board.phase-shop .dice-container,
+        .board.phase-shop .actions-grid { opacity: .62; filter: saturate(.8); }
+        .board.phase-rolling .turn-status-block::after,
+        .board.phase-shop .turn-status-block::after {
+            display: block; text-align: center; margin-top: 2px;
+            font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: #b9a8ca;
+        }
+        .board.phase-rolling .turn-status-block::after { content: "Keep or reroll"; }
+        .board.phase-shop .turn-status-block::after { content: "Spend energy"; }
+        .board > .panel.turn-owner-p1 { box-shadow: inset 0 2px 0 var(--player); }
+        .board > .panel.turn-owner-p2 { box-shadow: inset 0 2px 0 var(--cpu); }
+        .board.awaiting-opponent #actions-grid button,
+        .board.awaiting-opponent #btn-wipe-market,
+        .board.awaiting-opponent #energy-actions-panel-1 button,
+        .board.awaiting-opponent #energy-actions-panel-2 button { opacity: .42; }
+        .die { position: relative; }
+        .die.combo-die { animation: comboPop .45s ease; }
+        .die-combo-badge {
+            position: absolute; top: 1px; right: 1px; z-index: 2; pointer-events: none;
+            font-size: .62rem; line-height: 1.2; font-weight: 800; letter-spacing: 0;
+            background: #ffd166; color: #1a1208; border-radius: 99px; padding: 0 4px;
+        }
+        @keyframes comboPop { 0% { transform: scale(.92); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+        .track-container.submission-left-pressure .track-nodes::before,
+        .track-container.submission-right-pressure .track-nodes::before { animation: trackBleed 1.4s ease-in-out infinite; }
+        .track-container.submission-left-pressure .track-nodes::before {
+            background: linear-gradient(90deg, rgba(255,77,77,.95), rgba(255,77,77,.4) 40%, #444 72%, rgba(76,201,240,.22));
+        }
+        .track-container.submission-right-pressure .track-nodes::before {
+            background: linear-gradient(90deg, rgba(255,77,77,.22), #444 28%, rgba(76,201,240,.45) 60%, rgba(76,201,240,.95));
+        }
+        @keyframes trackBleed { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
+        .image-stub.portrait-obey-flash { animation: obeyFlash .5s ease-out; }
+        @keyframes obeyFlash { 0% { filter: brightness(1); } 30% { filter: brightness(2.15); } 100% { filter: brightness(1); } }
+        .transform-milestone {
+            min-height: 0; height: 0; overflow: hidden; text-align: center;
+            font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: #e7d4ff;
+        }
+        .transform-milestone.visible { height: auto; min-height: 1.1em; margin-top: 3px; overflow: visible; }
+        .card-type-chip {
+            display: inline-block; font-size: .72rem; letter-spacing: .04em; font-weight: 700;
+            border-radius: 99px; padding: 1px 7px; border: 1px solid currentColor;
+        }
+        .card.card-keep, .inv-card.card-keep { border-color: #c084fc; }
+        .card.card-instant, .inv-card.card-instant { border-color: #ffd34d; }
+        .card.card-keep .card-type-chip, .inv-card.card-keep .card-type-chip { color: #e5d4ff; }
+        .card.card-instant .card-type-chip, .inv-card.card-instant .card-type-chip { color: #ffe08a; }
+        .inv-card .card-type-chip { margin-bottom: 4px; }
+        #card-trigger-toast .toast-more { color: #c8b6dc; font-size: .75rem; letter-spacing: .04em; }
+        @media (prefers-reduced-motion: reduce) {
+            .die.combo-die, .track-container.submission-left-pressure .track-nodes::before,
+            .track-container.submission-right-pressure .track-nodes::before,
+            .image-stub.portrait-obey-flash { animation: none !important; }
+        }
+        .market-row .card.can-afford {
+            border-color: #d8b5ff;
+            box-shadow: 0 0 0 1px rgba(192,132,252,.38), 0 0 12px rgba(157,78,221,.18);
+        }
+        .market-row .card.cannot-afford,
+        .market-row .card.already-owned { opacity: .58; }
+        .market-row .card.cannot-afford .card-header span:last-child,
+        .market-row .card.already-owned .card-header span:last-child { color: #8d7a86; }
+        .market-row .card.cannot-afford,
+        .market-row .card.already-owned { cursor: not-allowed; }
+        .market-row .card.cannot-afford button,
+        .market-row .card.already-owned button { pointer-events: none; }
+        .market-row .card.card-deny { animation: cardDeny .35s ease; }
+        @keyframes cardDeny { 0%,100% { transform: translateX(0); } 30% { transform: translateX(-5px); } 70% { transform: translateX(5px); } }
+        @media (prefers-reduced-motion: reduce) {
+            .stat-float, .market-row .card.card-deny { animation: none !important; }
+        }
         
-        .inventory { display: flex; flex-direction: column; gap: 5px; max-height: 165px; overflow-y: auto; padding-right: 5px; }
+        .inventory { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; padding-right: 5px; }
         .inventory::-webkit-scrollbar { width: 6px; }
         .inventory::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 10px; }
         .inv-card { background: #222; border: 1px solid #555; padding: 8px; border-radius: 5px; font-size: 0.85em; }
@@ -316,8 +408,8 @@
         }
         .die.kept { border-color: var(--accent); background: #443355; }
         .die.special-die { border: 3px solid #f0b429; box-shadow: 0 0 8px rgba(240,180,41,.48), inset 0 0 5px rgba(240,180,41,.18); }
-        .die.special-die.kept { border-color: #ffd166; box-shadow: 0 0 11px rgba(255,209,102,.72), inset 0 0 7px rgba(255,209,102,.22); }
-        .die.special-die.cpu-kept { border-color: #ffd166; }
+        .die.special-die.kept { border-color: #4cc9f0; box-shadow: 0 0 12px rgba(76,201,240,.82), inset 0 0 7px rgba(76,201,240,.24); }
+        .die.special-die.cpu-kept { border-color: #4cc9f0; box-shadow: 0 0 12px rgba(76,201,240,.82), inset 0 0 7px rgba(76,201,240,.24); }
         .die.cpu-kept { border-color: var(--cpu); background: #553333; }
         .die.rolling-die {
             animation: dieTumble 620ms cubic-bezier(.18,.72,.25,1) both;
@@ -1127,8 +1219,8 @@
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
             <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Card Library" aria-label="Card Library">📚</button>
-            <!--button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-win" onclick="challengeTestFinish('win')" title="TEST ONLY: Auto-win this challenge match" aria-label="Test auto-win">🏆</button-->
-            <!--button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-lose" onclick="challengeTestFinish('lose')" title="TEST ONLY: Auto-lose this challenge match" aria-label="Test auto-lose">💥</button-->
+            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-win" onclick="challengeTestFinish('win')" title="TEST ONLY: Auto-win this challenge match" aria-label="Test auto-win">🏆</button>
+            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-lose" onclick="challengeTestFinish('lose')" title="TEST ONLY: Auto-lose this challenge match" aria-label="Test auto-lose">💥</button>
             <button id="restart-game-toolbar-btn" class="themed-secondary-btn main-toolbar-btn restart-game-toolbar-btn" onclick="restartGameFromBoard()" title="Restart game" aria-label="Restart game">↻</button>
             <button class="help-btn themed-secondary-btn main-toolbar-btn" onclick="openOptionsModal('game')" title="Display, audio, help, logs, and game controls">⚙ Options &amp; Tools</button>
             <button type="button" class="themed-secondary-btn main-toolbar-btn" onclick="showAboutBox()" title="About Hypnotic Duel" aria-label="About Hypnotic Duel">ⓘ</button>
@@ -1145,6 +1237,7 @@
                 <div class="transform-progress-track" id="p1-transform-progress-track" role="progressbar" aria-label="Player 1 transformation progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
                     <div class="transform-progress-fill" id="p1-transform-progress"></div>
                 </div>
+                <div class="transform-milestone" id="p1-transform-milestone" aria-live="polite"></div>
             </div>
             <div class="stat"><span class="stat-label" id="p1-trance-label">Trance 🌀:</span> <span class="stat-value" id="p1-trance">0</span></div>
             <div class="stat"><span class="stat-label" id="p1-arousal-label">Arousal 🔥:</span> <span class="stat-value" id="p1-arousal">0</span></div>
@@ -1396,6 +1489,7 @@ let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
 let diceAnimationToken = 0;
+let diceComboFlashUntil = 0;
 let diceAnimationInterval = null;
 let diceAnimationFaces = new Map();
 
@@ -1576,6 +1670,16 @@ function challengeSavePayload(){ return {version:1, challengeActive, challengeIn
 function saveChallengeProgress(){
     if(!challengeActive) return;
     try { safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
+function saveChallengeFromScreen(){
+    if(!challengeActive){ showPopup("No Active Challenge", "There is no active challenge to save."); return; }
+    try {
+        safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
+        showPopup("Challenge Saved", "Your challenge position and next-match bonus have been saved on this browser. To transfer progress to another browser, use <strong>Export Challenge Save</strong> in Game Tools.");
+    } catch(e) {
+        console.warn("Challenge progress could not be saved", e);
+        showPopup("Save Failed", "Your browser could not save challenge progress. Check that site storage is available, then try again.");
+    }
+}
 }
 function applyChallengeSave(data){
     if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
@@ -2246,7 +2350,7 @@ function renderChallengeScreen(kind, extra={}) {
     } else if (kind === "result") {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}<p style="text-align:center">${extra.modText}</p>`;
-        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
+        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
     } else if (kind === "victory") {
         title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
         html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
@@ -2427,6 +2531,7 @@ function showChallengeTaunt(eventName, forcedText=null){
     if(challengeTauntTimer) clearTimeout(challengeTauntTimer);
     box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: “${text}”`;
     box.classList.remove("visible");void box.offsetWidth;box.classList.add("visible");
+    log(`Rival — ${rival.name}: “${text}”`);
     challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
 }
 
@@ -2729,6 +2834,7 @@ function renderTurnHistory() {
     const group = groups[index];
     const events = group.events || [];
     const categories = [
+        { label: "Rival", match: t => /^Rival —/.test(t) },
         { label: "Dice Roll", match: t => /^Dice Roll:/i.test(t) },
         { label: "Cards & Effects", match: t => /card|bought|used|trigger|granted|activated|played|discard|shield|altered state|override|staircase|rapid pulse|mental awakening/i.test(t) }
     ];
@@ -2963,25 +3069,47 @@ function playSound(kind) {
         const ctx = soundAudioContext;
         if (ctx.state === "suspended") ctx.resume();
         const now = ctx.currentTime;
+        const tone = (freq, end, duration, wave, gainValue, offset) => {
+            const start = now + (offset || 0);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = wave || "sine";
+            osc.frequency.setValueAtTime(Math.max(35, freq), start);
+            osc.frequency.exponentialRampToValueAtTime(Math.max(35, end), start + duration);
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration + 0.02);
+        };
+        if (kind === "win") {
+            [[523, 0], [659, 0.06], [784, 0.12]].forEach(([freq, offset]) => tone(freq, freq, 0.38, "sine", 0.04, offset));
+            return;
+        }
+        if (kind === "transformBig") {
+            tone(78, 210, 0.32, "triangle", 0.05, 0);
+            tone(156, 320, 0.28, "sine", 0.028, 0.04);
+            return;
+        }
         const presets = {
-            roll:  { freq: 145, end: 82, duration: 0.20, wave: "triangle", gain: 0.075 },
-            lock:  { freq: 620, end: 390, duration: 0.075, wave: "sine", gain: 0.055 },
-            resolve:{ freq: 430, end: 660, duration: 0.14, wave: "sine", gain: 0.045 },
-            card:  { freq: 520, end: 880, duration: 0.18, wave: "triangle", gain: 0.055 }
+            roll:        { freq: 145, end: 82, duration: 0.20, wave: "triangle", gain: 0.075 },
+            lock:        { freq: 620, end: 390, duration: 0.075, wave: "sine", gain: 0.055 },
+            unlock:      { freq: 390, end: 240, duration: 0.07, wave: "sine", gain: 0.04 },
+            resolve:     { freq: 430, end: 660, duration: 0.14, wave: "sine", gain: 0.045 },
+            card:        { freq: 520, end: 880, duration: 0.18, wave: "triangle", gain: 0.055 },
+            trigger:     { freq: 480, end: 640, duration: 0.12, wave: "triangle", gain: 0.032 },
+            up:          { freq: 520, end: 780, duration: 0.09, wave: "sine", gain: 0.028 },
+            down:        { freq: 420, end: 220, duration: 0.1, wave: "sine", gain: 0.026 },
+            sub:         { freq: 210, end: 160, duration: 0.06, wave: "sine", gain: 0.04 },
+            transform:   { freq: 96, end: 150, duration: 0.2, wave: "triangle", gain: 0.04 },
+            turn1:       { freq: 660, end: 880, duration: 0.12, wave: "sine", gain: 0.03 },
+            turn2:       { freq: 392, end: 294, duration: 0.12, wave: "sine", gain: 0.03 },
+            deny:        { freq: 110, end: 70, duration: 0.09, wave: "square", gain: 0.03 }
         };
         const preset = presets[kind] || presets.lock;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = preset.wave;
-        osc.frequency.setValueAtTime(preset.freq, now);
-        osc.frequency.exponentialRampToValueAtTime(Math.max(35, preset.end), now + preset.duration);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(preset.gain, now + 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + preset.duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + preset.duration + 0.015);
+        tone(preset.freq, preset.end, preset.duration, preset.wave, preset.gain, 0);
     } catch (e) {
         // Ignore browser/audio-device failures; game logic continues normally.
     }
@@ -3010,6 +3138,27 @@ function playSubmissionCrackleSound() {
             osc.start(now + offset); osc.stop(now + offset + 0.085);
         });
     } catch (e) { /* Optional UI sound only; never affect gameplay. */ }
+}
+
+function showStatDelta(anchorEl, delta, glyph) {
+    const amount = Number(delta) || 0;
+    if (!anchorEl || !amount) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const host = anchorEl.closest(".stat, .transform-progress-wrap, .track-container") || anchorEl;
+    const floater = document.createElement("span");
+    floater.className = `stat-float ${amount > 0 ? "stat-float-up" : "stat-float-down"}`;
+    floater.textContent = `${amount > 0 ? "+" : ""}${amount}${glyph ? " " + glyph : ""}`;
+    host.appendChild(floater);
+    window.setTimeout(() => floater.remove(), 950);
+}
+
+function rejectMarketCard(el) {
+    playSound("deny");
+    if (!el || !el.classList) return;
+    el.classList.remove("card-deny");
+    void el.offsetWidth;
+    el.classList.add("card-deny");
+    window.setTimeout(() => el.classList.remove("card-deny"), 380);
 }
 
 function applyDiceDisplay(value) {
@@ -3564,7 +3713,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261016.6"; // Update this label for each release.
+const GAME_VERSION = "20261016.10"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -4526,6 +4675,7 @@ function cpuReleaseUselessKeeps(keep, rerollsAvail) {
         if (luKept > lucidityNeed) keep.forEach((kp, i) => { if (luKept > lucidityNeed && kp && faces[i] === "LU") { keep[i] = false; luKept--; changed = true; } });
         if (!changed) break;
     }
+	// it doesn't need to be kept, just there, but good for the CPU to keep it
     if (hasCard(2, 55) && !keep.some((kp, i) => kp && faces[i] === "TR")) { const i = faces.indexOf("TR"); if (i >= 0) keep[i] = true; }   // Transformation Ritual wants a kept 👁️
     return keep;
 }
@@ -5124,6 +5274,10 @@ function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stag
         }
     }
 
+    if (amountChanged > 0) {
+        const crossedMilestone = currentLevel >= 10 || (currentLevel >= 8 && currentLevel - amountChanged < 8) || (currentLevel >= 5 && currentLevel - amountChanged < 5);
+        playSound(crossedMilestone ? "transformBig" : "transform");
+    }
     if (amountChanged <= 0) return;
     const effectClass = currentLevel >= 10 ? "transform-pulse-final" :
         (amountChanged >= 2 || cumulativeGainThisTurn >= 2 || currentLevel >= 8 ? "transform-pulse-strong" : "transform-pulse");
@@ -5321,6 +5475,14 @@ function pulseChangedStat(playerPrefix, statName, currentValue) {
             void el.offsetWidth;
             el.classList.add(className);
             window.setTimeout(() => el.classList.remove(className), 950);
+            if (id === `${playerPrefix}-${statName}`) {
+                const delta = Number(value) - Number(el.dataset[dataKey]);
+                const glyphs = { trance: "🌀", arousal: "🔥", energy: "⚡" };
+                if (delta) {
+                    showStatDelta(el, delta, glyphs[statName] || "");
+                    playSound(delta > 0 ? "up" : "down");
+                }
+            }
         }
         el.dataset[dataKey] = value;
     });
@@ -5388,6 +5550,7 @@ function updateUI() {
         updateAvatarPortrait(container, imgPath, filename, stageChanged);
         if (previousTransform !== null && transformDelta !== 0) {
             if (transformDelta > 0) transformationGainThisTurn[p] += transformDelta;
+            showStatDelta(progressLabel || progressTrack, transformDelta, "👁️");
             playTransformationUIEffect(p, transformDelta, Number(pObj.transform) || 0, stageChanged, transformationGainThisTurn[p]);
         }
         lastDisplayedTransform[p] = Number(pObj.transform) || 0;
@@ -5445,6 +5608,11 @@ function updateUI() {
                 trackContainer.classList.add('endpoint-crackle');
                 window.setTimeout(() => trackContainer.classList.remove('endpoint-crackle'), 850);
                 playSubmissionCrackleSound();
+            } else if (lastDisplayedSubmission !== null && lastDisplayedSubmission !== rawSubmission) {
+                playSound("sub");
+            }
+            if (lastDisplayedSubmission !== null && lastDisplayedSubmission !== rawSubmission) {
+                showStatDelta(trackContainer, rawSubmission - lastDisplayedSubmission, "⛓️");
             }
         }
         lastDisplayedSubmission = rawSubmission;
@@ -5492,6 +5660,11 @@ function updateUI() {
     }
     
     document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
+    const boardEl = document.querySelector(".board");
+    if (boardEl) {
+        boardEl.classList.toggle("phase-rolling", gameState.phase === "rolling");
+        boardEl.classList.toggle("phase-shop", gameState.phase === "shop");
+    }
     
     document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
     
@@ -5553,7 +5726,7 @@ function renderDiceAndActions(isHumanTurn) {
         if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
             if (diceAnimating.size) return;
             die.kept = !die.kept;
-            playSound("lock");
+            playSound(die.kept ? "lock" : "unlock");
             syncToFirebase();
             updateUI();
         };
@@ -5586,11 +5759,15 @@ function renderMarket() {
         if (hasCard(gameState.activePlayer, 29)) displayCost = Math.max(0, displayCost - 1);
         if (hasCard(gameState.activePlayer, 28) && !activeP.boughtCardThisTurn) displayCost = Math.max(0, displayCost - 2);
         if (gameState.freeBuyActive) displayCost = 0;
-        
+
         const alreadyOwned = inventoryHasName(activeP, card.name);
-		let btnDisabled = !isHumanTurn || activeP.energy < displayCost || gameState.phase !== "shop" || alreadyOwned ? "disabled" : "";
+        const canAfford = activeP.energy >= displayCost || gameState.freeBuyActive;
+        const purchasable = isHumanTurn && gameState.phase === "shop" && canAfford && !alreadyOwned;
+        const affordClass = alreadyOwned ? "already-owned" : (canAfford ? "can-afford" : "cannot-afford");
+        let btnDisabled = purchasable ? "" : "disabled";
+        const reject = !purchasable && isHumanTurn && gameState.phase === "shop" ? ` onclick="rejectMarketCard(this)"` : "";
         mc.innerHTML += `
-            <div class="card">
+            <div class="card ${affordClass}"${reject}>
                 <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
                 <div class="card-type">${card.type}</div>
                 <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
@@ -5623,6 +5800,7 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
             if (!seen.has(k)) { seen.add(k); unique.push(n); }
         });
         renderCardTriggerToast(unique);
+        if (unique.length) playSound("trigger");
         // Animate only cards that actually triggered in this batch. No timer-based
         // reapplication during ordinary inventory redraws (e.g. clicking dice).
         const animated = new Set();
@@ -5975,7 +6153,7 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
         const transformCount = rolls.filter(face => face === "👁️ TRANSFORM").length;
         const rollLabels = rolls.map(face => face.split(" ")[0]);
         log(`Transformation Sigil rolls: ${rollLabels.join(" and ")}.`);
-        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p><button onclick="closePopup()">Continue</button>`);
+        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p>`);
         if (transformCount >= 1) {
             finalAmount = Math.max(0, finalAmount - 1);
             queueCardTrigger(targetPlayerId, 59, "Reduced incoming transformation by 1");
@@ -6388,7 +6566,8 @@ function startTurn() {
     }
 
     syncToFirebase();
-    updateUI(); 
+    updateUI();
+    playSound(gameState.activePlayer === 1 ? "turn1" : "turn2");
     if (gameState.activePlayer === 2 && gameState.gameMode === "solo") setTimeout(executeCPUTurn, 1000);
 }
 
@@ -6569,15 +6748,16 @@ async function resolveDice() {
     activeP.energy = activeP.energy || 0;
 
     if (hasCard(activePlayerNum, 55)) {
-        const keptTransform = gameState.dice.some(d => d && d.kept && d.face === "👁️ TRANSFORM");
-        if (!keptTransform) {
+        // “Kept” means the dice remaining at the end of the roll sequence, not only dice locked against rerolls.
+        const finalRollHasTransform = gameState.dice.some(d => d && d.face === "👁️ TRANSFORM");
+        if (!finalRollHasTransform) {
             const lost = Math.min(3, activeP.energy);
             activeP.energy = Math.max(0, activeP.energy - 3);
-            queueCardTrigger(activePlayerNum, 55, `Lost ${lost} ⚡ for not keeping an 👁️ die`);
-            log(`Transformation Ritual: no 👁️ die was kept; lost ${lost} ⚡.`);
+            queueCardTrigger(activePlayerNum, 55, `Lost ${lost} ⚡ because no 👁️ die remained in the final roll`);
+            log(`Transformation Ritual: no 👁️ die remained in the final dice; lost ${lost} ⚡.`);
         } else {
-            queueCardTrigger(activePlayerNum, 55, "Kept an 👁️ die; avoided the Energy penalty");
-            log("Transformation Ritual: kept an 👁️ die; no Energy penalty.");
+            queueCardTrigger(activePlayerNum, 55, "An 👁️ die remained in the final dice; avoided the Energy penalty");
+            log("Transformation Ritual: an 👁️ die remained in the final dice; no Energy penalty.");
         }
     }
     oppP.trance = oppP.trance || 0;
@@ -6841,6 +7021,8 @@ function wipeMarket() {
         syncToFirebase();
         updateUI();
         log(`Market Wiped. New cards: ${market.map(card => card && card.name).filter(Boolean).join(", ") || "none"}`);
+    } else {
+        playSound("deny");
     }
 }
 
@@ -6947,12 +7129,13 @@ function buyCard(index) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
 
     if (inventoryHasName(p, card.name)) {
+        playSound("deny");
         log(`${p.name} already has ${card.name}.`);
         return false;
     }
 
     let cost = getCardPurchaseCost(card, playerId);
-    if (p.energy < cost) return false;
+    if (p.energy < cost) { playSound("deny"); return false; }
     if (hasCard(playerId, 29)) cardResolvedThisTurn.add(`${playerId}:29`);
     if (hasCard(playerId, 28) && !p.boughtCardThisTurn) cardResolvedThisTurn.add(`${playerId}:28`);
 
@@ -7003,6 +7186,7 @@ function buyAction(type, pId) {
 function endTurn() {
     if (isChoicePending()) {
         if (gameState.activePlayer === 2 && gameState.gameMode === "solo") endTurnAfterChoice = true;   // CPU is done: end its turn as soon as you pick
+        playSound("deny");
         nudgeChoiceDialog(); return;
     }
     endTurnAfterChoice = false;
@@ -7432,6 +7616,7 @@ function presentFinishedGame() {
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
+    playSound("win");
     const challengeMatch = challengeActive && gameState.gameMode === "solo";
     if (challengeMatch) handleChallengeMatchEnded(winnerId);
     const challengeContinue = document.getElementById("go-challenge-continue");
