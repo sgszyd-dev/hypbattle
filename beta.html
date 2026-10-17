@@ -3032,7 +3032,7 @@ function updateLobbyUI(me, opp, note) {
 			transformOpponentInto === "Gender" ? transformOpponentInto = "Man" : transformOpponentInto = "Cow";
 		}
 	}
-    alert("5 Opp Name: " + (opp ? opp.name : "NA") + " Transform Opp into: " + transformOpponentInto + ", Gender: " + (opp ? getGender(opp.name) : "NA") + ", old: " + (opp?.target ?? "Gender"));
+    //alert("5 Opp Name: " + (opp ? opp.name : "NA") + " Transform Opp into: " + transformOpponentInto + ", Gender: " + (opp ? getGender(opp.name) : "NA") + ", old: " + (opp?.target ?? "Gender"));
 	
 	if (transformMeInto === "Gender" || transformMeInto === "Cow") {
 		if (getGender(myName) === "male") {
@@ -3041,7 +3041,7 @@ function updateLobbyUI(me, opp, note) {
 			transformMeInto === "Gender" ? transformMeInto = "Man" : transformMeInto = "Cow";
 		}
 	}
-    alert("My Name: " + myName + " Transform me into: " + transformMeInto + ", Gender: " + getGender(myName) + ", old: " + document.getElementById("p1-transform-type").value);
+    //alert("My Name: " + myName + " Transform me into: " + transformMeInto + ", Gender: " + getGender(myName) + ", old: " + document.getElementById("p1-transform-type").value);
 	
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${transformMeInto}` : "Share the room code so they can join.");
