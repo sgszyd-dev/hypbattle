@@ -3030,6 +3030,7 @@ function updateLobbyUI(me, opp, note) {
 			displayForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
 		}
 	}
+    alert("DF: " + displayForm + ", Gender: " + (opp ? getGender(opp) : "NA") + ", old: " + (opp?.target ?? "Gender"));
 	let youDisplayForm = document.getElementById("p1-transform-type").value;
 	if (youDisplayForm === "Gender" || youDisplayForm === "Cow") {
 		if (getGender(me) === "male") {
@@ -3038,6 +3039,7 @@ function updateLobbyUI(me, opp, note) {
 			youDisplayForm === "Gender" ? youDisplayForm = "Man" : youDisplayForm = "Cow";
 		}
 	}
+    alert("DF: " + youDisplayForm + ", Gender: " + getGender(me) + ", old: " + 			document.getElementById("p1-transform-type").value);
 	
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${displayForm}` : "Share the room code so they can join.");
