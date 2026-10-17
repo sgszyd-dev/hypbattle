@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261016.5</title>
+    <title>Hypnotic Duel - Beta V20261017.1</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -254,7 +254,20 @@
             #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation-duration:1ms !important; transition-duration:1ms !important; }
         }
 
-        .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; }
+        .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; position: relative; }
+        .transform-progress-wrap, .track-container { position: relative; }
+        .stat-float {
+            position: absolute; right: 0; top: -2px; z-index: 6; pointer-events: none;
+            font-weight: 800; font-size: .82rem; letter-spacing: .02em; white-space: nowrap;
+            animation: statFloat .9s ease-out forwards;
+        }
+        .stat-float-up { color: #e7d4ff; text-shadow: 0 0 8px rgba(192,132,252,.65); }
+        .stat-float-down { color: #ffb4a2; text-shadow: 0 0 8px rgba(255,120,90,.45); }
+        @keyframes statFloat {
+            0% { opacity: 0; transform: translateY(6px); }
+            18% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-18px); }
+        }
         .track-container { background: #111; padding: 15px; border-radius: 5px; text-align: center; }
         /* Keep the middle Submission label mathematically centered, independent of side-label lengths. */
         #track-labels { display: grid !important; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 6px; }
@@ -301,8 +314,87 @@
         }
         .card-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
         .card-type { font-size: 0.8em; color: #aaa; }
+        /* Phase tint: rolling highlights the dice; shop highlights the market. Presentation only. */
+        .board.phase-rolling .dice-container,
+        .board.phase-rolling .actions-grid {
+            background: rgba(76, 201, 240, 0.07);
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 1px rgba(157, 78, 221, 0.38);
+        }
+        .board.phase-rolling .market-row { opacity: .72; filter: saturate(.75); }
+        .board.phase-shop .dice-container,
+        .board.phase-shop .actions-grid { opacity: .62; filter: saturate(.8); }
+        .board.phase-rolling .turn-status-block::after,
+        .board.phase-shop .turn-status-block::after {
+            display: block; text-align: center; margin-top: 2px;
+            font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: #b9a8ca;
+        }
+        .board.phase-rolling .turn-status-block::after { content: "Keep or reroll"; }
+        .board.phase-shop .turn-status-block::after { content: "Spend energy"; }
+        .board > .panel.turn-owner-p1 { box-shadow: inset 0 2px 0 var(--player); }
+        .board > .panel.turn-owner-p2 { box-shadow: inset 0 2px 0 var(--cpu); }
+        .board.awaiting-opponent #actions-grid button,
+        .board.awaiting-opponent #btn-wipe-market,
+        .board.awaiting-opponent #energy-actions-panel-1 button,
+        .board.awaiting-opponent #energy-actions-panel-2 button { opacity: .42; }
+        .die { position: relative; }
+        .die.combo-die { animation: comboPop .45s ease; }
+        .die-combo-badge {
+            position: absolute; top: 1px; right: 1px; z-index: 2; pointer-events: none;
+            font-size: .62rem; line-height: 1.2; font-weight: 800; letter-spacing: 0;
+            background: #ffd166; color: #1a1208; border-radius: 99px; padding: 0 4px;
+        }
+        @keyframes comboPop { 0% { transform: scale(.92); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+        .track-container.submission-left-pressure .track-nodes::before,
+        .track-container.submission-right-pressure .track-nodes::before { animation: trackBleed 1.4s ease-in-out infinite; }
+        .track-container.submission-left-pressure .track-nodes::before {
+            background: linear-gradient(90deg, rgba(255,77,77,.95), rgba(255,77,77,.4) 40%, #444 72%, rgba(76,201,240,.22));
+        }
+        .track-container.submission-right-pressure .track-nodes::before {
+            background: linear-gradient(90deg, rgba(255,77,77,.22), #444 28%, rgba(76,201,240,.45) 60%, rgba(76,201,240,.95));
+        }
+        @keyframes trackBleed { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
+        .image-stub.portrait-obey-flash { animation: obeyFlash .5s ease-out; }
+        @keyframes obeyFlash { 0% { filter: brightness(1); } 30% { filter: brightness(2.15); } 100% { filter: brightness(1); } }
+        .transform-milestone {
+            min-height: 0; height: 0; overflow: hidden; text-align: center;
+            font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: #e7d4ff;
+        }
+        .transform-milestone.visible { height: auto; min-height: 1.1em; margin-top: 3px; overflow: visible; }
+        .card-type-chip {
+            display: inline-block; font-size: .72rem; letter-spacing: .04em; font-weight: 700;
+            border-radius: 99px; padding: 1px 7px; border: 1px solid currentColor;
+        }
+        .card.card-keep, .inv-card.card-keep { border-color: #c084fc; }
+        .card.card-instant, .inv-card.card-instant { border-color: #ffd34d; }
+        .card.card-keep .card-type-chip, .inv-card.card-keep .card-type-chip { color: #e5d4ff; }
+        .card.card-instant .card-type-chip, .inv-card.card-instant .card-type-chip { color: #ffe08a; }
+        .inv-card .card-type-chip { margin-bottom: 4px; }
+        #card-trigger-toast .toast-more { color: #c8b6dc; font-size: .75rem; letter-spacing: .04em; }
+        @media (prefers-reduced-motion: reduce) {
+            .die.combo-die, .track-container.submission-left-pressure .track-nodes::before,
+            .track-container.submission-right-pressure .track-nodes::before,
+            .image-stub.portrait-obey-flash { animation: none !important; }
+        }
+        .market-row .card.can-afford {
+            border-color: #d8b5ff;
+            box-shadow: 0 0 0 1px rgba(192,132,252,.38), 0 0 12px rgba(157,78,221,.18);
+        }
+        .market-row .card.cannot-afford,
+        .market-row .card.already-owned { opacity: .58; }
+        .market-row .card.cannot-afford .card-header span:last-child,
+        .market-row .card.already-owned .card-header span:last-child { color: #8d7a86; }
+        .market-row .card.cannot-afford,
+        .market-row .card.already-owned { cursor: not-allowed; }
+        .market-row .card.cannot-afford button,
+        .market-row .card.already-owned button { pointer-events: none; }
+        .market-row .card.card-deny { animation: cardDeny .35s ease; }
+        @keyframes cardDeny { 0%,100% { transform: translateX(0); } 30% { transform: translateX(-5px); } 70% { transform: translateX(5px); } }
+        @media (prefers-reduced-motion: reduce) {
+            .stat-float, .market-row .card.card-deny { animation: none !important; }
+        }
         
-        .inventory { display: flex; flex-direction: column; gap: 5px; max-height: 165px; overflow-y: auto; padding-right: 5px; }
+        .inventory { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; padding-right: 5px; }
         .inventory::-webkit-scrollbar { width: 6px; }
         .inventory::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 10px; }
         .inv-card { background: #222; border: 1px solid #555; padding: 8px; border-radius: 5px; font-size: 0.85em; }
@@ -316,8 +408,8 @@
         }
         .die.kept { border-color: var(--accent); background: #443355; }
         .die.special-die { border: 3px solid #f0b429; box-shadow: 0 0 8px rgba(240,180,41,.48), inset 0 0 5px rgba(240,180,41,.18); }
-        .die.special-die.kept { border-color: #ffd166; box-shadow: 0 0 11px rgba(255,209,102,.72), inset 0 0 7px rgba(255,209,102,.22); }
-        .die.special-die.cpu-kept { border-color: #ffd166; }
+        .die.special-die.kept { border-color: #4cc9f0; box-shadow: 0 0 12px rgba(76,201,240,.82), inset 0 0 7px rgba(76,201,240,.24); }
+        .die.special-die.cpu-kept { border-color: #4cc9f0; box-shadow: 0 0 12px rgba(76,201,240,.82), inset 0 0 7px rgba(76,201,240,.24); }
         .die.cpu-kept { border-color: var(--cpu); background: #553333; }
         .die.rolling-die {
             animation: dieTumble 620ms cubic-bezier(.18,.72,.25,1) both;
@@ -376,10 +468,52 @@
         .turn-end-p1:not(:disabled) { background:var(--player) !important; }
         .turn-end-p2:not(:disabled) { background:var(--cpu) !important; }
         .rerolls-status { display:block; text-align:center; font-size:.85em; font-weight:normal; margin-top:5px; }
+        /* Tiny last-effect ticker under the dice (human turn only). */
+        #last-effect-ticker {
+            min-height: 1.15em; margin: -6px 0 8px; text-align: center;
+            font-size: .78em; letter-spacing: .02em; color: #c9b6e0;
+            opacity: 0; transition: opacity 180ms ease;
+        }
+        #last-effect-ticker.visible { opacity: 1; }
+        #last-effect-ticker .ticker-card { color: var(--accent); font-weight: 600; }
+        /* Online connection + opponent-thinking status. */
+        .online-status-row {
+            display: none; align-items: center; justify-content: center; gap: 8px;
+            margin: 4px 0 2px; font-size: .78em; color: #b9a8d0;
+        }
+        .online-status-row.visible { display: flex; }
+        .connection-dot {
+            width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
+            background: #666; box-shadow: 0 0 0 2px rgba(0,0,0,.25);
+        }
+        .connection-dot.connected { background: #3dd68c; box-shadow: 0 0 8px rgba(61,214,140,.55); }
+        .connection-dot.disconnected { background: #ff5c5c; box-shadow: 0 0 8px rgba(255,92,92,.45); }
+        .connection-dot.connecting { background: #f0c14a; animation: connPulse 1.1s ease-in-out infinite; }
+        @keyframes connPulse {
+            0%, 100% { opacity: .55; box-shadow: 0 0 4px rgba(240,193,74,.3); }
+            50% { opacity: 1; box-shadow: 0 0 10px rgba(240,193,74,.7); }
+        }
+        .opponent-thinking-label {
+            display: none; color: var(--cpu); font-weight: 600; letter-spacing: .04em;
+        }
+        .opponent-thinking-label.visible { display: inline; }
+        /* CPU telegraph: briefly emphasize dice the AI has locked before it rerolls. */
+        .die.cpu-telegraph {
+            border-color: #ff7a7a !important;
+            background: #5a2a2a !important;
+            box-shadow: 0 0 12px rgba(255,77,77,.65), inset 0 0 8px rgba(255,77,77,.2);
+            transform: scale(1.04);
+            transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .die.cpu-telegraph { transform: none; transition: none; }
+            .connection-dot.connecting { animation: none; }
+        }
         @media (max-width: 480px) {
             .turn-status-row { gap:3px; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
             .compact-end-turn { padding:6px 5px; font-size:.64em; }
             #turn-indicator { font-size:.88em; }
+            #last-effect-ticker { font-size: .72em; }
         }
 
         .btn-end-turn {
@@ -1145,6 +1279,7 @@
                 <div class="transform-progress-track" id="p1-transform-progress-track" role="progressbar" aria-label="Player 1 transformation progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
                     <div class="transform-progress-fill" id="p1-transform-progress"></div>
                 </div>
+                <div class="transform-milestone" id="p1-transform-milestone" aria-live="polite"></div>
             </div>
             <div class="stat"><span class="stat-label" id="p1-trance-label">Trance 🌀:</span> <span class="stat-value" id="p1-trance">0</span></div>
             <div class="stat"><span class="stat-label" id="p1-arousal-label">Arousal 🔥:</span> <span class="stat-value" id="p1-arousal">0</span></div>
@@ -1196,9 +1331,15 @@
                     <span id="turn-indicator">►► Turn ◄◄</span>
                     <button onclick="endTurn()" id="btn-end-turn-2" class="btn-end-turn compact-end-turn turn-end-p2" style="display: none;">End Turn</button>
                 </div>
+                <div id="online-status-row" class="online-status-row" aria-live="polite">
+                    <span id="connection-dot" class="connection-dot connecting" title="Connection status"></span>
+                    <span id="connection-label">Connecting…</span>
+                    <span id="opponent-thinking-label" class="opponent-thinking-label">· Opponent thinking…</span>
+                </div>
                 <span id="rerolls-indicator" class="rerolls-status"></span>
             </div>
             <div class="dice-container" id="dice-container"></div>
+            <div id="last-effect-ticker" aria-live="polite"></div>
             <div class="actions-grid" id="actions-grid"></div>
             <section class="turn-history-card" id="turn-history-card" aria-label="Turn history">
                 <div class="turn-history-head">
@@ -1349,7 +1490,7 @@ const KNOWN_CARDS = [
 	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {transformer: 15, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
 	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {transformer: 25, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
     { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
-    { id: 55, name: "Transformation Ritual", cost: 4, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 98, adaptive: 95, aggressive: 95, defensive: 90, v23low: 95} },
+    { id: 55, name: "Transformation Ritual", cost: 6, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 93, adaptive: 90, aggressive: 90, defensive: 85, v23low: 90} },
     { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {transformer: 100, adaptive: 65, aggressive: 70, defensive: 80, v23low: 60} },
     { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {transformer: 15, adaptive: 55, aggressive: 25, defensive: 60, v23low: 35} },
     { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {transformer: 45, adaptive: 55, aggressive: 45, defensive: 55, v23low: 50} },
@@ -1382,6 +1523,11 @@ let gameState = {
 let onlineRoomId = "";
 let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
 let isSyncingFromFirebase = false;
+let onlineConnectionState = "idle"; // idle | connecting | connected | disconnected
+let lastCinematicLoserId = null; // for game-over "Replay Cinematic"
+let cpuTelegraphActive = false; // true while CPU kept dice are highlighted before a reroll
+let lastEffectTickerText = "";
+let lastEffectTickerTimer = null;
 
 // Presentation-only state: never participates in game rules or online game-state sync.
 let soundEnabled = true;
@@ -1396,6 +1542,7 @@ let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
 let diceAnimationToken = 0;
+let diceComboFlashUntil = 0;
 let diceAnimationInterval = null;
 let diceAnimationFaces = new Map();
 
@@ -1576,6 +1723,16 @@ function challengeSavePayload(){ return {version:1, challengeActive, challengeIn
 function saveChallengeProgress(){
     if(!challengeActive) return;
     try { safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
+function saveChallengeFromScreen(){
+    if(!challengeActive){ showPopup("No Active Challenge", "There is no active challenge to save."); return; }
+    try {
+        safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
+        showPopup("Challenge Saved", "Your challenge position and next-match bonus have been saved on this browser. To transfer progress to another browser, use <strong>Export Challenge Save</strong> in Game Tools.");
+    } catch(e) {
+        console.warn("Challenge progress could not be saved", e);
+        showPopup("Save Failed", "Your browser could not save challenge progress. Check that site storage is available, then try again.");
+    }
+}
 }
 function applyChallengeSave(data){
     if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
@@ -1640,13 +1797,13 @@ function challengeTestFinish(result){
     clearChallengeMatchAlerts(); updateUI(); presentFinishedGame();
 }
 const CHALLENGE_TAUNTS = {
-    TransformPlayer: ["There you go. One more step away from who you were.", "Feel that shift? I barely had to try.", "Your old shape is already starting to feel like a memory."],
-    AIGetsTransformed: ["Hey! That wasn't part of my plan!", "Careful. I can still turn this around.", "Enjoy that little victory while it lasts."],
-    PlayerIsObedient: ["Good. You followed the track exactly where I wanted.", "That was almost effortless. Thank you for cooperating.", "A little suggestion, and you simply obey."],
+    TransformPlayer: ["There you go. One more step away from who you were.", "Feel that shift? I barely had to try.", "Your old shape is already starting to feel like a memory.","There you go… another piece of the old you slipping away under my hands.","Feel that shift? Your body is learning its new shape faster than your mind can argue.","You’re starting to look like you belong to someone. Good."],
+    AIGetsTransformed: ["Hey! That wasn't part of my plan!", "Careful. I can still turn this around… and when I do, you’ll feel it.", "Enjoy that little victory while it lasts. Bodies remember who pushed them."],
+    PlayerIsObedient: ["Good. You followed the track exactly where I wanted.", "That was almost effortless. Thank you for cooperating.", "A little suggestion, and you simply obey.","A little pressure and you simply… yield. I like that."],
     AIIsObedient: ["I... did not mean to do that.", "A temporary lapse. Don't get comfortable.", "You got lucky. I won't make that mistake twice."],
     BigRollAI: ["Six dice, and the odds still adore me.", "Did you see that roll? Try keeping up.", "Now THAT is how you make the dice behave."],
     PlayerAt5Transform: ["Halfway there. Starting to recognize yourself less?", "Five stages down. You can still pretend you're in control.", "You're changing faster than you can deny it."],
-    PlayerAt8Transform: ["Eight stages. This is where the panic usually starts.", "Almost finished. Try to enjoy the last few moments of the old you.", "Two more steps. You can practically see the new you."],
+    PlayerAt8Transform: ["Eight stages. This is where the panic usually starts.", "Almost finished. Try to enjoy the last few moments of the old you.", "Two more steps and you’ll be mine to reshape completely."],
     AIAt5Transform: ["Halfway transformed? Fine. I'm still in this.", "Five stages? That's a setback, not a defeat.", "I'm not done yet. Not even close."],
     AIAt9Transform: ["One more and I lose. I refuse to make it easy.", "Nine? No. I am NOT becoming your victory lap.", "All right, you've got my attention. Don't waste it."]
 };
@@ -1655,9 +1812,9 @@ const CHALLENGE_RIVAL_TAUNTS = {
         TransformPlayer: [
             "Whoa, you're changing! This is kind of amazing, actually. Do you think you'll get a cool tail, too?",
             "Another step! Eee! I wonder what you'll look like at the end! I hope it's something fluffy!",
-            "You're changing right before my eyes! Is it rude to ask if I can take a picture? For science!",
-            "Ooh, progress! I have absolutely no idea what's happening to you, but I'm pretty sure it's exciting!",
-            "Look at you go! This is like a surprise makeover, except nobody knows what the final outfit looks like!"
+            "You're changing right before my eyes! Is it rude to ask if I can take a picture? For science! And also because it’s really cute.",
+            "Ooh, progress! Your old shape is getting all blurry. I hope the new one likes head-pats.",
+            "Look at you go! This is like a surprise makeover where your body does whatever it wants… and I get to watch."
         ],
 
         AIGetsTransformed: [
@@ -1669,19 +1826,20 @@ const CHALLENGE_RIVAL_TAUNTS = {
         ],
 
         PlayerIsObedient: [
-            "Aww, you're listening to me! I didn't know I was good at this! Should I get a little teacher hat?",
-            "See? Following instructions can be fun! Or weird! Usually both, in my experience!",
-            "Yay, teamwork! Well, sort of. You're doing what I say, and I'm doing a little happy dance!",
-            "Ooh, you're being so cooperative! I wonder if this is how Pokémon trainers feel. Am I a trainer now? Do I get a badge?",
-            "That's it! Just relax and go with it! That's my strategy for pretty much everything, and look how far I've gotten!"
+            "Aww, you’re listening so well! Should I reward you with head-pats or more changes?",
+            "See? Following instructions can feel really nice. Or weird. Usually both!",
+            "Yay, teamwork! You’re doing what I say and I’m getting all warm and happy about it.",
+            "Ooh, you’re being so cooperative. I wonder if this is how trainers feel when their Pokémon just… melts for them.",
+            "That’s it. Just relax and go with it. That’s my strategy for everything, and look how far it’s gotten me!"
         ],
 
         AIIsObedient: [
-            "Oops! Did I just do what you said? Huh. Well, you sounded very convincing, and I didn't want to be rude!",
+            "Oops! Did I just do what you said? Huh. Weird. Kind of tingly too.",
             "My brain said 'don't do it,' but the rest of me apparently voted yes. Democracy is weird!",
             "Okay, so I may have followed your suggestion without thinking. In my defense, thinking is hard!",
             "Wait, why did I agree to that?! Oh well! I'm sure there's a perfectly good explanation. Probably. Maybe.",
-            "I was going to resist that, but then I got distracted wondering if Eevees like belly rubs. What were we talking about?"
+            "I was going to resist that, but then I got distracted wondering if Eevees like belly rubs. What were we talking about?",
+			"Wait, that wasn’t me deciding that. My body just… went along with it. Rude.",
         ],
 
         BigRollAI: [
@@ -1689,13 +1847,13 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Whoa-ho-ho! That roll was incredible! I should put a little crown on these dice!",
             "YES! Nailed it! I have no idea how I did that, so naturally I'm going to take full credit!",
             "That was SO COOL! If I could high-five the dice, I totally would. Do dice have hands?",
-            "Look at me go! I'm basically a professional now! Don't ask me what the profession is, though."
+            "Did you see that? Even the dice want to play with me!"
         ],
 
         PlayerAt5Transform: [
-            "Whoa, halfway already! Should I make you a little progress chart? I love charts! I never remember how to read them, but I love them!",
-            "Five stages down! You're doing great! Well, unless you don't want to be transformed. In which case... oopsie?",
-            "We're at the halfway point! I think this calls for a snack break. Everything calls for a snack break, really.",
+            "Halfway there! You’re starting to look like you might actually enjoy this. Do you?",
+            "Five stages down. Your old self is getting softer around the edges. Fluffy edges, maybe?",
+            "You’re changing faster than you can deny it. I think that’s kind of hot. Is that allowed?",
             "Wow, you're changing so fast! It's like one of those time-lapse videos, except I can't stop watching!",
             "Halfway there! I would offer you some encouragement, but I'm not sure that would be very helpful right now. So... good luck?"
         ],
@@ -1703,13 +1861,13 @@ const CHALLENGE_RIVAL_TAUNTS = {
         PlayerAt8Transform: [
             "EIGHT?! Wow! You're almost done! Should I start planning the welcome party for your new self?",
             "Oh my gosh, only two stages left! This is so exciting! For me, anyway. Are you okay? You don't look okay.",
-            "You're nearly there! I feel like I should say something wise and meaningful, but all I've got is 'WOWZA!'",
-            "Eight stages! That's, like, a whole lot of transforming! I hope you've been keeping track, because I definitely haven't!",
-            "Almost finished! Do you think the final transformation comes with a dramatic sparkle effect? I really hope there's a dramatic sparkle effect!"
+            "Eight stages! You’re running out of room to pretend this isn’t happening to you.",
+            "Almost finished. Try to enjoy the last few moments of the old you… or don’t. Either works for me.",
+            "Two more steps. You can practically feel the new shape waiting. Exciting, right?"
         ],
 
         AIAt5Transform: [
-            "Okay, so... halfway to becoming an Eevee! That's a sentence I never expected to say about myself!",
+            "I’m not done yet! Even if my ears are bigger and my thoughts are fluffier.",
             "My ears are getting huge, my feet are turning into paws, and I think my tail is fluffier than my hair ever was. Is this normal? Who am I asking? I don't know any Eevees!",
             "Five stages already?! I'm half girl, half Eevee, and one hundred percent confused! But, um... the fur is actually really soft.",
             "Oh wow, my face is changing, too! I think I have a little Eevee nose! I keep trying to boop it, but I can't tell if I'm doing it right!",
@@ -1717,7 +1875,9 @@ const CHALLENGE_RIVAL_TAUNTS = {
         ],
 
         AIAt9Transform: [
-            "ONE MORE STEP! Eeee! Look at my fluffy tail! Look at my ears! LOOK AT ME! I'm practically an Eevee already!",
+            "One more and I lose! I refuse to become a soft, obedient little Eevee just because you want me to!",
+            "Nine stages?! No no no. I am still me. Mostly. Sort of. Help.",
+            "Okay you’ve got my full attention and also my full panic. Don’t you dare finish this.",
             "Okay, I have a confession. I thought becoming an Eevee would be weird, but now I kind of love it! My paws are adorable, and my tail is AMAZING!",
             "Is it just me, or am I getting cuter by the minute? Because I just caught my reflection, and OH MY GOSH. I want to hug myself!",
             "One step left! I used to be worried about all this, but now I really want to know what it's like to be a real Eevee! Do you think I'll be able to do a little Eevee cry?",
@@ -1728,8 +1888,8 @@ const CHALLENGE_RIVAL_TAUNTS = {
         TransformPlayer: [
             "The conversion has advanced another stage. Your physical properties are diverging further from the original baseline.",
             "Interesting. A measurable change in your structure, accompanied by a predictable increase in resistance. The correlation is becoming quite clear.",
-            "Another step complete. If you continue at this rate, we should have a remarkably complete case study by the end of the session.",
-            "Your transformation is progressing. I would ask how it feels, but I suspect your subjective report would be less reliable than direct observation.",
+            "Feel that? The new shape settling in like it was always meant to. Elegant, isn’t it?",
+            "You’re starting to look like a finished piece. I do enjoy watching a body learn its place.",
             "An additional stage of conversion. Fascinating how quickly a stable biological system can become something entirely different."
         ],
 
@@ -1745,8 +1905,9 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Compliance observed. The response is consistent with the hypothesis that resistance decreases under the appropriate conditions.",
             "You followed the suggestion. A useful demonstration of how behavioral variables can influence the transformation process.",
             "Excellent. The subject is cooperating. This should make the next phase considerably easier to observe.",
-            "Your response matches the predicted outcome. I wonder whether you recognize the pattern, or whether the effect prevents you from evaluating it objectively.",
-            "A fascinating result. The correct stimulus appears to produce compliance without the need for direct intervention. I shall have to document that."
+            "Good. You responded exactly as predicted. Compliance is such a clean sensation.",
+            "You moved where I directed. Efficient. Attractive, even.",
+            "A little pressure and you yield so neatly. I appreciate the precision."
         ],
 
         AIIsObedient: [
@@ -1767,16 +1928,18 @@ const CHALLENGE_RIVAL_TAUNTS = {
 
         PlayerAt5Transform: [
             "Stage five. Half of the conversion is complete, and your original physical characteristics are becoming an increasingly unreliable reference.",
-            "We have reached the midpoint. The remaining stages should reveal whether the transformation follows a linear progression or accelerates near completion.",
+            "Halfway rewritten. The old outline is still visible, but fading. Beautiful progress.",
             "Fifty percent complete. Your current condition is an interesting intermediate state, though I doubt you find it as informative as I do.",
             "Five stages down. I recommend reconsidering your strategy. The evidence suggests your original form is becoming progressively more difficult to preserve.",
-            "The midpoint has been reached. I would be interested in measuring your current resistance, but I suspect the result would be rather discouraging."
+            "The midpoint has been reached. I would be interested in measuring your current resistance, but I suspect the result would be rather discouraging.",
+			"You’re changing faster than denial can keep up. Good."
         ],
 
         PlayerAt8Transform: [
             "Stage eight. Only two increments remain before the conversion reaches its terminal state. The available recovery window is becoming negligible.",
             "Eighty percent complete. Your original form is now a diminishing component of the overall system. The conclusion is approaching rapidly.",
-            "Two stages remaining. At this point, the evidence strongly favors a completed transformation over a successful recovery.",
+            "The final form is almost visible. Do you feel it waiting under your skin?",
+            "Almost complete. The last scraps of the previous version are becoming… decorative.",
             "The process is nearing its endpoint. I would encourage you to reconsider your position, although I suspect the relevant variables are no longer under your control.",
             "Stage eight confirmed. If this were a controlled trial, I would already be preparing the final assessment. Unfortunately for you, the experiment is still running."
         ],
@@ -1803,21 +1966,29 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Progress! I do hope you're paying attention. This is an excellent demonstration of how quickly things can change when you least expect them.",
             "Another step toward your new self. Don't look so worried, dear. Change can be an excellent teacher, even when the lessons are rather unconventional.",
             "Well done, Fable. Oh, sorry, I meant well done, me! It's so easy to get distracted when one's opponent is providing such a fascinating case study.",
-            "One more step! If this were a classroom, I'd be writing your progress report. I'm afraid the comments section would be rather extensive."
+            "One more step! If this were a classroom, I'd be writing your progress report. I'm afraid the comments section would be rather extensive.",
+			"Ooh, look at you changing. Softening. Getting a little wetter around the edges in all the best ways.",
+            "Another step under. Your body is learning to flow where I push it. Slippery, isn’t it?",
+            "You’re starting to look like something I could keep. Something that would feel good to hold."
         ],
         AIGetsTransformed: [
             "Oh, goodness! My hands are changing. I believe my fingers are becoming webbed. This is certainly not covered in the curriculum!",
             "My face feels different, and I rather suspect whiskers are coming in. I am going to need a very long staff meeting to process this.",
             "An otter. I'm becoming an otter! I teach children about the natural world, but I never expected to become part of the lesson myself.",
             "My feet feel terribly strange. If these are becoming proper otter paws, I shall have to reconsider my entire approach to footwear.",
-            "Well, this is an unexpected development. I always encouraged my students to embrace new experiences, but I did rather assume I'd remain human while doing so."
+            "Well, this is an unexpected development. I always encouraged my students to embrace new experiences, but I did rather assume I'd remain human while doing so.",
+			"Hey— my shape is getting slippery and I didn’t ask for this!",
+            "Okay that change felt… really good actually. Rude of you to notice."
         ],
         PlayerIsObedient: [
             "There we are, dear. Sometimes it's easier to learn when we stop arguing with the lesson and start listening.",
             "Very good! I knew you could follow instructions. Now, let's see if we can make a little more progress, shall we?",
             "That's the spirit! There's no shame in accepting a little guidance. Even the most stubborn pupils can surprise themselves.",
             "Eyes forward, take a deep breath, and listen carefully. That's it. My, what a wonderfully attentive student you've become.",
-            "Excellent cooperation! I'm afraid your homework tonight will involve a rather substantial amount of personal transformation."
+            "Excellent cooperation! I'm afraid your homework tonight will involve a rather substantial amount of personal transformation.",
+			"Mmm. You followed so nicely. I could get used to that.",
+            "That was smooth. Almost like you wanted to.",
+            "A little pressure and you just… give. I like watching that."
         ],
         AIIsObedient: [
             "Oh! I seem to have followed that instruction without thinking. Well, even teachers can have an off day.",
@@ -1830,6 +2001,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Oh, splendid! That's what I call an exemplary performance. Full marks for me!",
             "Now, class, observe carefully. This is what happens when preparation meets opportunity. Well, mostly opportunity. And a little luck.",
             "Outstanding! I would put that result on the classroom wall if I weren't so busy using it to beat you.",
+			"Did you see that roll? Even chance wants to get wet with me.",
             "Well, would you look at that! I believe I've just earned myself a gold star. Perhaps two.",
             "A truly excellent roll! And you know what we do with excellent results, don't you? We build on them!"
         ],
@@ -1838,14 +2010,18 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Five stages completed. I'd call that a significant milestone, though I suspect you'd prefer a different sort of achievement certificate.",
             "We're at the halfway point, dear. Perhaps it's time to stop doodling in the margins and pay attention to the rather important matter at hand.",
             "Fifty percent! Not quite a passing grade if your goal was to remain unchanged, I'm afraid. Let's see whether you can improve your performance.",
-            "Oh, my. Halfway transformed already! I do hope you're learning something from all this. Though perhaps not quite as much as I am."
+            "Oh, my. Halfway transformed already! I do hope you're learning something from all this. Though perhaps not quite as much as I am.",
+			"Halfway there. You’re starting to feel less solid and more… available.",
+            "Five stages down. The old you is getting harder to hold onto. Fun, right?",
+            "You’re changing so easily now. Almost like you were made for it."
         ],
         PlayerAt8Transform: [
             "Eight stages! Only two more, dear. I'm afraid extra credit isn't going to save you this time.",
             "Now we're getting very close to the final lesson. I suggest you pay attention, because there may not be an opportunity for a retake.",
             "Oh, dear. Eight out of ten. If this were an examination, I'd be preparing the results envelope already.",
             "Two stages to go! I would offer you some encouraging words, but I suspect we'd both know I was being terribly insincere.",
-            "You've made quite remarkable progress. Unfortunately, I don't think this is the sort of progress you wanted to put on your report card."
+			"Almost finished. The last pieces of the old shape are getting soft and easy.",
+            "Two more steps and you’ll be something I can keep. Something that fits."
         ],
         AIAt5Transform: [
             "Halfway to becoming an otter! My fingers are webbed, my face is changing, and I can feel fur where there absolutely should not be fur. I need to sit down.",
@@ -1868,7 +2044,9 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Another successful operation. I would explain the process, but your system appears to be running on intuition rather than logic.",
             "One step closer to a completely different you. The transition is proceeding more smoothly than your decision-making.",
             "State updated. Your resistance remains measurable, but its practical value is declining.",
-            "Fascinating. Apply the correct input at the correct moment, and even a stubborn system can be persuaded to rewrite itself."
+            "Fascinating. Apply the correct input at the correct moment, and even a stubborn system can be persuaded to rewrite itself.",
+			"Feel that shift? Your body is choosing a different truth. I’m just helping it along.",
+            "You’re starting to look like someone who knows what they are. Or what they’re becoming."
         ],
         AIGetsTransformed: [
             "Another step toward becoming a woman. I did not authorize this change to my physical specifications.",
@@ -1877,14 +2055,18 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Wonderful. Another step closer to becoming a woman. I spend years optimizing systems, and now I can't even maintain my own original architecture.",
             "My physical parameters are changing in a distinctly feminine direction. I am trying to remain objective, but this is a rather intrusive update.",
             "I appear to be losing the ability to specify my own biological configuration. This is precisely why I distrust undocumented processes.",
-            "Unexpected state change detected. I refuse to believe that becoming a woman is the optimal solution to whatever problem these dice think I have."
+            "Unexpected state change detected. I refuse to believe that becoming a woman is the optimal solution to whatever problem these dice think I have.",
+			"Interesting. The new shape fits better than it should. I will not thank you for that."
         ],
         PlayerIsObedient: [
             "There we are. The correct suggestion, delivered at the correct moment. Human decision-making really is a fascinating interface.",
             "Compliance confirmed. No need to force the issue when a well-timed prompt does the work for you.",
             "Your defenses have entered compatibility mode. Shall we proceed with the next phase of the update?",
             "I predicted this response three turns ago. You may call it hypnosis; I call it understanding the system requirements.",
-            "Excellent. Your objections are still present, but they no longer appear to have administrative privileges."
+            "Excellent. Your objections are still present, but they no longer appear to have administrative privileges.",
+			"Good. You moved when I told you to. Bodies are honest like that.",
+            "That was clean. You felt it, didn’t you? The little give.",
+            "A little pressure and the old identity slips. I like watching that happen."
         ],
         AIIsObedient: [
             "I followed the suggestion. For the record, an action performed under compromised conditions should not count as informed consent.",
@@ -1898,14 +2080,17 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Exceptional output. The dice have finally stopped behaving like an unmaintained legacy system.",
             "Beautiful. Every variable aligned, every outcome cooperated, and my opponent is about to experience the consequences.",
             "A remarkably efficient roll. I do appreciate it when randomness temporarily behaves like a competent colleague.",
-            "Optimal result achieved. If anyone asks, I absolutely had a sophisticated predictive model for that."
+            "Optimal result achieved. If anyone asks, I absolutely had a sophisticated predictive model for that.",
+			"Chance just chose a side. Mine.",
+			"The dice understand power. Good."
         ],
         PlayerAt5Transform: [
             "Five out of ten. Congratulations, you have reached the midpoint of a process you are unlikely to enjoy completing.",
             "We are halfway through your conversion. Statistically speaking, your recovery strategy deserves a performance review.",
             "Transformation progress: fifty percent. I would recommend a contingency plan, but I suspect you are already running out of options.",
             "Halfway there. Your original configuration is still recognizable, although the remaining system resources are becoming concerning.",
-            "Five stages complete. You can still turn this around, of course. I simply wouldn't build a business plan around it."
+            "Five stages complete. You can still turn this around, of course. I simply wouldn't build a business plan around it.",
+			"You’re changing in places you can’t ignore. Good."
         ],
         PlayerAt8Transform: [
             "Eight out of ten. At this point, recovery is less of a strategy and more of a theoretical possibility.",
@@ -1935,7 +2120,10 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "One more step along the path, dear. You can resist the current, or discover how lovely it feels to float.",
             "Shhh... no need to struggle. Every change brings you closer to a self you have not yet met. Isn't that a beautiful thought?",
             "Another little shift. I wonder what you'll become when the journey is complete. Don't worry, I'll be here to welcome you.",
-            "Feel that? The boundary between who you were and who you are becoming grows thinner with every breath. Just let it happen."
+            "Feel that? The boundary between who you were and who you are becoming grows thinner with every breath. Just let it happen.",
+			"Look at you changing! Fast little steps into something softer and more interesting.",
+            "Another stage down. Your body is getting quicker to listen. I like that in a rival.",
+            "You’re starting to look like you might actually enjoy being mine for a while."
         ],
 
         AIGetsTransformed: [
@@ -1943,7 +2131,10 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "A soft tail is taking shape behind me... how curious. I wonder how it will feel to curl up with it. I welcome the discovery.",
             "My body grows lighter, more nimble. Perhaps the universe is teaching me to move through life with a little more playfulness.",
             "Ahh... soft fur, twitching ears, and the beginnings of a fluffy tail. My meditation has taken an unexpectedly delightful direction.",
-            "I can feel the squirrel girl emerging, and I find myself smiling. There is something rather freeing about allowing a new form to unfold."
+            "I can feel the squirrel girl emerging, and I find myself smiling. There is something rather freeing about allowing a new form to unfold.",
+			"Hey! My shape is getting all twitchy and sensitive and I did not sign up for this!",
+            "Okay that felt really good for a second. Rude of you to make me admit it.",
+            "My body is going all squirrel-y and hyper and part of me wants to lean into the rush."
         ],
 
         PlayerIsObedient: [
@@ -1951,6 +2142,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Good... so beautifully willing. Feel your worries drifting away as you surrender to the moment. Isn't stillness wonderful?",
             "You followed my voice without hesitation. Perhaps some part of you has been longing to stop resisting and simply experience.",
             "That's it... deeper now. Let the outside world grow distant while my words become the only thing you need to follow.",
+			"That was easy. Almost like you were waiting for permission.",
             "Mmm, such a receptive mind. I wonder how far you can wander when you stop trying to find your way back. Shall we discover that together?"
         ],
 
@@ -1999,6 +2191,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Almost complete. My ears twitch at every little sound, and I find myself wanting to scamper up the nearest tree. How wonderful to discover new ways of being.",
             "I used to think of this as a transformation. Now it feels more like awakening to a part of myself I had never known. One more breath, one more step... I'm ready.",
             "Mmm, soft fur, nimble paws, a beautiful tail... I could spend hours simply exploring how it feels to move in this body. The universe has given me a delightful new practice.",
+			"Nine. Too close. I’m still me under all this twitchy heat.",
             "One final step, and I shall be a squirrel girl in full. I welcome the change with an open heart. And I confess, I am rather looking forward to finding somewhere cozy to hide a few acorns."
         ]
     },
@@ -2008,7 +2201,10 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "There you go, changin' again. Ain't it a shame you can't talk your way outta this one?",
             "Another step closer to somethin' you ain't gonna recognize in the mirror. Don't worry, I'll try not to laugh too hard.",
             "Now, don't give me that look. You knew there'd be consequences when you climbed into the saddle. You just figured they'd happen to somebody else.",
-            "Well, ain't that somethin'. You're changin' faster than a politician changes his story. Least this transformation's got the decency to be honest about it."
+            "Well, ain't that somethin'. You're changin' faster than a politician changes his story. Least this transformation's got the decency to be honest about it.",
+			"There you go. Slow and heavy. Another step into the shape I chose for you.",
+            "Feel that? Your body getting fuller, warmer, slower to argue. Good.",
+            "You’re starting to look like you belong in a stall. Mine."
         ],
 
         AIGetsTransformed: [
@@ -2016,15 +2212,20 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "You're tellin' me I'm growin' horns? I've spent my whole life avoidin' bulls, and now I'm fixin' to be the biggest one in the pasture.",
             "My boots don't fit, my legs feel like fence posts, and somethin' tells me a tailor ain't gonna be much help with this particular problem.",
             "I can feel my face changin'. If a set of horns shows up between my eyes, partner, we're gonna have words.",
-            "Well, ain't this a fine mess. I'm turnin' into a bull, and I got a feeling the ladies in the pasture are about to become a whole lot more interestin' than I'd care to admit."
+            "Well, ain't this a fine mess. I'm turnin' into a bull, and I got a feeling the ladies in the pasture are about to become a whole lot more interestin' than I'd care to admit.",
+			"Interesting. The changes settle in deep. I can feel every one of them.",
+            "My form is shifting. I will remember the hands that pushed it."
         ],
 
         PlayerIsObedient: [
-            "That's it, partner. You listen real nice, and I'll try not to take advantage of the arrangement. Much.",
+            "That's it. You listen real nice, and I'll try not to take advantage of the arrangement. Much.",
             "Well, would you look at that. All that bluster, and a little suggestion was all it took. I won't tell if you won't.",
             "A sensible choice. A person's got to know when to lead and when to let somebody else hold the reins.",
             "There we go. Ain't no shame in takin' direction from a man who knows what he's doin'. Shame would be pretendin' you do.",
-            "Much obliged. I do appreciate a cooperative guest. Makes it so much easier to get things done without raisin' my voice."
+            "Much obliged. I do appreciate a cooperative guest. Makes it so much easier to get things done without raisin' my voice.",
+			"Good. You moved when I told you. Slow and sure.",
+            "That was easy. Bodies like yours learn fast under the right pressure.",
+            "A little weight and you yield. I like that in a rival."
         ],
 
         AIIsObedient: [
@@ -2072,7 +2273,8 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "One stage left. I got a powerful set of shoulders, a fine coat, and the cows have started givin' me looks. Can't say I blame 'em. Still, this is gonna take some gettin' used to.",
             "Reckon I've spent enough time complainin'. Bein' a bull ain't all bad, and if the ladies in the pasture have opinions on the matter, well... a gentleman listens.",
             "Would you look at that. I can toss my head, stamp the ground, and make a fence post nervous just by walkin' past. There's somethin' to be said for a little presence.",
-            "One more step and I'm a bull through and through. Never figured that'd be my road, but the pasture's lookin' mighty inviting, and I ain't one to argue with every good thing that comes my way."
+            "One more step and I'm a bull through and through. Never figured that'd be my road, but the pasture's lookin' mighty inviting, and I ain't one to argue with every good thing that comes my way.",
+			"One stage left. I refuse to become someone else’s finished livestock."
         ]
     },
     Siobhán: {
@@ -2081,7 +2283,10 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Oh, don't look so startled. You knew this little game had claws. Well, mine, anyway.",
             "Another step along the way. I do love watching a carefully constructed identity come undone.",
             "Purrhaps you'll thank me when it's over. No? Well, let's not spoil the surprise.",
-            "You see, sweetheart, I have a knack for bringing out things people never knew they had."
+            "You see, sweetheart, I have a knack for bringing out things people never knew they had.",
+			"There you go, darling. Another careful step away from who you were. You’re becoming much more interesting.",
+            "Feel that shift? Your body is learning its new manners. I do enjoy a quick study.",
+            "You’re starting to look like you belong on a leash. Figuratively. For now."
         ],
 
         AIGetsTransformed: [
@@ -2097,7 +2302,9 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Such cooperation! And here I was prepared to use my claws. What a disappointment. What a relief.",
             "Oh, darling, you followed that little cue perfectly. I do enjoy a well-trained audience.",
             "See how easy that was? A little nudge, a little suggestion, and suddenly we're getting somewhere.",
-            "Mmm. I could get used to this. Though I suspect you might have other ideas about that."
+            "Mmm. I could get used to this. Though I suspect you might have other ideas about that.",
+			"That was almost effortless. Thank you for making my work look easy.",
+            "A little suggestion and you simply obey. I do appreciate good taste in a rival."
         ],
 
         AIIsObedient: [
@@ -2113,6 +2320,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Oh, marvelous! I do love it when fortune remembers which side of the room has the better wardrobe.",
             "A roll worthy of a standing ovation. Go on, darling—try not to look too impressed.",
             "See? Grace, timing, and a touch of luck. It's amazing what a cat can accomplish without asking permission.",
+            "Did you see that? Even chance knows who is in charge.",
             "Well, well. The dice have spoken, and apparently they have excellent taste."
         ],
 
@@ -2195,7 +2403,7 @@ function renderChallengeScreen(kind, extra={}) {
     } else if (kind === "result") {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}<p style="text-align:center">${extra.modText}</p>`;
-        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
+        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
     } else if (kind === "victory") {
         title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
         html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
@@ -2376,6 +2584,7 @@ function showChallengeTaunt(eventName, forcedText=null){
     if(challengeTauntTimer) clearTimeout(challengeTauntTimer);
     box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: “${text}”`;
     box.classList.remove("visible");void box.offsetWidth;box.classList.add("visible");
+    log(`Rival — ${rival.name}: “${text}”`);
     challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
 }
 
@@ -2678,6 +2887,7 @@ function renderTurnHistory() {
     const group = groups[index];
     const events = group.events || [];
     const categories = [
+        { label: "Rival", match: t => /^Rival —/.test(t) },
         { label: "Dice Roll", match: t => /^Dice Roll:/i.test(t) },
         { label: "Cards & Effects", match: t => /card|bought|used|trigger|granted|activated|played|discard|shield|altered state|override|staircase|rapid pulse|mental awakening/i.test(t) }
     ];
@@ -2912,25 +3122,47 @@ function playSound(kind) {
         const ctx = soundAudioContext;
         if (ctx.state === "suspended") ctx.resume();
         const now = ctx.currentTime;
+        const tone = (freq, end, duration, wave, gainValue, offset) => {
+            const start = now + (offset || 0);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = wave || "sine";
+            osc.frequency.setValueAtTime(Math.max(35, freq), start);
+            osc.frequency.exponentialRampToValueAtTime(Math.max(35, end), start + duration);
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration + 0.02);
+        };
+        if (kind === "win") {
+            [[523, 0], [659, 0.06], [784, 0.12]].forEach(([freq, offset]) => tone(freq, freq, 0.38, "sine", 0.04, offset));
+            return;
+        }
+        if (kind === "transformBig") {
+            tone(78, 210, 0.32, "triangle", 0.05, 0);
+            tone(156, 320, 0.28, "sine", 0.028, 0.04);
+            return;
+        }
         const presets = {
-            roll:  { freq: 145, end: 82, duration: 0.20, wave: "triangle", gain: 0.075 },
-            lock:  { freq: 620, end: 390, duration: 0.075, wave: "sine", gain: 0.055 },
-            resolve:{ freq: 430, end: 660, duration: 0.14, wave: "sine", gain: 0.045 },
-            card:  { freq: 520, end: 880, duration: 0.18, wave: "triangle", gain: 0.055 }
+            roll:        { freq: 145, end: 82, duration: 0.20, wave: "triangle", gain: 0.075 },
+            lock:        { freq: 620, end: 390, duration: 0.075, wave: "sine", gain: 0.055 },
+            unlock:      { freq: 390, end: 240, duration: 0.07, wave: "sine", gain: 0.04 },
+            resolve:     { freq: 430, end: 660, duration: 0.14, wave: "sine", gain: 0.045 },
+            card:        { freq: 520, end: 880, duration: 0.18, wave: "triangle", gain: 0.055 },
+            trigger:     { freq: 480, end: 640, duration: 0.12, wave: "triangle", gain: 0.032 },
+            up:          { freq: 520, end: 780, duration: 0.09, wave: "sine", gain: 0.028 },
+            down:        { freq: 420, end: 220, duration: 0.1, wave: "sine", gain: 0.026 },
+            sub:         { freq: 210, end: 160, duration: 0.06, wave: "sine", gain: 0.04 },
+            transform:   { freq: 96, end: 150, duration: 0.2, wave: "triangle", gain: 0.04 },
+            turn1:       { freq: 660, end: 880, duration: 0.12, wave: "sine", gain: 0.03 },
+            turn2:       { freq: 392, end: 294, duration: 0.12, wave: "sine", gain: 0.03 },
+            deny:        { freq: 110, end: 70, duration: 0.09, wave: "square", gain: 0.03 }
         };
         const preset = presets[kind] || presets.lock;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = preset.wave;
-        osc.frequency.setValueAtTime(preset.freq, now);
-        osc.frequency.exponentialRampToValueAtTime(Math.max(35, preset.end), now + preset.duration);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(preset.gain, now + 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + preset.duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + preset.duration + 0.015);
+        tone(preset.freq, preset.end, preset.duration, preset.wave, preset.gain, 0);
     } catch (e) {
         // Ignore browser/audio-device failures; game logic continues normally.
     }
@@ -2959,6 +3191,136 @@ function playSubmissionCrackleSound() {
             osc.start(now + offset); osc.stop(now + offset + 0.085);
         });
     } catch (e) { /* Optional UI sound only; never affect gameplay. */ }
+}
+
+/** Light device vibration for lock / resolve / transform. Honors prefers-reduced-motion. */
+function triggerHaptic(kind) {
+    try {
+        if (!navigator.vibrate) return;
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const patterns = {
+            lock: 18,
+            unlock: 12,
+            resolve: [22, 30, 22],
+            transform: [28, 40, 28, 40, 45]
+        };
+        const pattern = patterns[kind];
+        if (pattern != null) navigator.vibrate(pattern);
+    } catch (e) { /* Haptics are optional; never block gameplay. */ }
+}
+
+/** Update the tiny last-effect line under the dice (human's own turn only). */
+function setLastEffectTicker(cardName, detail) {
+    const el = document.getElementById("last-effect-ticker");
+    if (!el) return;
+    // Only show during the local human player's turn.
+    if (!gameState || !isLocalPlayerTurn()) {
+        el.classList.remove("visible");
+        el.innerHTML = "";
+        lastEffectTickerText = "";
+        return;
+    }
+    const name = String(cardName || "").trim();
+    const detailText = String(detail || "").trim();
+    if (!name && !detailText) {
+        el.classList.remove("visible");
+        el.innerHTML = "";
+        lastEffectTickerText = "";
+        return;
+    }
+    const esc = v => String(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    lastEffectTickerText = name ? `${name}: ${detailText}` : detailText;
+    el.innerHTML = name
+        ? `<span class="ticker-card">${esc(name)}</span>${detailText ? ": " + esc(detailText) : ""}`
+        : esc(detailText);
+    el.classList.add("visible");
+    if (lastEffectTickerTimer) clearTimeout(lastEffectTickerTimer);
+    lastEffectTickerTimer = setTimeout(() => {
+        // Fade after a few seconds so the board stays clean; keep text for screen readers briefly.
+        el.classList.remove("visible");
+    }, 4200);
+}
+
+function clearLastEffectTicker() {
+    const el = document.getElementById("last-effect-ticker");
+    if (el) { el.classList.remove("visible"); el.innerHTML = ""; }
+    lastEffectTickerText = "";
+    if (lastEffectTickerTimer) { clearTimeout(lastEffectTickerTimer); lastEffectTickerTimer = null; }
+}
+
+/** Online connection dot + "opponent thinking" label. */
+function updateOnlineStatusUI() {
+    const row = document.getElementById("online-status-row");
+    const dot = document.getElementById("connection-dot");
+    const label = document.getElementById("connection-label");
+    const thinking = document.getElementById("opponent-thinking-label");
+    if (!row || !dot || !label) return;
+    const isOnline = !!(gameState && gameState.gameMode === "online");
+    if (!isOnline) {
+        row.classList.remove("visible");
+        if (thinking) thinking.classList.remove("visible");
+        return;
+    }
+    row.classList.add("visible");
+    dot.classList.remove("connected", "disconnected", "connecting");
+    if (onlineConnectionState === "connected") {
+        dot.classList.add("connected");
+        label.textContent = "Connected";
+    } else if (onlineConnectionState === "disconnected") {
+        dot.classList.add("disconnected");
+        label.textContent = "Disconnected";
+    } else {
+        dot.classList.add("connecting");
+        label.textContent = onlineConnectionState === "connecting" ? "Connecting…" : "Online";
+    }
+    const waitingOnOpponent = isOnline && gameState && !gameState.gameEnded && !isLocalPlayerTurn();
+    if (thinking) {
+        if (waitingOnOpponent) thinking.classList.add("visible");
+        else thinking.classList.remove("visible");
+    }
+}
+
+function bindFirebaseConnectionStatus() {
+    if (!window.db || !window.dbRef || !window.dbOnValue) return;
+    try {
+        const connRef = window.dbRef(window.db, ".info/connected");
+        window.dbOnValue(connRef, (snap) => {
+            onlineConnectionState = snap.val() ? "connected" : "disconnected";
+            updateOnlineStatusUI();
+        });
+    } catch (e) {
+        onlineConnectionState = "disconnected";
+        updateOnlineStatusUI();
+    }
+}
+
+async function replayLastCinematic() {
+    if (lastCinematicLoserId == null || !gameState) return;
+    const modal = document.getElementById("game-over-modal");
+    if (modal) modal.style.display = "none";
+    await playFinalTransformationCinematic(lastCinematicLoserId);
+    if (modal) modal.style.display = "flex";
+}
+
+function showStatDelta(anchorEl, delta, glyph) {
+    const amount = Number(delta) || 0;
+    if (!anchorEl || !amount) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const host = anchorEl.closest(".stat, .transform-progress-wrap, .track-container") || anchorEl;
+    const floater = document.createElement("span");
+    floater.className = `stat-float ${amount > 0 ? "stat-float-up" : "stat-float-down"}`;
+    floater.textContent = `${amount > 0 ? "+" : ""}${amount}${glyph ? " " + glyph : ""}`;
+    host.appendChild(floater);
+    window.setTimeout(() => floater.remove(), 950);
+}
+
+function rejectMarketCard(el) {
+    playSound("deny");
+    if (!el || !el.classList) return;
+    el.classList.remove("card-deny");
+    void el.offsetWidth;
+    el.classList.add("card-deny");
+    window.setTimeout(() => el.classList.remove("card-deny"), 380);
 }
 
 function applyDiceDisplay(value) {
@@ -3096,6 +3458,9 @@ function initializeGame() {
     if (gameMode === "online") {
         onlineRoomId = document.getElementById("online-room-code").value.trim().toUpperCase() || "ROOM123";
         onlineLocalRole = parseInt(document.getElementById("online-role-option").value, 10);
+        onlineConnectionState = "connecting";
+        bindFirebaseConnectionStatus();
+        updateOnlineStatusUI();
 
         document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
@@ -3513,7 +3878,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261016.5"; // Update this label for each release.
+const GAME_VERSION = "20261017.1"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -4475,6 +4840,7 @@ function cpuReleaseUselessKeeps(keep, rerollsAvail) {
         if (luKept > lucidityNeed) keep.forEach((kp, i) => { if (luKept > lucidityNeed && kp && faces[i] === "LU") { keep[i] = false; luKept--; changed = true; } });
         if (!changed) break;
     }
+	// it doesn't need to be kept, just there, but good for the CPU to keep it
     if (hasCard(2, 55) && !keep.some((kp, i) => kp && faces[i] === "TR")) { const i = faces.indexOf("TR"); if (i >= 0) keep[i] = true; }   // Transformation Ritual wants a kept 👁️
     return keep;
 }
@@ -5073,6 +5439,11 @@ function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stag
         }
     }
 
+    if (amountChanged > 0) {
+        const crossedMilestone = currentLevel >= 10 || (currentLevel >= 8 && currentLevel - amountChanged < 8) || (currentLevel >= 5 && currentLevel - amountChanged < 5);
+        playSound(crossedMilestone ? "transformBig" : "transform");
+        if (stageChanged || amountChanged >= 2 || currentLevel >= 8) triggerHaptic("transform");
+    }
     if (amountChanged <= 0) return;
     const effectClass = currentLevel >= 10 ? "transform-pulse-final" :
         (amountChanged >= 2 || cumulativeGainThisTurn >= 2 || currentLevel >= 8 ? "transform-pulse-strong" : "transform-pulse");
@@ -5270,6 +5641,14 @@ function pulseChangedStat(playerPrefix, statName, currentValue) {
             void el.offsetWidth;
             el.classList.add(className);
             window.setTimeout(() => el.classList.remove(className), 950);
+            if (id === `${playerPrefix}-${statName}`) {
+                const delta = Number(value) - Number(el.dataset[dataKey]);
+                const glyphs = { trance: "🌀", arousal: "🔥", energy: "⚡" };
+                if (delta) {
+                    showStatDelta(el, delta, glyphs[statName] || "");
+                    playSound(delta > 0 ? "up" : "down");
+                }
+            }
         }
         el.dataset[dataKey] = value;
     });
@@ -5337,6 +5716,7 @@ function updateUI() {
         updateAvatarPortrait(container, imgPath, filename, stageChanged);
         if (previousTransform !== null && transformDelta !== 0) {
             if (transformDelta > 0) transformationGainThisTurn[p] += transformDelta;
+            showStatDelta(progressLabel || progressTrack, transformDelta, "👁️");
             playTransformationUIEffect(p, transformDelta, Number(pObj.transform) || 0, stageChanged, transformationGainThisTurn[p]);
         }
         lastDisplayedTransform[p] = Number(pObj.transform) || 0;
@@ -5394,6 +5774,11 @@ function updateUI() {
                 trackContainer.classList.add('endpoint-crackle');
                 window.setTimeout(() => trackContainer.classList.remove('endpoint-crackle'), 850);
                 playSubmissionCrackleSound();
+            } else if (lastDisplayedSubmission !== null && lastDisplayedSubmission !== rawSubmission) {
+                playSound("sub");
+            }
+            if (lastDisplayedSubmission !== null && lastDisplayedSubmission !== rawSubmission) {
+                showStatDelta(trackContainer, rawSubmission - lastDisplayedSubmission, "⛓️");
             }
         }
         lastDisplayedSubmission = rawSubmission;
@@ -5441,6 +5826,11 @@ function updateUI() {
     }
     
     document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
+    const boardEl = document.querySelector(".board");
+    if (boardEl) {
+        boardEl.classList.toggle("phase-rolling", gameState.phase === "rolling");
+        boardEl.classList.toggle("phase-shop", gameState.phase === "shop");
+    }
     
     document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
     
@@ -5472,6 +5862,7 @@ function updateUI() {
     renderLog();
     renderTurnHistory();
     setGameLogVisible(localShowGameLog);
+    updateOnlineStatusUI();
 	if (gameState.gameEnded) {
 		presentFinishedGame();
 		return;
@@ -5502,10 +5893,15 @@ function renderDiceAndActions(isHumanTurn) {
         if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
             if (diceAnimating.size) return;
             die.kept = !die.kept;
-            playSound("lock");
+            playSound(die.kept ? "lock" : "unlock");
+            triggerHaptic(die.kept ? "lock" : "unlock");
             syncToFirebase();
             updateUI();
         };
+        // CPU telegraph: briefly emphasize locked dice before the AI rerolls.
+        if (cpuTelegraphActive && die.kept && gameState.activePlayer === 2) {
+            div.classList.add("cpu-telegraph");
+        }
         dc.appendChild(div);
     });
 
@@ -5535,11 +5931,15 @@ function renderMarket() {
         if (hasCard(gameState.activePlayer, 29)) displayCost = Math.max(0, displayCost - 1);
         if (hasCard(gameState.activePlayer, 28) && !activeP.boughtCardThisTurn) displayCost = Math.max(0, displayCost - 2);
         if (gameState.freeBuyActive) displayCost = 0;
-        
+
         const alreadyOwned = inventoryHasName(activeP, card.name);
-		let btnDisabled = !isHumanTurn || activeP.energy < displayCost || gameState.phase !== "shop" || alreadyOwned ? "disabled" : "";
+        const canAfford = activeP.energy >= displayCost || gameState.freeBuyActive;
+        const purchasable = isHumanTurn && gameState.phase === "shop" && canAfford && !alreadyOwned;
+        const affordClass = alreadyOwned ? "already-owned" : (canAfford ? "can-afford" : "cannot-afford");
+        let btnDisabled = purchasable ? "" : "disabled";
+        const reject = !purchasable && isHumanTurn && gameState.phase === "shop" ? ` onclick="rejectMarketCard(this)"` : "";
         mc.innerHTML += `
-            <div class="card">
+            <div class="card ${affordClass}"${reject}>
                 <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
                 <div class="card-type">${card.type}</div>
                 <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
@@ -5561,6 +5961,10 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
     if (cardResolvedThisTurn instanceof Set) cardResolvedThisTurn.add(`${Number(playerId)}:${Number(cardId)}`);
     const cardName = card?.name || (typeof KNOWN_CARDS !== "undefined" ? (KNOWN_CARDS.find(c => Number(c.id) === Number(cardId)) || {}).name : "") || `Card ${cardId}`;
     pendingCardTriggerNotices.push({ playerId: Number(playerId), playerName: p.name || `Player ${playerId}`, cardId: Number(cardId), cardName, detail, kind });
+    // Last-effect ticker: only for the local human's own triggers on their turn.
+    if (isLocalPlayerTurn() && Number(playerId) === Number(gameState.activePlayer)) {
+        setLastEffectTicker(cardName, detail);
+    }
     if (cardTriggerFlushTimer) return;
     cardTriggerFlushTimer = setTimeout(() => {
         cardTriggerFlushTimer = null;
@@ -5572,6 +5976,7 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
             if (!seen.has(k)) { seen.add(k); unique.push(n); }
         });
         renderCardTriggerToast(unique);
+        if (unique.length) playSound("trigger");
         // Animate only cards that actually triggered in this batch. No timer-based
         // reapplication during ordinary inventory redraws (e.g. clicking dice).
         const animated = new Set();
@@ -5924,7 +6329,7 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
         const transformCount = rolls.filter(face => face === "👁️ TRANSFORM").length;
         const rollLabels = rolls.map(face => face.split(" ")[0]);
         log(`Transformation Sigil rolls: ${rollLabels.join(" and ")}.`);
-        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p><button onclick="closePopup()">Continue</button>`);
+        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p>`);
         if (transformCount >= 1) {
             finalAmount = Math.max(0, finalAmount - 1);
             queueCardTrigger(targetPlayerId, 59, "Reduced incoming transformation by 1");
@@ -6336,8 +6741,10 @@ function startTurn() {
         showTurnAlert(alteredStateMessage, gameState.activePlayer);
     }
 
+    clearLastEffectTicker();
     syncToFirebase();
-    updateUI(); 
+    updateUI();
+    playSound(gameState.activePlayer === 1 ? "turn1" : "turn2");
     if (gameState.activePlayer === 2 && gameState.gameMode === "solo") setTimeout(executeCPUTurn, 1000);
 }
 
@@ -6500,6 +6907,7 @@ async function resolveDice() {
     // In online mode, only the active local player executes dice resolution
     if (gameState.gameMode === "online" && !isLocalPlayerTurn()) return;
     playSound("resolve");
+    triggerHaptic("resolve");
 
     gameState.phase = "shop";
     
@@ -6518,15 +6926,16 @@ async function resolveDice() {
     activeP.energy = activeP.energy || 0;
 
     if (hasCard(activePlayerNum, 55)) {
-        const keptTransform = gameState.dice.some(d => d && d.kept && d.face === "👁️ TRANSFORM");
-        if (!keptTransform) {
+        // “Kept” means the dice remaining at the end of the roll sequence, not only dice locked against rerolls.
+        const finalRollHasTransform = gameState.dice.some(d => d && d.face === "👁️ TRANSFORM");
+        if (!finalRollHasTransform) {
             const lost = Math.min(3, activeP.energy);
             activeP.energy = Math.max(0, activeP.energy - 3);
-            queueCardTrigger(activePlayerNum, 55, `Lost ${lost} ⚡ for not keeping an 👁️ die`);
-            log(`Transformation Ritual: no 👁️ die was kept; lost ${lost} ⚡.`);
+            queueCardTrigger(activePlayerNum, 55, `Lost ${lost} ⚡ because no 👁️ die remained in the final roll`);
+            log(`Transformation Ritual: no 👁️ die remained in the final dice; lost ${lost} ⚡.`);
         } else {
-            queueCardTrigger(activePlayerNum, 55, "Kept an 👁️ die; avoided the Energy penalty");
-            log("Transformation Ritual: kept an 👁️ die; no Energy penalty.");
+            queueCardTrigger(activePlayerNum, 55, "An 👁️ die remained in the final dice; avoided the Energy penalty");
+            log("Transformation Ritual: an 👁️ die remained in the final dice; no Energy penalty.");
         }
     }
     oppP.trance = oppP.trance || 0;
@@ -6569,6 +6978,7 @@ async function resolveDice() {
 		let tPush = counts.SPIRAL;
 		if (!oppP.shieldActive && hasCard(activePlayerNum, 0)) {
 			tPush += 1;
+			queueCardTrigger(activePlayerNum, 0, "trance +1");
 			log("Deep Gaze deepened Trance by 1 more!");
 		}
 		if (increaseTrance(oppP, tPush, activePlayerNum)) log(`${oppP.name}'s trance deepens +${tPush} 🌀.`);
@@ -6790,6 +7200,8 @@ function wipeMarket() {
         syncToFirebase();
         updateUI();
         log(`Market Wiped. New cards: ${market.map(card => card && card.name).filter(Boolean).join(", ") || "none"}`);
+    } else {
+        playSound("deny");
     }
 }
 
@@ -6896,12 +7308,13 @@ function buyCard(index) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
 
     if (inventoryHasName(p, card.name)) {
+        playSound("deny");
         log(`${p.name} already has ${card.name}.`);
         return false;
     }
 
     let cost = getCardPurchaseCost(card, playerId);
-    if (p.energy < cost) return false;
+    if (p.energy < cost) { playSound("deny"); return false; }
     if (hasCard(playerId, 29)) cardResolvedThisTurn.add(`${playerId}:29`);
     if (hasCard(playerId, 28) && !p.boughtCardThisTurn) cardResolvedThisTurn.add(`${playerId}:28`);
 
@@ -6952,6 +7365,7 @@ function buyAction(type, pId) {
 function endTurn() {
     if (isChoicePending()) {
         if (gameState.activePlayer === 2 && gameState.gameMode === "solo") endTurnAfterChoice = true;   // CPU is done: end its turn as soon as you pick
+        playSound("deny");
         nudgeChoiceDialog(); return;
     }
     endTurnAfterChoice = false;
@@ -7063,11 +7477,20 @@ function executeCPUTurn() {
         log("CPU used Rapid Pulse! Shielded incoming Trance and Arousal!");
     }
 
+    let cpuBusy = false; // prevents overlapping telegraph/reroll steps inside the interval
     let rInterval = setInterval(() => {
-        
+        if (cpuBusy) return;
         if (gameState.rerollsLeft > 0) {
+            // Telegraph: lock dice, show which ones the CPU kept, then pause before rolling.
             cpuChooseDiceToKeep();
-            rollDiceAction();
+            cpuTelegraphActive = true;
+            updateUI();
+            cpuBusy = true;
+            setTimeout(() => {
+                cpuTelegraphActive = false;
+                rollDiceAction();
+                cpuBusy = false;
+            }, 400);
         } else {
 			let transformCount = gameState.dice.filter(d => d.face === "👁️ TRANSFORM").length;
 			if (cpuShouldUseFadingReality(transformCount)) {
@@ -7381,6 +7804,7 @@ function presentFinishedGame() {
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
+    playSound("win");
     const challengeMatch = challengeActive && gameState.gameMode === "solo";
     if (challengeMatch) handleChallengeMatchEnded(winnerId);
     const challengeContinue = document.getElementById("go-challenge-continue");
@@ -7425,8 +7849,12 @@ function presentFinishedGame() {
         if (e) e.classList.remove("active-portrait-glow-p1", "active-portrait-glow-p2");
     });
 
+    lastCinematicLoserId = p1Wins ? 2 : 1;
+    const replayBtn = document.getElementById("go-replay-cinematic");
+    if (replayBtn) replayBtn.style.display = ENABLE_FINAL_TRANSFORMATION_CINEMATIC ? "inline-block" : "none";
+
     if (ENABLE_FINAL_TRANSFORMATION_CINEMATIC) {
-        playFinalTransformationCinematic(p1Wins ? 2 : 1).finally(() => {
+        playFinalTransformationCinematic(lastCinematicLoserId).finally(() => {
             gameOverModal.style.display = "flex";
         });
     } else {
@@ -7546,17 +7974,17 @@ const HELP_CONTENT = {
     quick: `
         <div class="help-section">
             <h3>Objective</h3>
-            <p><strong>Completely transform your opponent before they transform you to win.</strong> There are 10 stages of transformation: when your move pushes the opponent to 10+, you win.</p>
+            <p><strong><strong>Completely transform your opponent before they transform you.</strong> There are 10 stages of transformation. When your move pushes them to 10 or beyond, you win. Their body becomes yours to rewrite.</p>
         </div>
         <div class="help-section">
             <h3>Your Turn</h3>
             <div class="help-grid">
-                <div class="help-box"><strong>1. Roll</strong><br>Roll all available dice.</div>
-                <div class="help-box"><strong>2. Keep</strong><br>Click dice to lock the ones you want to keep.</div>
-                <div class="help-box"><strong>3. Reroll</strong><br>Roll the unkept dice again while you have rerolls remaining.</div>
-                <div class="help-box"><strong>4. Resolve</strong><br>Resolve the final dice to apply their effects.</div>
-                <div class="help-box"><strong>5. Shop</strong><br>Spend Energy on cards and/or clear the card market. You may buy multiple cards if you can afford them.</div>
-                <div class="help-box"><strong>6. End Turn</strong><br>Finish the shop phase and pass play to the other player unless an effect grants another turn.</div>
+                <div class="help-box"><strong>1. Roll</strong><br>Roll all available dice. Chance is the first language of suggestion.</div>
+                <div class="help-box"><strong>2. Keep</strong><br>Click dice to lock the faces you want to keep. What you hold, you keep.</div>
+                <div class="help-box"><strong>3. Reroll</strong><br>Roll the unkept dice again while you still have rerolls. High arousal makes the mind slower to refuse.</div>
+                <div class="help-box"><strong>4. Resolve</strong><br>Resolve the final dice. Individual faces and powerful combinations both land.</div>
+                <div class="help-box"><strong>5. Shop</strong><br>Spend Energy on cards or wipe the market. You may buy multiple cards if you can afford them.</div>
+                <div class="help-box"><strong>6. End Turn</strong><br>Finish the shop phase and pass play unless an effect grants another turn.</div>
             </div>
         </div>
 		<div class="help-section">
@@ -7594,11 +8022,11 @@ const HELP_CONTENT = {
         <div class="help-section">
             <h3>The Six Dice</h3>
             <p>🌀 Trance &nbsp; 💧 Lucidity &nbsp; ⚡ Energy &nbsp; ⛓️ Submission &nbsp; 🔥 Arousal &nbsp; 👁️ Transform</p>
-            <p>Most dice have an individual effect. Matching 3 or more of ⛓️ or 👁️ can create a stronger combination effect.</p>
+            <p>Most dice have an individual effect. Matching 3 or more of ⛓️ or 👁️ creates a stronger combination effect that can push the body or mind further under.</p>
         </div>
         <div class="help-section">
             <h3>First Strategy Tip</h3>
-            <p>Energy buys cards, while Transform is how you actually finish the opponent. Early in a game, decide whether your roll is better used for Energy, pressure, or building a useful combination.</p>
+            <p>Energy buys the card powers that let you rewrite your opponent. Transform is how you finish the job. Early on, decide whether your roll is better spent building resources, applying pressure, or setting up a combination that leaves them soft and open.</p>
         </div>
         <div class="help-section" style="text-align:center;">
             <button onclick="startGuidedTutorial(false)" style="max-width:320px; margin:auto;">Start Guided Tutorial</button>
@@ -7607,33 +8035,33 @@ const HELP_CONTENT = {
     rules: `
         <div class="help-section">
             <h3>Objective: The Final Transformation</h3>
-            <p>Each player is trying to <strong>Completely transform the opponent to a target</strong>. The player whose opponent is completely transformed through the 10 stages of transformation first is the winner. If both players are completely transformed during the same active turn/effect, the active player wins the tie.</p>
+            <p>Each player is trying to <strong>Completely transform the opponent to a target shape</strong>. The player whose opponent is completely transformed through the 10 stages of transformation first is the winner. If both players are completely transformed during the same active turn/effect, the active player takes the victory.</p>
         </div>
         <div class="help-section">
             <h3>The Ritual of Each Turn</h3>
             <ol>
-                <li><strong>Rolling phase:</strong> roll, lock useful dice, and reroll unkept dice.</li>
+                <li><strong>Rolling phase:</strong> roll, lock useful dice, and reroll the rest while you still can.</li>
                 <li><strong>Resolve:</strong> apply the final roll's individual effects and combinations.</li>
                 <li><strong>Shop phase:</strong> buy cards or clear the market.</li>
-                <li><strong>End Turn:</strong> end-of-turn effects resolve before the next player's turn.</li>
+                <li><strong>End Turn:</strong> end-of-turn effects resolve before the next player's turn begins.</li>
             </ol>
         </div>
         <div class="help-section">
             <h3>The Pendulum of Submission</h3>
-            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations to the player on that end. They are ready to obey your suggestions again and again.</p>
-            <p>At Submission 3 or more, a roll of ⛓️ produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of push.</p>
+            <p>Each side of the track has five steps. Having the track marker on your side means you are more submissive and open to being manipulated: it is not good for you. A sufficiently strong Submission roll pushes the track towards the opponent. Pushing beyond an endpoint overflows into Transformations: they obey, and their body changes to match.</p>
+            <p>A roll of 3 or more ⛓️ faces produces <strong>1 + (number of ⛓️ beyond the first three)</strong> points of submission towards the opponent.</p>
         </div>
         <div class="help-section">
             <h3>Trance 🌀</h3>
-            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You get to choose whether they are more submissive (+2) or more aroused (+2). Then they wake up with 0 Trance again.</p>
+            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You choose whether they are more submissive (+2) or more aroused (+2). Then they surface with 0 Trance again... temporarily.</p>
         </div>
         <div class="help-section">
             <h3>Arousal 🔥 & Rerolls</h3>
-            <p>Two 🔥 dice produce 1 Arousal. Each one after produces one more. So 3 🔥 produce 2, 4 🔥 produce 3, etc., etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. Some cards add rerolls or other modifiers.</p>
+            <p>Two 🔥 dice produce 1 Arousal; each additional 🔥 adds one more. So 3 🔥 produce 2, 4 🔥 produce 3, etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. A heated mind is a slower mind. Some cards add rerolls or other modifiers.</p>
         </div>
         <div class="help-section">
             <h3>Transform 👁️</h3>
-            <p>Three 👁️ dice produce 1 Transformation of the opponent, with each additional 👁️ adding another point. Cards can increase the number of Transformations. Transforming the opponent to 10+ ends the game in your favor.</p>
+            <p>Three 👁️ dice produce 1 Transformation of the opponent, with each additional 👁️ adding another point. Cards can increase the number of Transformations. Transforming the opponent to 10 ends the game in your favor. Their body becomes the final statement.</p>
         </div>
         <div class="help-section">
             <h3>Energy ⚡</h3>
@@ -7641,7 +8069,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Lucidity 💧</h3>
-            <p>💧 Lucidity lets you reduce your own Trance, Arousal, and—when applicable—Vulnerability. <i>Deep Safeties</i> adds 1 extra point to spend. If the opponent has <i>Burning Intensity</i>, each Arousal point you remove costs 2💧. Human players distribute Lucidity manually in the allocation dialog.</p>
+            <p>💧 Lucidity lets you reduce your own Trance, Arousal, and — when applicable — Vulnerability. <i>Deep Safeties</i> adds 1 extra point to spend. If the opponent has <i>Burning Intensity</i>, each Arousal point you remove costs 2💧. Human players distribute Lucidity manually in the allocation dialog.</p>
         </div>
         <div class="help-section">
             <h3>Vulnerability</h3>
@@ -7766,7 +8194,7 @@ function renderHelpCards(filter = '') {
 const GUIDED_TUTORIAL_STEPS = [
     {
         title: 'Welcome to Hypnotic Duel',
-        body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. This is a practice game. You will make a few actions here so you can see how the controls work.</p>',
+        body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. This is a practice game. You will make a few actions here so you can see how the controls work... and how the pressure builds.</p>',
         target: null, position: 'bottom', actionGate: 'none'
     },
     {
@@ -7776,12 +8204,12 @@ const GUIDED_TUTORIAL_STEPS = [
     },
     {
         title: '2. Lock and Unlock Dice',
-        body: '<p>Now practice controlling your roll. Click two or three dice to <strong>lock</strong> them. Locked dice will stay in place when you reroll.</p><p>Then click one of those dice again to <strong>unlock</strong> it. Leave at least one die unlocked for the next step.</p>',
+        body: '<p>Practice controlling your roll. Click two or three dice to <strong>lock</strong> them. Locked dice will stay in place when you reroll.</p><p>Then click one of those dice again to <strong>unlock</strong> it. Leave at least one die unlocked for the next step.</p>',
         target: '#dice-container', position: 'top', actionGate: 'dice'
     },
     {
         title: '3. Reroll the Unlocked Dice',
-        body: '<p>Only unlocked dice are rerolled. Click <strong>Roll Unkept Dice</strong> once and watch the unlocked dice change while your locked dice stay put.</p><p>Your available rerolls are shown above the dice.</p>',
+        body: '<p>Only unlocked dice are rerolled. Click <strong>Roll Unkept Dice</strong> once and watch the unlocked dice change while your locked dice stay put.</p><p>Your available rerolls are shown above the dice. High arousal makes those rerolls harder to come by, so keep your libdo in check.</p>',
         target: '#btn-roll', position: 'top', actionGate: 'reroll'
     },
     {
@@ -7791,22 +8219,22 @@ const GUIDED_TUTORIAL_STEPS = [
     },
     {
         title: '5. Build Your Resources',
-        body: '<p>After the roll resolves, your resources change. ⚡ Energy buys cards. 🌀 Trance pressures your opponent. 💧 Lucidity protects you. ⛓️ Submission moves the Submission track. 🔥 Arousal affects how many rerolls the opponent is allowed. 👁️ Transform is your main offensive path to victory.</p>',
+        body: '<p>After the roll resolves, your resources change. ⚡ Energy buys cards. 🌀 Trance pressures your opponent. 💧 Lucidity protects you. ⛓️ Submission moves the Submission track. 🔥 Arousal affects how many rerolls the opponent is allowed. 👁️ Transform is your main path to victory.</p>',
         target: '#p1-energy', position: 'top', actionGate: 'none'
     },
     {
         title: '6. Buy Cards',
-        body: '<p>The three cards in the <strong>Market</strong> are available during the Shop phase. You may buy multiple cards if you have enough Energy; each purchase immediately refills that market slot.</p><p><strong>Keep</strong> cards remain active and appear in your Active Cards area. <strong>Instant</strong> cards resolve immediately and are then discarded. You may not have two Keep cards with the same name in your inventory.</p>',
+        body: '<p>The three cards in the <strong>Market</strong> are available during the Shop phase. You may buy multiple cards if you have enough Energy; each purchase immediately refills that market slot.</p><p><strong>Keep</strong> cards remain active and appear in your Active Cards area. <strong>Instant</strong> cards resolve immediately and are then discarded. You may not have two Keep cards with the same name.</p>',
         target: '#market-container', position: 'bottom', actionGate: 'none'
     },
     {
         title: '7. The Submission Track',
-        body: '<p>The Submission track runs from -5 to +5. Positive values favor Player 1; negative values favor Player 2.</p><p>Strong Submission effects push the track. If you push beyond an endpoint, the overflow becomes Transform damage against the player on that side.</p>',
+        body: '<p>The Submission track has five nodes on each side. Nodes to the left mean Player 1 is more submissive and Player 2 is dominant. Nodes to the right are the opposite.</p><p>Strong Submission effects push the track. If you push beyond an endpoint, the overflow becomes Transformations against the player on that side; they obey, and their body changes.</p>',
         target: '#submission-track', position: 'bottom', actionGate: 'none'
     },
     {
         title: '8. Watch Your Active Cards',
-        body: '<p>Your active <strong>Keep</strong> cards appear in the Active Cards area. Some add dice, rerolls, defensive effects, or stronger dice results. Others provide special abilities during particular phases.</p>',
+        body: '<p>Your active <strong>Keep</strong> cards appear in the Active Cards area. Some add dice, rerolls, defensive effects, or stronger dice results. Others provide special abilities during particular phases. They are the lasting suggestions that stay with you.</p>',
         target: '#p1-inventory', position: 'top', actionGate: 'none'
     },
     {
@@ -7816,7 +8244,7 @@ const GUIDED_TUTORIAL_STEPS = [
     },
     {
         title: '10. Win the Duel',
-        body: '<p>Keep applying pressure until you Transform your opponent to <strong>10 or more</strong>.</p><p>Cards, dice combinations, Submission overflow, Energy actions, and other effects can all contribute to the final push.</p><p>You are ready to play!</p>',
+        body: '<p>Keep applying pressure until you Transform your opponent to <strong>10 or more</strong>.</p><p>Cards, dice combinations, Submission overflow, Energy actions, and other effects can all contribute to the final push. Their body (or tragically, yours) becomes the proof.</p><p>You are ready to play!</p>',
         target: null, position: 'top', actionGate: 'none'
     }
 ];
