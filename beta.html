@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.1</title>
+    <title>Hypnotic Duel - Beta V20261017.3</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -324,13 +324,37 @@
         .board.phase-rolling .market-row { opacity: .72; filter: saturate(.75); }
         .board.phase-shop .dice-container,
         .board.phase-shop .actions-grid { opacity: .62; filter: saturate(.8); }
-        .board.phase-rolling .turn-status-block::after,
-        .board.phase-shop .turn-status-block::after {
-            display: block; text-align: center; margin-top: 2px;
-            font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: #b9a8ca;
+        /* Permanent phase cue under the market — fixed height so layout never jumps. */
+        .phase-cue {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 2.35em; margin: 10px 0 2px; padding: 7px 14px;
+            border-radius: 8px; box-sizing: border-box;
+            border: 1px solid transparent;
+            background: rgba(30, 24, 40, .55);
+            font-family: var(--font-display);
+            font-size: .92rem; font-weight: 700;
+            letter-spacing: .16em; text-transform: uppercase;
+            color: #cfc0e4; text-align: center;
+            transition: color 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
         }
-        .board.phase-rolling .turn-status-block::after { content: "Keep or reroll"; }
-        .board.phase-shop .turn-status-block::after { content: "Spend energy"; }
+        .board.phase-rolling .phase-cue {
+            color: #7dd8f7;
+            border-color: rgba(76, 201, 240, .55);
+            background: linear-gradient(180deg, rgba(76, 201, 240, .14), rgba(30, 24, 40, .5));
+            box-shadow: 0 0 14px rgba(76, 201, 240, .18), inset 0 0 10px rgba(76, 201, 240, .06);
+        }
+        .board.phase-shop .phase-cue {
+            color: #e0b8ff;
+            border-color: rgba(157, 78, 221, .55);
+            background: linear-gradient(180deg, rgba(157, 78, 221, .16), rgba(30, 24, 40, .5));
+            box-shadow: 0 0 14px rgba(157, 78, 221, .2), inset 0 0 10px rgba(157, 78, 221, .07);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .phase-cue { transition: none; }
+        }
+        @media (max-width: 480px) {
+            .phase-cue { font-size: .78rem; letter-spacing: .12em; min-height: 2.15em; padding: 6px 10px; }
+        }
         .board > .panel.turn-owner-p1 { box-shadow: inset 0 2px 0 var(--player); }
         .board > .panel.turn-owner-p2 { box-shadow: inset 0 2px 0 var(--cpu); }
         .board.awaiting-opponent #actions-grid button,
@@ -1165,8 +1189,9 @@
                     <h2 id="go-p2-name">CPU</h2><div class="image-stub" id="go-p2-image"></div><div id="go-p2-status" style="font-weight: bold; font-size: 1.2em;"></div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
                 <button class="start-btn" onclick="recDownload()" style="margin-top: 0; background: #2a9d8f !important;">💾 Download Game Log</button>
+                <button class="start-btn" id="go-replay-cinematic" onclick="replayLastCinematic()" style="margin-top: 0; background: #5a3d7a !important;">▶ Replay Cinematic</button>
                 <button class="start-btn" id="go-play-again" onclick="location.reload()" style="margin-top: 0;">Play Again</button>
                 <button class="start-btn" onclick="closeGameOverToBoard()" style="margin-top: 0; background: #666 !important;">View Board</button>
                 <button class="start-btn" id="go-challenge-continue" onclick="continueFromChallengeGameOver()" style="display:none;margin-top:0;background:#7b2cbf !important;">✦ Continue Challenge</button>
@@ -1322,6 +1347,9 @@
                 <button onclick="wipeMarket()" id="btn-wipe-market" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Wipe Row (2⚡)</button>
             </div>
             <div class="market-row" id="market-container"></div>
+            <div id="phase-cue" class="phase-cue" role="status" aria-live="polite">
+                <span id="phase-cue-text">Keep or reroll</span>
+            </div>
             <div class="choice-dialog" id="choice-dialog"></div>
             <div id="card-trigger-toast" role="status" aria-live="polite"></div>
 
@@ -1516,13 +1544,14 @@ let gameState = {
     p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, burningUpPending: 0 },
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
     dice: Array(6).fill({ face: "-", kept: false }),
-    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
+    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false, endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
 	log: [] // Store log messages here
 };
 
 let onlineRoomId = "";
 let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
 let isSyncingFromFirebase = false;
+let localForfeitPending = false;
 let onlineConnectionState = "idle"; // idle | connecting | connected | disconnected
 let lastCinematicLoserId = null; // for game-over "Replay Cinematic"
 let cpuTelegraphActive = false; // true while CPU kept dice are highlighted before a reroll
@@ -3437,11 +3466,106 @@ function closeOptionsModal() {
     // The setup dialog remains open behind Options when launched from setup.
 }
 
+
 function confirmResetGame() {
-    if (window.confirm("Reset Hypnotic Duel and return to the setup screen? The current match will be lost.")) {
+    const isActiveOnlineGame =
+        gameState &&
+        gameState.gameMode === "online" &&
+        onlineRoomId &&
+        !gameState.gameEnded &&
+        gameState.phase !== "waiting";
+
+    if (isActiveOnlineGame) {
+        const confirmed = window.confirm(
+            "Forfeit this online match?\n\n" +
+            "If you proceed, your opponent will be declared the winner " +
+            "and will see your final transformation. This cannot be undone."
+        );
+
+        if (confirmed) {
+            forfeitOnlineGameAndExit();
+        }
+        return;
+    }
+
+    if (window.confirm(
+        "Reset Hypnotic Duel and return to the setup screen? " +
+        "The current match will be lost."
+    )) {
         window.location.reload();
     }
 }
+
+async function forfeitOnlineGameAndExit() {
+    if (
+        !window.db ||
+        !window.dbRef ||
+        !window.dbUpdate ||
+        !onlineRoomId
+    ) {
+        window.alert(
+            "Unable to submit the forfeit because the online server " +
+            "is unavailable. Your game has not been reset."
+        );
+        return;
+    }
+
+    const quitterId = Number(onlineLocalRole);
+    if (![1, 2].includes(quitterId)) return;
+
+    const quitter = quitterId === 1 ? gameState.p1 : gameState.p2;
+    const previous = {
+        gameEnded: gameState.gameEnded,
+        endReason: gameState.endReason,
+        forfeitingPlayerId: gameState.forfeitingPlayerId,
+        forfeitWinnerId: gameState.forfeitWinnerId,
+        transform: quitter.transform
+    };
+
+    // Prevent this browser from presenting the opponent's victory cinematic.
+    localForfeitPending = true;
+
+    gameState.endReason = "forfeit";
+    gameState.forfeitingPlayerId = quitterId;
+    gameState.forfeitWinnerId = quitterId === 1 ? 2 : 1;
+    gameState.gameEnded = true;
+
+    // The cinematic ends at the fully transformed stage.
+    quitter.transform = 10;
+
+    const base = `games/${onlineRoomId}/gameState`;
+    const updates = {};
+
+    updates[`${base}/endReason`] = "forfeit";
+    updates[`${base}/forfeitingPlayerId`] = quitterId;
+    updates[`${base}/forfeitWinnerId`] = gameState.forfeitWinnerId;
+    updates[`${base}/gameEnded`] = true;
+    updates[`${base}/p${quitterId}/transform`] = 10;
+
+    try {
+        // One atomic update ensures the opponent cannot receive a
+        // game-ended result without the accompanying forfeit details.
+        await window.dbUpdate(window.dbRef(window.db), updates);
+
+        // Return the quitting player to the main setup screen.
+        window.location.reload();
+    } catch (error) {
+        console.error("Failed to submit online forfeit:", error);
+
+        gameState.gameEnded = previous.gameEnded;
+        gameState.endReason = previous.endReason;
+        gameState.forfeitingPlayerId = previous.forfeitingPlayerId;
+        gameState.forfeitWinnerId = previous.forfeitWinnerId;
+        quitter.transform = previous.transform;
+        localForfeitPending = false;
+
+        window.alert(
+            "The forfeit could not be sent to the server. " +
+            "Please check your connection and try again."
+        );
+    }
+}
+
 
 function initializeGame() {
     const soundOption = document.getElementById("sound-effects-option");
@@ -3666,6 +3790,13 @@ function listenToFirebase(roomId) {
 
             if (!gameState.log) gameState.log = [];
             if (!Array.isArray(gameState.log)) gameState.log = Object.values(gameState.log);
+			if (
+				localForfeitPending &&
+				gameState.endReason === "forfeit" &&
+				Number(gameState.forfeitingPlayerId) === Number(onlineLocalRole)
+			) {
+				return;
+			}
 
             updateUI();
         } catch (err) {
@@ -3878,7 +4009,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.1"; // Update this label for each release.
+const GAME_VERSION = "20261017.3"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -5489,7 +5620,14 @@ async function playFinalTransformationCinematic(loserId) {
 		}
 	}
     const targetArticle = /^[AEIOU]/i.test(String(displayForm).trim()) ? "an" : "a";
-    const finalCaption = `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;
+    const isForfeit =
+		gameState.endReason === "forfeit" &&
+		Number(gameState.forfeitingPlayerId) === Number(loserId);
+
+	const finalCaption = isForfeit
+		? `${loser.name}'s resistance finally crumbles before ${winner.name}. ` +
+		`“I surrender. I forfeit. I can't fight you any longer.”`
+		: `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;
     const overlay = document.getElementById("final-transform-cinematic");
     const portrait = document.getElementById("cinematic-avatar");
     const caption = document.getElementById("cinematic-caption");
@@ -5516,7 +5654,11 @@ async function playFinalTransformationCinematic(loserId) {
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     void overlay.offsetWidth;
     overlay.classList.add("cinematic-enter");
-    if (caption) caption.textContent = `${playerDisplayName(loser)} — transformation begins`;
+    if (caption) {
+		caption.textContent = isForfeit
+			? `${playerDisplayName(loser)} — their resistance finally breaks`
+			: `${playerDisplayName(loser)} — transformation begins`;
+	}
     if (counterWrap) counterWrap.style.display = "block";
 
     const stagePath = stage => `images/avatars/${loser.name}/${loser.name}_to_${loser.transformTarget}_${Math.min(10, Math.max(0, Number(stage) || 0))}.jpg`;
@@ -5557,7 +5699,15 @@ async function playFinalTransformationCinematic(loserId) {
         } else {
             overlay.classList.add("cinematic-shimmer");
             if (stage >= 8) overlay.classList.add("cinematic-intense");
-            if (caption) caption.textContent = stage >= 8 ? "The final changes take hold…" : "Transformation in progress…";
+            if (caption) {
+				caption.textContent = isForfeit
+					? (stage >= 8
+						? "Their last defenses collapse…"
+						: "Their resolve is fading…")
+					: (stage >= 8
+						? "The final changes take hold…"
+						: "Transformation in progress…");
+			}
         }
         await cinematicWait(stage === 10 ? (reducedMotion ? 180 : 1050) : stageDelay);
     }
@@ -5582,8 +5732,10 @@ async function playFinalTransformationCinematic(loserId) {
         waitingForContinue = true;
         await new Promise(resolve => { continueCinematic = resolve; });
         waitingForContinue = false;
-        skipButton.textContent = "Skip to Final";
-    }
+        skipButton.textContent = isForfeit
+			? "Return to Main Screen"
+			: "Continue";
+	}
     overlay.style.display = "none";
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     portrait.classList.remove("is-fading");
@@ -5830,6 +5982,10 @@ function updateUI() {
     if (boardEl) {
         boardEl.classList.toggle("phase-rolling", gameState.phase === "rolling");
         boardEl.classList.toggle("phase-shop", gameState.phase === "shop");
+        const phaseCueText = document.getElementById("phase-cue-text");
+        if (phaseCueText) {
+            phaseCueText.textContent = gameState.phase === "shop" ? "Spend energy" : "Keep or reroll";
+        }
     }
     
     document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
@@ -7791,11 +7947,24 @@ function syncFinalBoardPortrait(playerId) {
 
 function winnerIdFromState() {
     if (!gameState || !gameState.p1 || !gameState.p2) return null;
+
+    // A forfeit takes precedence over normal transformation scoring.
+    if (gameState.endReason === "forfeit") {
+        const quitter = Number(gameState.forfeitingPlayerId);
+
+        if (quitter === 1) return 2;
+        if (quitter === 2) return 1;
+    }
+
     const p1Transformed = Number(gameState.p1.transform) >= 10;
     const p2Transformed = Number(gameState.p2.transform) >= 10;
-    if (p1Transformed && p2Transformed) return Number(gameState.activePlayer) === 2 ? 2 : 1;
+
+    if (p1Transformed && p2Transformed) {
+        return Number(gameState.activePlayer) === 2 ? 2 : 1;
+    }
     if (p1Transformed) return 2;
     if (p2Transformed) return 1;
+
     return null;
 }
 
@@ -7852,13 +8021,23 @@ function presentFinishedGame() {
     lastCinematicLoserId = p1Wins ? 2 : 1;
     const replayBtn = document.getElementById("go-replay-cinematic");
     if (replayBtn) replayBtn.style.display = ENABLE_FINAL_TRANSFORMATION_CINEMATIC ? "inline-block" : "none";
+	const isForfeit = gameState.endReason === "forfeit";
 
     if (ENABLE_FINAL_TRANSFORMATION_CINEMATIC) {
         playFinalTransformationCinematic(lastCinematicLoserId).finally(() => {
+			if (isForfeit) {
+				window.location.reload();
+				return;
+			}
             gameOverModal.style.display = "flex";
         });
     } else {
-        gameOverModal.style.display = "flex";
+		if (isForfeit) {
+			window.location.reload();
+		}
+		else {
+			gameOverModal.style.display = "flex";
+		}
     }
 }
 
