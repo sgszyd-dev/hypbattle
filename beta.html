@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.5.2</title>
+    <title>Hypnotic Duel - Beta V20261017.5.5</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -982,6 +982,7 @@
 	  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 	  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 	  import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+	  import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js";
 
 	  // Initialize Firebase & Auth
 	  //const app = initializeApp(firebaseConfig);
@@ -1003,9 +1004,25 @@
 		try {
 	  
 			const app = initializeApp(firebaseConfig);
+			const analytics = getAnalytics(app);
+			
+			// Enable debug Mode for localhost testing
+			if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+				self.FIREBASE_APPCHECK_EXECUTE_IN_DEBUG_MODE = true;
+			}
+			
+			//alert(location.hostname + " :: " + self.FIREBASE_APPCHECK_EXECUTE_IN_DEBUG_MODE);
+			
+			// Initialize App Check with reCAPTCHA Enterprise
+			const appCheck = initializeAppCheck(app, {
+				provider: new ReCaptchaEnterpriseProvider('6LfXI_QtAAAAAJc6m9adK_XelXZh_s5a8fvynoCR'),
+				isTokenAutoRefreshEnabled: true
+			});
+			
 			const auth = getAuth(app);
 			
-			const analytics = getAnalytics(app);
+			
+			
 			const db = getDatabase(app);
 			window.firebaseAuthReady = false;
 			//window.firebaseReady = true;
@@ -4043,7 +4060,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.5.2"; // Update this label for each release.
+const GAME_VERSION = "20261017.5.4"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
