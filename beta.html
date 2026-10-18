@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.5.6</title>
+    <title>Hypnotic Duel - Beta V20261017.5.7</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -83,6 +83,29 @@
         .option-row { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:9px 0; }
         .option-row label { font-weight:normal; }
         .option-row select { min-width:170px; max-width:55%; }
+		.music-volume-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			min-width: 170px;
+			max-width: 55%;
+		}
+		.music-volume-controls input[type="range"] {
+			flex: 1;
+			min-width: 90px;
+			accent-color: var(--accent);
+			cursor: pointer;
+		}
+		.music-volume-label {
+			color: #c9b8dc;
+			font-size: .8rem;
+			font-variant-numeric: tabular-nums;
+			min-width: 2.6em;
+			text-align: right;
+		}
+		@media (max-width: 620px) {
+			.music-volume-controls { max-width: 100%; width: 100%; }
+		}
         .option-toggle { display:flex; align-items:center; gap:9px; cursor:pointer; }
         .option-toggle input { width:auto !important; margin:0; accent-color:var(--accent); }
         .options-tool-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -1320,6 +1343,14 @@
 					</label>
 					<span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
 				</div>
+				<div class="option-row music-volume-row" id="music-volume-row">
+					<label for="music-volume-slider">Music volume</label>
+					<div class="music-volume-controls">
+						<input type="range" id="music-volume-slider" min="0" max="100" value="18"
+							oninput="setMusicVolume(this.value / 100)">
+						<span id="music-volume-label" class="music-volume-label">18%</span>
+					</div>
+				</div>
                 <div class="option-row">
                     <label class="option-toggle" for="show-game-log-option">
                         <input type="checkbox" id="show-game-log-option" onchange="setGameLogVisible(this.checked)">
@@ -1770,7 +1801,7 @@ let soundAudioContext = null;
 let musicEnabled = false;          // default off
 let currentMusicTrack = null;      // "setup" | "game" | "challenge" | "final" | null
 const musicAudio = { setup: null, game: null, challenge: null, final: null };
-let musicVolume = 0.35;
+let musicVolume = 0.18;
 // Presentation preferences are local to this browser, not shared game-state rules.
 let localShowDiceText = true;
 let localShowGameLog = false;
@@ -1795,6 +1826,10 @@ window.onload = () => {
     if (diceOption) diceOption.value = localShowDiceText ? "on" : "off";
 	const musicToggle = document.getElementById("music-option");
 	if (musicToggle) musicToggle.checked = musicEnabled;
+	const volSlider = document.getElementById("music-volume-slider");
+	const volLabel = document.getElementById("music-volume-label");
+	if (volSlider) volSlider.value = String(Math.round(musicVolume * 100));
+	if (volLabel) volLabel.textContent = Math.round(musicVolume * 100) + "%";
     const populate = (id, arr, addRandom = false) => {
         const select = document.getElementById(id);
         select.innerHTML = "";
@@ -3499,6 +3534,8 @@ function setMusicEnabled(enabled) {
     try { safeStorage.set("hypduel_music_enabled", String(musicEnabled)); } catch (e) {}
     const toggle = document.getElementById("music-option");
     if (toggle) toggle.checked = musicEnabled;
+    const volRow = document.getElementById("music-volume-row");
+    if (volRow) volRow.style.opacity = musicEnabled ? "1" : "0.45";
     if (!musicEnabled) {
         stopAllMusic(true);
         return;
@@ -3506,13 +3543,26 @@ function setMusicEnabled(enabled) {
     playMusicForCurrentContext();
 }
 
+function setMusicVolume(vol) {
+    musicVolume = Math.max(0, Math.min(1, Number(vol) || 0));
+    try { safeStorage.set("hypduel_music_volume", String(musicVolume)); } catch (e) {}
+    const label = document.getElementById("music-volume-label");
+    if (label) label.textContent = Math.round(musicVolume * 100) + "%";
+    const slider = document.getElementById("music-volume-slider");
+    if (slider) slider.value = String(Math.round(musicVolume * 100));
+    // Apply immediately to whatever is currently playing
+    Object.values(musicAudio).forEach(a => {
+        if (a && !a.paused) a.volume = musicVolume;
+    });
+}
+
 function stopAllMusic(fade = true) {
     Object.keys(musicAudio).forEach(key => {
         const a = musicAudio[key];
         if (!a) return;
-        if (fade && !a.paused && a.volume > 0) {
+        if (fade && !a.paused && a.volume > 0.001) {
             const startVol = a.volume;
-            const steps = 12;
+            const steps = 16;
             let i = 0;
             const id = setInterval(() => {
                 i++;
@@ -3533,24 +3583,30 @@ function stopAllMusic(fade = true) {
     currentMusicTrack = null;
 }
 
-async function playMusic(key, { fadeMs = 600 } = {}) {
+async function playMusic(key, { fadeMs = 900 } = {}) {
     if (!musicEnabled) return;
-    if (currentMusicTrack === key) return;
+    if (currentMusicTrack === key) {
+        // Already on this track — just ensure volume matches slider
+        const cur = musicAudio[key];
+        if (cur && !cur.paused) cur.volume = musicVolume;
+        return;
+    }
 
     const next = getMusicElement(key);
     const prevKey = currentMusicTrack;
     currentMusicTrack = key;
+    const steps = Math.max(1, Math.round(fadeMs / 40));
 
+    // Fade previous out (overlap with the new track)
     if (prevKey && musicAudio[prevKey] && prevKey !== key) {
         const prev = musicAudio[prevKey];
-        const startVol = prev.volume;
-        const steps = Math.max(1, Math.round(fadeMs / 40));
+        const startVol = prev.volume > 0 ? prev.volume : musicVolume;
         let i = 0;
-        const id = setInterval(() => {
+        const outId = setInterval(() => {
             i++;
             prev.volume = Math.max(0, startVol * (1 - i / steps));
             if (i >= steps) {
-                clearInterval(id);
+                clearInterval(outId);
                 prev.pause();
                 prev.currentTime = 0;
                 prev.volume = 0;
@@ -3561,15 +3617,16 @@ async function playMusic(key, { fadeMs = 600 } = {}) {
     try {
         next.volume = 0;
         await next.play();
-        const steps = Math.max(1, Math.round(fadeMs / 40));
-        let i = 0;
-        const id = setInterval(() => {
-            i++;
-            next.volume = musicVolume * (i / steps);
-            if (i >= steps) clearInterval(id);
+        let j = 0;
+        const inId = setInterval(() => {
+            j++;
+            next.volume = musicVolume * (j / steps);
+            if (j >= steps) {
+                clearInterval(inId);
+                next.volume = musicVolume;
+            }
         }, 40);
     } catch (e) {
-        // Autoplay blocked until a user gesture; stay silent.
         currentMusicTrack = null;
     }
 }
@@ -3589,11 +3646,9 @@ function playMusicForCurrentContext() {
     } else if (gameState && !gameState.gameEnded) {
         playMusic("game");
     } else {
-        // Game over / idle — stop or leave quiet
         stopAllMusic(true);
     }
 }
-
 /** Light device vibration for lock / resolve / transform. Honors prefers-reduced-motion. */
 function triggerHaptic(kind) {
     try {
@@ -3742,7 +3797,12 @@ function loadLocalDisplayPreferences() {
         const savedBrain = safeStorage.get("hypduel_show_brain_comments");
         if (savedBrain !== null) localShowBrainComments = savedBrain === "true";
 		const savedMusic = safeStorage.get("hypduel_music_enabled");
-        if (savedMusic !== null) musicEnabled = savedMusic === "true";
+		if (savedMusic !== null) musicEnabled = savedMusic === "true";
+		const savedVol = safeStorage.get("hypduel_music_volume");
+		if (savedVol !== null) {
+			const v = parseFloat(savedVol);
+			if (!Number.isNaN(v)) musicVolume = Math.max(0, Math.min(1, v));
+		}
     } catch (e) { /* Storage may be unavailable for local files or private browsing. */ }
 }
 
@@ -3833,6 +3893,14 @@ function openOptionsModal(returnTarget = "game") {
     if (diceSelect) diceSelect.value = localShowDiceText ? "on" : "off";
     const soundToggle = document.getElementById("sound-effects-option");
     if (soundToggle) soundToggle.checked = soundEnabled;
+	const musicToggle = document.getElementById("music-option");
+	if (musicToggle) musicToggle.checked = musicEnabled;
+	const volSlider = document.getElementById("music-volume-slider");
+	const volLabel = document.getElementById("music-volume-label");
+	if (volSlider) volSlider.value = String(Math.round(musicVolume * 100));
+	if (volLabel) volLabel.textContent = Math.round(musicVolume * 100) + "%";
+	const volRow = document.getElementById("music-volume-row");
+	if (volRow) volRow.style.opacity = musicEnabled ? "1" : "0.45";
     const logToggle = document.getElementById("show-game-log-option");
     if (logToggle) logToggle.checked = localShowGameLog;
     const brainToggle = document.getElementById("show-brain-comments-option");
@@ -4404,7 +4472,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.5.6"; // Update this label for each release.
+const GAME_VERSION = "20261017.5.7"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
