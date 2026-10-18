@@ -148,7 +148,9 @@ const gamePlaylist = [
     "audio/bgm-game-1.mp3",
     "audio/bgm-game-2.mp3",
     "audio/bgm-game-3.mp3",
-    "audio/bgm-game-4.mp3"
+    "audio/bgm-game-4.mp3",
+	"audio/bgm-game-5.mp3",
+	"audio/bgm-game-6.mp3"
 ];
 let gameAudio = null;
 let musicVolume = 0.18;
