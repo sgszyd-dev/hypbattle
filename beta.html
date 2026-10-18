@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.5.7</title>
+    <title>Hypnotic Duel - Beta V20261017.5.8</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -1801,6 +1801,13 @@ let soundAudioContext = null;
 let musicEnabled = false;          // default off
 let currentMusicTrack = null;      // "setup" | "game" | "challenge" | "final" | null
 const musicAudio = { setup: null, game: null, challenge: null, final: null };
+const gamePlaylist = [
+    "audio/bgm-game-1.mp3",
+    "audio/bgm-game-2.mp3",
+    "audio/bgm-game-3.mp3",
+    "audio/bgm-game-4.mp3"
+];
+let gameAudio = null;
 let musicVolume = 0.18;
 // Presentation preferences are local to this browser, not shared game-state rules.
 let localShowDiceText = true;
@@ -3552,14 +3559,18 @@ function setMusicVolume(vol) {
     if (slider) slider.value = String(Math.round(musicVolume * 100));
     // Apply immediately to whatever is currently playing
     Object.values(musicAudio).forEach(a => {
-        if (a && !a.paused) a.volume = musicVolume;
-    });
+		if (a && !a.paused) a.volume = musicVolume;
+	});
+	if (gameAudio && !gameAudio.paused) gameAudio.volume = musicVolume;
 }
 
 function stopAllMusic(fade = true) {
-    Object.keys(musicAudio).forEach(key => {
-        const a = musicAudio[key];
-        if (!a) return;
+    const all = [
+        ...Object.values(musicAudio),
+        gameAudio
+    ].filter(Boolean);
+
+    all.forEach(a => {
         if (fade && !a.paused && a.volume > 0.001) {
             const startVol = a.volume;
             const steps = 16;
@@ -3580,40 +3591,77 @@ function stopAllMusic(fade = true) {
             a.volume = 0;
         }
     });
-    currentMusicTrack = null;
+	currentMusicTrack = -1;
+    //currentMusicTrack = null;
+    // optional: currentGameIndex = -1;  // so next game start picks fresh
 }
 
 async function playMusic(key, { fadeMs = 900 } = {}) {
     if (!musicEnabled) return;
-    if (currentMusicTrack === key) {
-        // Already on this track — just ensure volume matches slider
-        const cur = musicAudio[key];
+
+    // Already on the right high-level track
+    if (currentMusicTrack === key && key !== "game") {
+        const cur = getMusicElement(key);
         if (cur && !cur.paused) cur.volume = musicVolume;
+        return;
+    }
+    // For game: if something is already playing, leave it alone
+    if (key === "game" && currentMusicTrack === "game" && gameAudio && !gameAudio.paused) {
+        gameAudio.volume = musicVolume;
         return;
     }
 
     const next = getMusicElement(key);
     const prevKey = currentMusicTrack;
-    currentMusicTrack = key;
     const steps = Math.max(1, Math.round(fadeMs / 40));
 
-    // Fade previous out (overlap with the new track)
-    if (prevKey && musicAudio[prevKey] && prevKey !== key) {
-        const prev = musicAudio[prevKey];
-        const startVol = prev.volume > 0 ? prev.volume : musicVolume;
-        let i = 0;
-        const outId = setInterval(() => {
-            i++;
-            prev.volume = Math.max(0, startVol * (1 - i / steps));
-            if (i >= steps) {
-                clearInterval(outId);
-                prev.pause();
-                prev.currentTime = 0;
-                prev.volume = 0;
-            }
-        }, 40);
+    // Fade whatever was playing out
+    if (prevKey && prevKey !== key) {
+        const prev = getMusicElement(prevKey);
+        if (prev && !prev.paused) {
+            const startVol = prev.volume > 0 ? prev.volume : musicVolume;
+            let i = 0;
+            const outId = setInterval(() => {
+                i++;
+                prev.volume = Math.max(0, startVol * (1 - i / steps));
+                if (i >= steps) {
+                    clearInterval(outId);
+                    prev.pause();
+                    if (prevKey !== "game") prev.currentTime = 0;
+                    prev.volume = 0;
+                }
+            }, 40);
+        }
     }
 
+    if (key === "game") {
+        // Start a random game track (or advance if none yet)
+        currentMusicTrack = "game";
+        if (currentGameIndex < 0 || !gameAudio || !gameAudio.src) {
+            currentGameIndex = pickNextGameIndex();
+        }
+        next.src = gamePlaylist[currentGameIndex];
+        next.loop = false;
+        try {
+            next.volume = 0;
+            await next.play();
+            let j = 0;
+            const inId = setInterval(() => {
+                j++;
+                next.volume = musicVolume * (j / steps);
+                if (j >= steps) {
+                    clearInterval(inId);
+                    next.volume = musicVolume;
+                }
+            }, 40);
+        } catch (e) {
+            currentMusicTrack = null;
+        }
+        return;
+    }
+
+    // Non-game tracks (setup / challenge / final) — same as before, looped
+    currentMusicTrack = key;
     try {
         next.volume = 0;
         await next.play();
@@ -3649,6 +3697,92 @@ function playMusicForCurrentContext() {
         stopAllMusic(true);
     }
 }
+
+function getMusicElement(key) {
+    if (key === "game") {
+        if (!gameAudio) {
+            gameAudio = new Audio();
+            gameAudio.preload = "auto";
+            gameAudio.volume = 0;
+            // When a game track finishes, pick another
+            gameAudio.addEventListener("ended", onGameTrackEnded);
+        }
+        return gameAudio;
+    }
+    if (!musicAudio[key]) {
+        const a = new Audio(`audio/bgm-${key}.mp3`);
+        a.loop = true;
+        a.volume = 0;
+        a.preload = "auto";
+        musicAudio[key] = a;
+    }
+    return musicAudio[key];
+}
+
+function pickNextGameIndex() {
+    if (gamePlaylist.length <= 1) return 0;
+    let next;
+    do {
+        next = Math.floor(Math.random() * gamePlaylist.length);
+    } while (next === currentGameIndex);
+    return next;
+}
+
+function onGameTrackEnded() {
+    if (!musicEnabled || currentMusicTrack !== "game") return;
+    // Soft handoff into the next random game track
+    advanceGameTrack({ fadeMs: 700 });
+}
+
+async function advanceGameTrack({ fadeMs = 700 } = {}) {
+    if (!musicEnabled) return;
+    const a = getMusicElement("game");
+    const nextIndex = pickNextGameIndex();
+    const nextSrc = gamePlaylist[nextIndex];
+
+    // Fade current out
+    const startVol = a.volume > 0 ? a.volume : musicVolume;
+    const steps = Math.max(1, Math.round(fadeMs / 40));
+    await new Promise(resolve => {
+        if (a.paused || startVol < 0.001) {
+            resolve();
+            return;
+        }
+        let i = 0;
+        const id = setInterval(() => {
+            i++;
+            a.volume = Math.max(0, startVol * (1 - i / steps));
+            if (i >= steps) {
+                clearInterval(id);
+                resolve();
+            }
+        }, 40);
+    });
+
+    a.pause();
+    a.currentTime = 0;
+    a.src = nextSrc;
+    a.loop = false;                 // important: do not loop a single file
+    currentGameIndex = nextIndex;
+    currentMusicTrack = "game";
+
+    try {
+        a.volume = 0;
+        await a.play();
+        let j = 0;
+        const inId = setInterval(() => {
+            j++;
+            a.volume = musicVolume * (j / steps);
+            if (j >= steps) {
+                clearInterval(inId);
+                a.volume = musicVolume;
+            }
+        }, 40);
+    } catch (e) {
+        currentMusicTrack = null;
+    }
+}
+
 /** Light device vibration for lock / resolve / transform. Honors prefers-reduced-motion. */
 function triggerHaptic(kind) {
     try {
@@ -4472,7 +4606,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.5.7"; // Update this label for each release.
+const GAME_VERSION = "20261017.5.8"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
