@@ -1800,7 +1800,8 @@ let soundEnabled = true;
 let soundAudioContext = null;
 let musicEnabled = false;          // default off
 let currentMusicTrack = null;      // "setup" | "game" | "challenge" | "final" | null
-const musicAudio = { setup: null, game: null, challenge: null, final: null };
+let currentGameIndex = -1;          // which game track is playing
+const musicAudio = { setup: null, challenge: null, final: null };
 const gamePlaylist = [
     "audio/bgm-game-1.mp3",
     "audio/bgm-game-2.mp3",
@@ -3591,9 +3592,10 @@ function stopAllMusic(fade = true) {
             a.volume = 0;
         }
     });
-	currentMusicTrack = -1;
-    //currentMusicTrack = null;
+	
+    currentMusicTrack = null;
     // optional: currentGameIndex = -1;  // so next game start picks fresh
+	currentGameIndex = -1;
 }
 
 async function playMusic(key, { fadeMs = 900 } = {}) {
