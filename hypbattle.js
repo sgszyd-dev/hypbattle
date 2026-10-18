@@ -5288,8 +5288,8 @@ function useFadingReality(pId) {
         }
     });
     if (changed > 0) {
-        queueCardTrigger(pId, 47, `Rerolled ${changed} unlocked Transform die${changed === 1 ? "" : "s"}`, "manual");
-        log(`Fading Reality: rerolled ${changed} unlocked Transform die${changed === 1 ? "" : "s"}.`);
+        queueCardTrigger(pId, 47, `Rerolled ${changed} unlocked Transform ${changed === 1 ? "die" : "dice"}`, "manual");
+        log(`Fading Reality: rerolled ${changed} unlocked Transform ${changed === 1 ? "die" : "dice"}.`);
         syncToFirebase();
         updateUI();
     }
