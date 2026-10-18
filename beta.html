@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.5.5</title>
+    <title>Hypnotic Duel - Beta V20261017.5.6</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -1313,6 +1313,13 @@
                     </label>
                     <span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
                 </div>
+				<div class="option-row">
+					<label class="option-toggle" for="music-option">
+						<input type="checkbox" id="music-option" onchange="setMusicEnabled(this.checked)">
+						<span>Enable background music</span>
+					</label>
+					<span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
+				</div>
                 <div class="option-row">
                     <label class="option-toggle" for="show-game-log-option">
                         <input type="checkbox" id="show-game-log-option" onchange="setGameLogVisible(this.checked)">
@@ -1760,6 +1767,10 @@ let lastEffectTickerTimer = null;
 // Presentation-only state: never participates in game rules or online game-state sync.
 let soundEnabled = true;
 let soundAudioContext = null;
+let musicEnabled = false;          // default off
+let currentMusicTrack = null;      // "setup" | "game" | "challenge" | "final" | null
+const musicAudio = { setup: null, game: null, challenge: null, final: null };
+let musicVolume = 0.35;
 // Presentation preferences are local to this browser, not shared game-state rules.
 let localShowDiceText = true;
 let localShowGameLog = false;
@@ -1782,6 +1793,8 @@ window.onload = () => {
     setGameLogVisible(localShowGameLog);
     const diceOption = document.getElementById("dice-text-option");
     if (diceOption) diceOption.value = localShowDiceText ? "on" : "off";
+	const musicToggle = document.getElementById("music-option");
+	if (musicToggle) musicToggle.checked = musicEnabled;
     const populate = (id, arr, addRandom = false) => {
         const select = document.getElementById(id);
         select.innerHTML = "";
@@ -2730,6 +2743,7 @@ async function playChallengeVictoryCinematic(){
     const wait=ms=>new Promise(resolve=>window.setTimeout(resolve,reduced?Math.min(ms,80):ms));
     challengeVictoryCinematicSkip=false;
     overlay.style.display="flex";
+	playMusic("challenge");
     overlay.classList.remove("cvc-flash");
     image.classList.remove("cvc-fade");
     document.getElementById("cvc-skip").textContent="Skip Cinematic";
@@ -2781,6 +2795,9 @@ async function playChallengeVictoryCinematic(){
         image.classList.remove("cvc-fade");
         challengeVictoryCinematicSkip=false;
         challengeVictoryCinematicResolve=null;
+		// Return to game music if a match is still active, otherwise stop.
+		if (gameState && !gameState.gameEnded) playMusic("game");
+		else stopAllMusic(true);
     }
 }
 function handleChallengeMatchEnded(winnerId){
@@ -3465,6 +3482,118 @@ function playSubmissionCrackleSound() {
     } catch (e) { /* Optional UI sound only; never affect gameplay. */ }
 }
 
+// ---------- Background music (presentation only) ----------
+function getMusicElement(key) {
+    if (!musicAudio[key]) {
+        const a = new Audio(`audio/bgm-${key}.mp3`);
+        a.loop = true;
+        a.volume = 0;
+        a.preload = "auto";
+        musicAudio[key] = a;
+    }
+    return musicAudio[key];
+}
+
+function setMusicEnabled(enabled) {
+    musicEnabled = !!enabled;
+    try { safeStorage.set("hypduel_music_enabled", String(musicEnabled)); } catch (e) {}
+    const toggle = document.getElementById("music-option");
+    if (toggle) toggle.checked = musicEnabled;
+    if (!musicEnabled) {
+        stopAllMusic(true);
+        return;
+    }
+    playMusicForCurrentContext();
+}
+
+function stopAllMusic(fade = true) {
+    Object.keys(musicAudio).forEach(key => {
+        const a = musicAudio[key];
+        if (!a) return;
+        if (fade && !a.paused && a.volume > 0) {
+            const startVol = a.volume;
+            const steps = 12;
+            let i = 0;
+            const id = setInterval(() => {
+                i++;
+                a.volume = Math.max(0, startVol * (1 - i / steps));
+                if (i >= steps) {
+                    clearInterval(id);
+                    a.pause();
+                    a.currentTime = 0;
+                    a.volume = 0;
+                }
+            }, 40);
+        } else {
+            a.pause();
+            a.currentTime = 0;
+            a.volume = 0;
+        }
+    });
+    currentMusicTrack = null;
+}
+
+async function playMusic(key, { fadeMs = 600 } = {}) {
+    if (!musicEnabled) return;
+    if (currentMusicTrack === key) return;
+
+    const next = getMusicElement(key);
+    const prevKey = currentMusicTrack;
+    currentMusicTrack = key;
+
+    if (prevKey && musicAudio[prevKey] && prevKey !== key) {
+        const prev = musicAudio[prevKey];
+        const startVol = prev.volume;
+        const steps = Math.max(1, Math.round(fadeMs / 40));
+        let i = 0;
+        const id = setInterval(() => {
+            i++;
+            prev.volume = Math.max(0, startVol * (1 - i / steps));
+            if (i >= steps) {
+                clearInterval(id);
+                prev.pause();
+                prev.currentTime = 0;
+                prev.volume = 0;
+            }
+        }, 40);
+    }
+
+    try {
+        next.volume = 0;
+        await next.play();
+        const steps = Math.max(1, Math.round(fadeMs / 40));
+        let i = 0;
+        const id = setInterval(() => {
+            i++;
+            next.volume = musicVolume * (i / steps);
+            if (i >= steps) clearInterval(id);
+        }, 40);
+    } catch (e) {
+        // Autoplay blocked until a user gesture; stay silent.
+        currentMusicTrack = null;
+    }
+}
+
+function playMusicForCurrentContext() {
+    if (!musicEnabled) return;
+    const settings = document.getElementById("settings-modal");
+    const challengeOverlay = document.getElementById("challenge-victory-cinematic");
+    const finalOverlay = document.getElementById("final-transform-cinematic");
+
+    if (finalOverlay && finalOverlay.style.display === "flex") {
+        playMusic("final");
+    } else if (challengeOverlay && challengeOverlay.style.display === "flex") {
+        playMusic("challenge");
+    } else if (settings && settings.style.display !== "none") {
+        playMusic("setup");
+    } else if (gameState && !gameState.gameEnded) {
+        playMusic("game");
+    } else {
+        // Game over / idle — stop or leave quiet
+        stopAllMusic(true);
+    }
+}
+
 /** Light device vibration for lock / resolve / transform. Honors prefers-reduced-motion. */
 function triggerHaptic(kind) {
     try {
@@ -3612,6 +3741,8 @@ function loadLocalDisplayPreferences() {
         if (savedLog !== null) localShowGameLog = savedLog !== "false";
         const savedBrain = safeStorage.get("hypduel_show_brain_comments");
         if (savedBrain !== null) localShowBrainComments = savedBrain === "true";
+		const savedMusic = safeStorage.get("hypduel_music_enabled");
+        if (savedMusic !== null) musicEnabled = savedMusic === "true";
     } catch (e) { /* Storage may be unavailable for local files or private browsing. */ }
 }
 
@@ -3872,6 +4003,8 @@ function initializeGame() {
             startTurn(); 
             syncToFirebase();
             listenToFirebase(onlineRoomId);
+			// Music: leave setup track and enter the board track (user has already clicked Start).
+			playMusic("game");
 
         } else {
             // --- GUEST (PLAYER 2) ---
@@ -3946,7 +4079,9 @@ function initializeGame() {
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
     startTurn();
     updateUI();
-
+	
+	// Music: leave setup track and enter the board track (user has already clicked Start).
+	playMusic("game");
 }
 
 
@@ -4269,7 +4404,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.5.4"; // Update this label for each release.
+const GAME_VERSION = "20261017.5.6"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -5911,6 +6046,7 @@ async function playFinalTransformationCinematic(loserId) {
     skipButton.onclick = skip;
     overlay.style.setProperty("--cinematic-player-color", loserId === 1 ? "var(--player)" : "var(--cpu)");
     overlay.style.display = "flex";
+	playMusic("final");
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     void overlay.offsetWidth;
     overlay.classList.add("cinematic-enter");
@@ -5997,6 +6133,8 @@ async function playFinalTransformationCinematic(loserId) {
 			: "Continue";
 	}
     overlay.style.display = "none";
+	// Cinematic finished; game-over modal is about to appear — stop BGM or leave quiet.
+	stopAllMusic(true);
     overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
     portrait.classList.remove("is-fading");
 	
@@ -7852,6 +7990,8 @@ function endTurn() {
         syncToFirebase();
         updateUI();
         startTurn();
+		// Music: leave setup track and enter the board track (user has already clicked Start).
+		playMusic("game");
         return;
     }
 
@@ -7864,6 +8004,8 @@ function endTurn() {
     syncToFirebase();
     updateUI();
     startTurn();
+	// Music: leave setup track and enter the board track (user has already clicked Start).
+	playMusic("game");
 }
 
 function executeCPUTurn() {
@@ -8292,6 +8434,8 @@ function presentFinishedGame() {
             gameOverModal.style.display = "flex";
         });
     } else {
+		playSound("win");
+		stopAllMusic(true);   // or playMusic("final") for a short non-looping sting later
 		if (isForfeit) {
 			window.location.reload();
 		}
