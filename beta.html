@@ -2004,11 +2004,19 @@ function saveChallengeRecord(record){ try { safeStorage.set(CHALLENGE_RECORD_KEY
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
 const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
 function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], savedAt:new Date().toISOString()}; }
-function saveChallengeProgress(){
+function saveChallengeProgress() {
     if(!challengeActive) return;
-    try { safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload())); } catch(e) { console.warn("Challenge progress could not be saved",e); }
+	
+    try {
+		safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
+	} catch(e) {
+		console.warn("Challenge progress could not be saved",e); 
+	}
+}
 function saveChallengeFromScreen(){
-    if(!challengeActive){ showPopup("No Active Challenge", "There is no active challenge to save."); return; }
+    if(!challengeActive) {
+		showPopup("No Active Challenge", "There is no active challenge to save."); return; 
+	}
     try {
         safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
         showPopup("Challenge Saved", "Your challenge position and next-match bonus have been saved on this browser. To transfer progress to another browser, use <strong>Export Challenge Save</strong> in Game Tools.");
@@ -2016,7 +2024,6 @@ function saveChallengeFromScreen(){
         console.warn("Challenge progress could not be saved", e);
         showPopup("Save Failed", "Your browser could not save challenge progress. Check that site storage is available, then try again.");
     }
-}
 }
 function applyChallengeSave(data){
     if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
