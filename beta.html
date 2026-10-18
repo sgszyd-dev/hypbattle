@@ -972,6 +972,132 @@
             #final-transform-cinematic { overflow-y: auto; align-items: flex-start; }
         }
 
+        /* ===== Hypnotic Duel: Themed Dialogs ===== */
+
+        #themed-dialog {
+            width: min(440px, calc(100% - 32px));
+            max-width: 440px;
+            padding: 0;
+            color: #f5eaff;
+            background: #21152f;
+            border: 1px solid #9d4edd;
+            border-radius: 16px;
+            box-shadow:
+                0 0 24px rgba(157, 78, 221, 0.25),
+                0 20px 60px rgba(0, 0, 0, 0.65);
+            overflow: hidden;
+        }
+
+        #themed-dialog::backdrop {
+            background: rgba(7, 3, 14, 0.78);
+            backdrop-filter: blur(5px);
+        }
+
+        .themed-dialog-inner {
+            padding: 26px 24px 22px;
+            text-align: center;
+        }
+
+        .themed-dialog-emblem {
+            color: #d6a6ff;
+            font-size: 30px;
+            line-height: 1.2;
+            margin-bottom: 10px;
+            text-shadow: 0 0 14px rgba(157, 78, 221, 0.8);
+        }
+
+        #themed-dialog-title {
+            margin: 0 0 12px;
+            color: #dcb7ff;
+            font-size: 1.35rem;
+        }
+
+        #themed-dialog-message {
+            margin: 0 0 20px;
+            color: #eee3f8;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+            white-space: pre-line;
+        }
+
+        #themed-dialog-form {
+            margin: 0;
+        }
+
+        #themed-dialog-input {
+            display: none;
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            margin: 0 0 18px;
+            padding: 12px 14px;
+            color: #fff;
+            background: #120c1c;
+            border: 1px solid #7950a6;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 16px; /* Avoids mobile browser zoom on focus */
+        }
+
+        #themed-dialog-input:focus {
+            outline: 2px solid #c77dff;
+            outline-offset: 2px;
+            border-color: #c77dff;
+        }
+
+        .themed-dialog-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .themed-dialog-buttons button {
+            min-height: 44px;
+            min-width: 110px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: 1px solid #7950a6;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.15s ease, transform 0.15s ease;
+        }
+
+        #themed-dialog-cancel {
+            color: #e5d8f0;
+            background: #382747;
+        }
+
+        #themed-dialog-accept {
+            color: white;
+            background: #7b2cbf;
+            border-color: #b56ae8;
+        }
+
+        .themed-dialog-buttons button:hover {
+            filter: brightness(1.2);
+        }
+
+        .themed-dialog-buttons button:active {
+            transform: scale(0.97);
+        }
+
+        @media (max-width: 480px) {
+            .themed-dialog-inner {
+                padding: 22px 18px 18px;
+            }
+
+            .themed-dialog-buttons {
+                gap: 8px;
+            }
+
+            .themed-dialog-buttons button {
+                flex: 1;
+                min-width: 0;
+            }
+        }
+
     </style>
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
@@ -1330,8 +1456,8 @@
         <h1 style="margin: 0;">Hypnotic Duel</h1>
         <div style="display:flex; gap:8px; align-items:center;">
             <button class="themed-secondary-btn main-toolbar-btn" onclick="openHelpModal('cards')" title="Card Library" aria-label="Card Library">📚</button>
-            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-win" onclick="challengeTestFinish('win')" title="TEST ONLY: Auto-win this challenge match" aria-label="Test auto-win">🏆</button>
-            <button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-lose" onclick="challengeTestFinish('lose')" title="TEST ONLY: Auto-lose this challenge match" aria-label="Test auto-lose">💥</button>
+            <!--button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-win" onclick="challengeTestFinish('win')" title="TEST ONLY: Auto-win this challenge match" aria-label="Test auto-win">🏆</button-->
+            <!--button class="themed-secondary-btn main-toolbar-btn challenge-test-btn challenge-test-lose" onclick="challengeTestFinish('lose')" title="TEST ONLY: Auto-lose this challenge match" aria-label="Test auto-lose">💥</button-->
             <button id="restart-game-toolbar-btn" class="themed-secondary-btn main-toolbar-btn restart-game-toolbar-btn" onclick="restartGameFromBoard()" title="Restart game" aria-label="Restart game">↻</button>
             <button class="help-btn themed-secondary-btn main-toolbar-btn" onclick="openOptionsModal('game')" title="Display, audio, help, logs, and game controls">⚙ Options &amp; Tools</button>
             <button type="button" class="themed-secondary-btn main-toolbar-btn" onclick="showAboutBox()" title="About Hypnotic Duel" aria-label="About Hypnotic Duel">ⓘ</button>
@@ -1858,7 +1984,14 @@ function showChallengeRecord(){
     const last=r.lastPlayed ? new Date(r.lastPlayed).toLocaleString() : "Never";
     showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at Roz:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}</div>`);
 }
-function resetChallengeRecord(){ if(!window.confirm("Reset the saved The Seven challenge record on this browser?")) return; saveChallengeRecord(emptyChallengeRecord()); showChallengeRecord(); }
+async function resetChallengeRecord(){ 
+        const confirmed = await showThemedConfirm(
+        "Reset the saved The Seven challenge record on this browser?",
+        "Reset Challenge Record"
+    );
+
+    if (!confirmed) return; saveChallengeRecord(emptyChallengeRecord()); showChallengeRecord(); 
+}
 function clearChallengeMatchAlerts(){ const toast=document.getElementById("card-trigger-toast"); if(toast){toast.innerHTML="";toast.classList.remove("visible");toast.removeAttribute("aria-hidden");} }
 function challengeTestFinish(result){
     if(!challengeActive || !gameState || gameState.gameMode!=="solo" || gameState.gameEnded){ showPopup("Challenge Test Buttons","Start an active Solo Challenge match before using these test buttons."); return; }
@@ -8668,6 +8801,136 @@ function endGuidedTutorial() {
 
 
 recInstall();
+
+const themedDialog = document.getElementById("themed-dialog");
+const themedDialogTitle = document.getElementById("themed-dialog-title");
+const themedDialogMessage = document.getElementById("themed-dialog-message");
+const themedDialogForm = document.getElementById("themed-dialog-form");
+const themedDialogInput = document.getElementById("themed-dialog-input");
+const themedDialogCancel = document.getElementById("themed-dialog-cancel");
+const themedDialogAccept = document.getElementById("themed-dialog-accept");
+
+let themedDialogMode = "alert";
+
+function openThemedDialog({
+    mode = "alert",
+    title = "A Moment of Decision",
+    message = "",
+    defaultValue = "",
+    acceptText = "Continue",
+    cancelText = "Cancel"
+} = {}) {
+    // Avoid stacking multiple dialogs on top of each other.
+    if (themedDialog.open) {
+        console.warn("A themed dialog is already open.");
+        return Promise.resolve(null);
+    }
+
+    themedDialogMode = mode;
+    themedDialogTitle.textContent = title;
+    themedDialogMessage.textContent = message;
+
+    themedDialogInput.style.display =
+        mode === "prompt" ? "block" : "none";
+
+    themedDialogInput.value = defaultValue;
+    themedDialogInput.required = false;
+
+    themedDialogCancel.textContent = cancelText;
+    themedDialogCancel.style.display =
+        mode === "alert" ? "none" : "";
+
+    themedDialogAccept.textContent = acceptText;
+
+    return new Promise((resolve) => {
+        // Resolve when the dialog closes, including Escape.
+        themedDialog.addEventListener("close", () => {
+            const result = themedDialog.returnValue;
+
+            if (mode === "confirm") {
+                resolve(result === "accept");
+            } else if (mode === "prompt") {
+                resolve(result === "accept"
+                    ? themedDialogInput.value
+                    : null);
+            } else {
+                resolve(undefined);
+            }
+        }, { once: true });
+
+        themedDialog.showModal();
+
+        if (mode === "prompt") {
+            themedDialogInput.focus();
+            themedDialogInput.select();
+        } else {
+            themedDialogAccept.focus();
+        }
+    });
+}
+
+// Returns true for Confirm, false for Cancel or Escape.
+function showThemedConfirm(
+    message,
+    title = "Confirm Your Decision"
+) {
+    return openThemedDialog({
+        mode: "confirm",
+        title,
+        message,
+        acceptText: "Confirm",
+        cancelText: "Cancel"
+    });
+}
+
+// Returns the entered string, or null for Cancel or Escape.
+function showThemedPrompt(
+    message,
+    defaultValue = "",
+    title = "Enter Your Response"
+) {
+    return openThemedDialog({
+        mode: "prompt",
+        title,
+        message,
+        defaultValue,
+        acceptText: "Submit",
+        cancelText: "Cancel"
+    });
+}
+
+// Shows a message with a single Continue button.
+function showThemedAlert(
+    message,
+    title = "A Message for You"
+) {
+    return openThemedDialog({
+        mode: "alert",
+        title,
+        message,
+        acceptText: "Continue"
+    });
+}
+
+// Submit / Enter accepts the dialog.
+themedDialogForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    themedDialog.close("accept");
+});
+
+// Cancel button dismisses the dialog.
+themedDialogCancel.addEventListener("click", () => {
+    themedDialog.close("cancel");
+});
+
+// Escape dismisses the dialog and is handled by the close listener.
+themedDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    themedDialog.close("cancel");
+});
+
+
+
 </script>
 
 
@@ -8709,5 +8972,34 @@ recInstall();
         <span onclick="closeImageModal()" style="position:absolute; top:-15px; right:-15px; background:#fff; color:#000; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; cursor:pointer;">&times;</span>
     </div>
 </div>
+<!-- Reusable themed dialog -->
+<dialog id="themed-dialog" aria-labelledby="themed-dialog-title">
+  <div class="themed-dialog-inner">
+    <div class="themed-dialog-emblem">✦</div>
+
+    <h2 id="themed-dialog-title">A Moment of Decision</h2>
+    <p id="themed-dialog-message"></p>
+
+    <form id="themed-dialog-form">
+      <input
+        id="themed-dialog-input"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Dialog input"
+      />
+
+      <div class="themed-dialog-buttons">
+        <button type="button" id="themed-dialog-cancel">
+          Cancel
+        </button>
+        <button type="submit" id="themed-dialog-accept">
+          Continue
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 </body>
 </html>
