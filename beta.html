@@ -1973,8 +1973,16 @@ function exportChallengeSave(){
     const code=btoa(unescape(encodeURIComponent(data)));
     showPopup("Export The Seven Save", `<p>Copy this save code, then use <strong>Load Challenge Save</strong> in another browser or on another computer.</p><textarea id="challenge-save-code" style="width:100%;min-height:110px;box-sizing:border-box;background:#17131f;color:#eee;border:1px solid #8b5cf6;border-radius:8px;padding:10px">${code}</textarea><button onclick="copySaveCode();">Copy Save Code</button>`);
 }
-function importChallengeSave(){
-    const code=window.prompt("Paste your The Seven save code here:"); if(!code) return;
+async function importChallengeSave(){
+    const code = await showThemedPrompt(
+        "Paste your The Seven save code here:",
+        "",
+        "Restore Challenge Save"
+    );
+
+    if (code === null) return; // Player cancelled.
+
+
     try { const data=JSON.parse(decodeURIComponent(escape(atob(code.trim())))); applyChallengeSave(data); }
     catch(e){ showPopup("Could Not Load Save", "That code is invalid or damaged. Copy the entire save code and try again."); }
 }
