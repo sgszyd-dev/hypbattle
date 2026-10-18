@@ -167,6 +167,9 @@ let diceAnimationToken = 0;
 let diceComboFlashUntil = 0;
 let diceAnimationInterval = null;
 let diceAnimationFaces = new Map();
+let lastPlayerTransformationTaunt = null;
+let regularTauntTimer = null;
+
 
 let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
 let lucidityResolve = null;
@@ -460,6 +463,635 @@ async function challengeTestFinish(result){
     gameState.activePlayer=result==="win"?1:2;
     clearChallengeMatchAlerts(); updateUI(); presentFinishedGame();
 }
+
+
+const PLAYER_TRANSFORMATION_TAUNT_CHANCE = 0.25;
+
+const TRANSFORMATION_TAUNTS = {
+    Statue: {
+        player: {
+            TransformPlayer: [
+                "Another step. Your skin is losing its warmth, and soon even your expression may be set in stone.",
+                "Feel that stiffness? I'm not just changing how you look. I'm taking away the little movements you never thought about."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to stone. How long before that startled look gets carved permanently into your face?",
+                "Five stages down. Your body is becoming an ornament, and you still think you can fight me."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Imagine standing there forever, unable to do a thing about what I've made of you.",
+                "Almost a statue. That lovely defiant expression? I might just make it your permanent one."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My skin is hardening. If you think I'll stand here like some garden ornament, think again.",
+                "Stone? You're trying to turn me into stone? I'll make sure you regret chipping away at me."
+            ],
+            AIAt5Transform: [
+                "Halfway to stone, and I can already feel my movements stiffening. You're going to pay for this.",
+                "My face feels like marble. I refuse to become some lifeless decoration for your amusement."
+            ],
+            AIAt9Transform: [
+                "One step left. A statue, is it? Fine. Then I'll be the most intimidating thing in your collection.",
+                "Perhaps stone isn't so bad. I could stand here forever looking down on you. You, on the other hand, will still be breakable."
+            ]
+        }
+    },
+
+    Cow_female: {
+        player: {
+            TransformPlayer: [
+                "Another step toward horns, hooves, and a body built for the pasture. Starting to feel less human?",
+                "Your features are changing, and that stubborn human pride won't stop a single hoof from growing."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a cow. How does it feel knowing your old shape is being replaced by something so thoroughly different?",
+                "Five stages in. That human silhouette is fading, and there's a whole new animal taking its place."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon those hooves will be yours, and your old shoes will be nothing but a memory.",
+                "Almost a cow now. Keep glaring at me. I want you to remember exactly who did this."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Horns? Hooves? Oh, you are going to regret making this particular change to me.",
+                "My body is getting heavier, my features are changing. You'd better enjoy this while you can."
+            ],
+            AIAt5Transform: [
+                "Halfway to a cow. I can feel my balance changing, and I absolutely refuse to moo for you.",
+                "My hands are changing, my feet are changing, and you're enjoying this far too much."
+            ],
+            AIAt9Transform: [
+                "One step left. If I'm going to be a cow, I'll be the most formidable one in the herd.",
+                "Fine. Let the horns come. You may have changed my shape, but don't mistake that for having broken me."
+            ]
+        }
+    },
+
+    Cow_male: {
+        player: {
+            TransformPlayer: [
+                "Another step toward becoming a bull. Those shoulders won't stay human, and neither will that face.",
+                "Feel yourself getting heavier? You're being built into a bull, piece by piece. Keep telling yourself you're in control."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a bull. Your strength is changing, your frame is broadening, and your old clothes are losing the argument.",
+                "Five stages down. Soon you'll have horns to match that stubborn head of yours."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Imagine those horns in the mirror. Still want to tell me nothing has changed?",
+                "Nearly a bull. Your human proportions are almost gone, and there's no bargaining with what's coming."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My frame is broadening. If you're trying to turn me into a bull, you had better be ready for the consequences.",
+                "Horns? Hooves? I did not agree to this. You and I are going to have a very different conversation afterward."
+            ],
+            AIAt5Transform: [
+                "Halfway to a bull, and my body feels like it's been rebuilt from the ground up. I'm not letting you enjoy this for long.",
+                "My shoulders are enormous, my balance is different, and I'm starting to understand just how strong this body could be."
+            ],
+            AIAt9Transform: [
+                "One step left. All right, let the horns finish growing. You may have made a bull, but you haven't made me tame.",
+                "I can feel the strength in this body now. If this is what you've chosen for me, you'd better learn to respect it."
+            ]
+        }
+    },
+
+    Cat: {
+        player: {
+            TransformPlayer: [
+                "Another step toward whiskers, soft paws, and a tail that will give away every little emotion.",
+                "Your ears are changing, your features are sharpening. Soon you'll look like you've always belonged on four paws."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a cat. I wonder how long before your ears start twitching whenever I speak.",
+                "Five stages down. That new face is coming along nicely. Shame you can't claw your way out of this."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Better prepare for a tail that betrays your mood even when your face doesn't.",
+                "Almost a cat. That human reflection is about to become somebody else's problem."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My ears! And what is happening to my face? You're going to regret giving me whiskers.",
+                "A tail? Paws? Oh, that's just wonderful. I'll remember this when I get the chance to return the favor."
+            ],
+            AIAt5Transform: [
+                "Halfway to a cat. My balance is different, and I can hear every little sound in this room. Annoying.",
+                "I can feel fur spreading and my face changing. Stop looking so pleased with yourself."
+            ],
+            AIAt9Transform: [
+                "One step left. Fine, I'll admit these ears suit me. That doesn't mean you've won anything but a very irritated cat.",
+                "Perhaps this form has its advantages. Sharp senses, quick movements, claws. You might have made a mistake."
+            ]
+        }
+    },
+
+    Dog: {
+        player: {
+            TransformPlayer: [
+                "Another step toward floppy ears, a muzzle, and a tail that may be rather less discreet than your face.",
+                "Your features are growing canine. Keep your chin up while you still can."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a dog. How long before that new nose starts noticing everything you'd rather ignore?",
+                "Five stages down. Your old face is slipping away, and a muzzle is taking its place."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Those ears and that tail are almost yours to keep.",
+                "Nearly a dog. You can glare all you want, but you can't glare away a wagging tail."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My face is changing. You're giving me a muzzle? Oh, this is going to be personal.",
+                "I can feel my ears changing and something happening behind me. Don't you dare laugh."
+            ],
+            AIAt5Transform: [
+                "Halfway to a dog. My hearing is sharper, my nose is changing, and I can smell your smugness from here.",
+                "My hands aren't quite right, and my face is growing longer. This is a humiliating way to gain new senses."
+            ],
+            AIAt9Transform: [
+                "One step left. Fine, I'll take the sharper senses and the speed. I'll still be the one deciding what to do with them.",
+                "Perhaps a canine form isn't entirely a disadvantage. Just remember who taught this dog to bite back."
+            ]
+        }
+    },
+
+    Werewolf: {
+        player: {
+            TransformPlayer: [
+                "Another step toward fur, fangs, and a face that won't look human for much longer.",
+                "Your body is growing wilder. I wonder whether you'll recognize yourself when the claws come in."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a werewolf. Your human features are losing ground to something far more feral.",
+                "Five stages down. Fur, fangs, and a growing muzzle. Still think you can hold on to your old self?"
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon that reflection will bare its fangs back at you.",
+                "Nearly a werewolf. Your old life is looking awfully small from inside that changing body."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Fur? Fangs? Oh, you have made a very dangerous choice. I hope you know what you're doing.",
+                "My face is changing, and I can feel claws coming in. You'd better hope I don't get used to them."
+            ],
+            AIAt5Transform: [
+                "Halfway to a werewolf. My senses are sharpening, my body is changing, and I can barely ignore every sound around me.",
+                "My hands are becoming claws, and my teeth feel wrong. I am not enjoying this. Not yet."
+            ],
+            AIAt9Transform: [
+                "One step left. The claws feel natural now. That should worry you more than it worries me.",
+                "Fine. Let the transformation finish. If I am going to be a werewolf, I will be the one everyone else fears."
+            ]
+        }
+    },
+
+    Fox: {
+        player: {
+            TransformPlayer: [
+                "Another step toward fox ears, a pointed muzzle, and a tail that will be impossible to ignore.",
+                "Your features are getting sharper and more vulpine. I wonder whether that clever human expression will survive."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a fox. Your face is changing, your tail is coming in, and your old appearance is losing its grip.",
+                "Five stages down. You are beginning to look like the creature I have planned for you."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Those ears and that bushy tail are nearly yours.",
+                "Almost a fox. All that cleverness, and you still couldn't outsmart a transformation."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "A muzzle and a tail? You have some nerve. I will find a way to make you regret this.",
+                "My ears are changing, and I can feel my face sharpening. You'd better hope I don't become as clever as I look."
+            ],
+            AIAt5Transform: [
+                "Halfway to a fox. My balance is changing, and this tail is going to take some getting used to.",
+                "My features are getting sharper. If you think that makes me less dangerous, you're a fool."
+            ],
+            AIAt9Transform: [
+                "One step left. I'll admit the tail is impressive. Don't mistake appreciation for gratitude.",
+                "Fine. A fox it is. Quick, clever, and difficult to catch. Perhaps you should have thought this through."
+            ]
+        }
+    },
+
+    Horse: {
+        player: {
+            TransformPlayer: [
+                "Another step toward a mane, hooves, and a frame that won't fit through life the way it used to.",
+                "Your legs and body are changing. That human stride is on its way out."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a horse. Your balance is shifting, your frame is changing, and those human proportions are fading.",
+                "Five stages down. Soon those feet won't be much use for your old shoes."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. You can practically feel those hooves replacing your feet.",
+                "Nearly a horse. I hope you weren't too attached to your old way of walking."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My legs! What are you doing to my legs? This body is changing far too quickly.",
+                "A mane? Hooves? I'll make you regret every stage of this transformation."
+            ],
+            AIAt5Transform: [
+                "Halfway to a horse. My balance is completely different, and my legs are becoming something else.",
+                "My frame is growing, my feet are changing, and I am not about to let you enjoy my discomfort."
+            ],
+            AIAt9Transform: [
+                "One step left. All right, this body has power. I can work with power.",
+                "A horse, then. Strong, fast, and hardly helpless. You may have changed me, but you haven't made me obedient."
+            ]
+        }
+    },
+
+    Pig: {
+        player: {
+            TransformPlayer: [
+                "Another step toward a snout, floppy ears, and a body that looks less and less like your old one.",
+                "Your nose is changing. That familiar face is disappearing, and there's nothing dignified about what comes next."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a pig. Your face is changing, and that human nose is losing the battle.",
+                "Five stages down. You can be furious all you like; it won't stop those ears from changing."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon the snout will be unmistakable.",
+                "Almost a pig. I wonder how you'll feel when the mirror confirms what I've done."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My nose! No. Absolutely not. You are going to pay for this indignity.",
+                "I can feel my face changing. You have some idea of what you've started, don't you?"
+            ],
+            AIAt5Transform: [
+                "Halfway to a pig. My face feels wrong, my balance is changing, and you're enjoying every second.",
+                "Five stages. I refuse to let a snout be the most memorable thing about me."
+            ],
+            AIAt9Transform: [
+                "One step left. Fine. I can survive being a pig. Can you survive what I do next?",
+                "If this is the body I've been given, I'll wear it with more dignity than you deserve."
+            ]
+        }
+    },
+
+    Gender_male: {
+        player: {
+            TransformPlayer: [
+                "Another step toward becoming a woman. Your face, your silhouette, your voice—none of it is beyond my reach.",
+                "Your body is shifting toward a woman's form. Keep insisting you're unchanged; the mirror will settle the argument."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to becoming a woman. Your features and proportions are changing, and denial won't make them revert.",
+                "Five stages down. Your old masculine outline is giving way to something unmistakably feminine."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. That woman in the mirror is almost you, whether you're ready to admit it or not.",
+                "Nearly transformed. You can cling to your old identity all you like; your changing reflection tells a different story."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My face is changing, my proportions are shifting—you're turning me into a woman. I will remember this.",
+                "My voice sounds different. My body feels different. Don't you dare mistake my surprise for surrender."
+            ],
+            AIAt5Transform: [
+                "Halfway to becoming a woman. My shape is changing in ways I can no longer dismiss. This is infuriating.",
+                "My features are softer, my silhouette is changing, and my old clothes fit differently. I hate that you can see it."
+            ],
+            AIAt9Transform: [
+                "One step left. I can see the woman I'm becoming now. That doesn't mean you've won my respect.",
+                "Fine. Let the transformation finish. I'll decide what kind of woman I become, not you."
+            ]
+        }
+    },
+
+    Gender_female: {
+        player: {
+            TransformPlayer: [
+                "Another step toward becoming a man. Your features and proportions are shifting, and there's no stopping them now.",
+                "Your body is changing toward a man's form. That old reflection is slipping away, whether you like it or not."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to becoming a man. Your silhouette is changing, and your old features are losing ground.",
+                "Five stages down. That familiar face is changing into someone you may barely recognize."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. The man in the mirror is almost you now.",
+                "Nearly transformed. You can protest all you want; your reflection won't be persuaded."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My face is changing, my frame feels different—you're turning me into a man. This is not over.",
+                "My voice, my proportions, my features—everything is shifting. I won't let you define who I am."
+            ],
+            AIAt5Transform: [
+                "Halfway to becoming a man. My body is changing in ways I can feel with every movement.",
+                "My frame is changing, and my reflection is becoming harder to recognize. I am furious with you."
+            ],
+            AIAt9Transform: [
+                "One step left. I can see the man I'm becoming. I'll decide what that means for me.",
+                "Fine. Let the change finish. You may have changed my body, but you don't get to own my identity."
+            ]
+        }
+    },
+
+    Puppet: {
+        player: {
+            TransformPlayer: [
+                "Another step toward a body built with joints instead of freedom. I wonder how much control you'll have left.",
+                "Your movements are becoming less natural. Soon you'll look like something made to be handled."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a puppet. How does it feel when your body starts moving like it was designed by someone else?",
+                "Five stages down. Your joints are changing, your movements feel strange, and you still can't stop me."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon every movement will remind you what I've turned you into.",
+                "Almost a puppet. Imagine seeing those joints in the mirror and knowing exactly who made them."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My joints feel wrong. Are you turning me into a puppet? You have no idea what you're risking.",
+                "My movements are changing. I refuse to become some toy you can show off."
+            ],
+            AIAt5Transform: [
+                "Halfway to a puppet. My limbs move differently, and I hate how aware I am of every joint.",
+                "Five stages. I can feel my body becoming something crafted rather than born. This is deeply unsettling."
+            ],
+            AIAt9Transform: [
+                "One step left. If I become a puppet, I'll be the one pulling the strings.",
+                "Fine. Let the joints settle. A puppet can still have a mind, and mine is already plotting."
+            ]
+        }
+    },
+
+    Bunny: {
+        player: {
+            TransformPlayer: [
+                "Another step toward long ears, a fluffy tail, and legs that won't look quite human for much longer.",
+                "Your ears are changing. That new silhouette is going to be very hard to hide."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a bunny. Those ears are becoming part of you, and your old appearance is slipping away.",
+                "Five stages down. I wonder how you'll feel when that little tail finally appears."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Nearly all fluff, ears, and rabbit features. How charmingly irreversible.",
+                "Almost a bunny. You can keep glaring, but those long ears are here to stay."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My ears are growing? And what is happening to my legs? You're going to regret this.",
+                "A tail? Long ears? I am not going to let you enjoy this without consequences."
+            ],
+            AIAt5Transform: [
+                "Halfway to a bunny. My balance is changing, and my legs feel ready to spring without asking me.",
+                "Five stages. These ears are impossible to ignore. I swear, if you laugh..."
+            ],
+            AIAt9Transform: [
+                "One step left. All right, the new legs have some advantages. Don't think I've forgiven you.",
+                "Fine. A bunny. Quick, alert, and not nearly as helpless as you seem to think."
+            ]
+        }
+    },
+
+    Otter: {
+        player: {
+            TransformPlayer: [
+                "Another step toward sleek fur, whiskers, and paws made for a life far removed from your old one.",
+                "Your features are becoming more otter-like. I wonder how long before that new face feels familiar."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to an otter. Your whiskers and paws are coming along nicely. Still think this is just a game?",
+                "Five stages down. You're losing your human shape and gaining a very different set of instincts."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon that sleek little otter face will be unmistakably yours.",
+                "Almost an otter. That old reflection is nearly gone, and I rather like the replacement."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Whiskers? Fur? You're turning me into an otter. I hope you're ready for the consequences.",
+                "My paws are changing, and my face feels strange. You will answer for this."
+            ],
+            AIAt5Transform: [
+                "Halfway to an otter. My body feels sleeker, my paws are different, and I am trying very hard not to panic.",
+                "Five stages. My senses are changing, and this new body is becoming harder to ignore."
+            ],
+            AIAt9Transform: [
+                "One step left. The sleek build and nimble paws might actually be useful. I still intend to win.",
+                "Fine. An otter it is. If I have to adapt, I'll adapt better than you ever could."
+            ]
+        }
+    },
+
+    Eevee: {
+        player: {
+            TransformPlayer: [
+                "Another step toward fluffy fur, huge ears, and an Eevee face. Your old look is fading fast.",
+                "That new fur is coming in nicely. Soon you'll be unmistakably an Eevee, whether you find that cute or not."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to Eevee. The ears, the fur, the changing face—how much of your old self do you still recognize?",
+                "Five stages down. You're becoming something adorable, and I know that isn't necessarily comforting."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Almost an Eevee. Your old reflection is about to become a distant memory.",
+                "Nearly there. All that fluffy fur, those ears, that tail—you're going to look nothing like you did before."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Fluffy fur and oversized ears? You're turning me into an Eevee. I am not amused.",
+                "My face is changing, my ears are enormous, and I swear you are enjoying this far too much."
+            ],
+            AIAt5Transform: [
+                "Halfway to Eevee. I can feel the fur, and these ears make it impossible to ignore the changes.",
+                "Five stages. I look ridiculous, I feel different, and I'm still going to beat you."
+            ],
+            AIAt9Transform: [
+                "One step left. Fine, I'll admit the fur is soft. You are still absolutely insufferable.",
+                "All right. An Eevee. Cute, quick, and quite capable of ruining your day."
+            ]
+        }
+    },
+
+    Squirrel: {
+        player: {
+            TransformPlayer: [
+                "Another step toward twitching ears, nimble paws, and that big fluffy tail. Your old silhouette is disappearing.",
+                "Your body is becoming squirrel-like. I wonder how you'll feel when that tail follows every movement."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a squirrel. Those ears and paws are changing, and your human habits are starting to look out of place.",
+                "Five stages down. You are halfway to a fluffy tail and a very different reflection."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Nearly a squirrel, and that tail is going to be very difficult to ignore.",
+                "Almost there. Your human shape is nearly gone. Better get used to those paws."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My ears are changing, and something is happening to my tailbone. Don't you dare laugh.",
+                "Paws? A fluffy tail? You're turning me into a squirrel. This is a new low."
+            ],
+            AIAt5Transform: [
+                "Halfway to a squirrel. My balance is changing, and I can feel that tail growing behind me.",
+                "Five stages. These paws are nimble, these ears twitch at everything, and I'm still furious with you."
+            ],
+            AIAt9Transform: [
+                "One step left. I'll admit the balance and agility are impressive. I'll still make you regret this.",
+                "Fine. A squirrel. Quick, alert, and perfectly capable of climbing somewhere you can't follow."
+            ]
+        }
+    },
+
+    Robot: {
+        player: {
+            TransformPlayer: [
+                "Another step toward metal, machinery, and a body that answers to a very different set of rules.",
+                "Your body is becoming mechanical. I wonder how long before you stop recognizing your own movements."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a robot. Your human body is being replaced piece by piece, and you can feel every change.",
+                "Five stages down. Metal where there was flesh, mechanisms where there were muscles. Still feel in control?"
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon your reflection will be all machine, and your old body will be gone.",
+                "Nearly a robot. Imagine looking down and realizing that almost nothing about your body is organic anymore."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Metal? Machinery? What have you done to my body? I'll dismantle whatever plan you have next.",
+                "My limbs feel mechanical. You're turning me into a machine, and I am not going quietly."
+            ],
+            AIAt5Transform: [
+                "Halfway to a robot. My movements feel different, and I can feel mechanisms replacing what used to be natural.",
+                "Five stages. I am becoming metal and machinery, and I refuse to let you reduce me to a device."
+            ],
+            AIAt9Transform: [
+                "One step left. If I'm becoming a machine, then I'll make this new body work for me.",
+                "Fine. Let the transformation finish. A machine can be precise, relentless, and very difficult to stop."
+            ]
+        }
+    },
+
+    Doll: {
+        player: {
+            TransformPlayer: [
+                "Another step toward a polished face, carefully crafted features, and a body that looks made rather than born.",
+                "Your skin and features are changing. Soon you'll look like a doll somebody else designed."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a doll. Your face is becoming smoother, your movements feel different, and your old appearance is fading.",
+                "Five stages down. You're being remade into something that looks carefully crafted. How does that feel?"
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon that doll-like face will be unmistakably yours.",
+                "Almost a doll. Your old reflection is nearly gone, replaced with something polished and unfamiliar."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My skin feels different. You're turning me into a doll? You will regret this.",
+                "My features are changing, and my movements feel strange. I refuse to become a toy for your amusement."
+            ],
+            AIAt5Transform: [
+                "Halfway to a doll. My face is changing, and every movement feels unfamiliar. I hate that you can see it.",
+                "Five stages. I can feel myself becoming something crafted, something carefully made. This is unnerving."
+            ],
+            AIAt9Transform: [
+                "One step left. If I'm going to look like a doll, I'll be the one deciding what expression I wear.",
+                "Fine. Let the finish settle. A doll can still be dangerous, and I intend to prove it."
+            ]
+        }
+    },
+
+    Dragon: {
+        player: {
+            TransformPlayer: [
+                "Another step toward scales, claws, horns, and a shape far more formidable than your old one.",
+                "Your body is growing draconic. I wonder whether you'll recognize the creature staring back at you."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a dragon. Those scales and claws aren't decoration; they're signs of how thoroughly you're changing.",
+                "Five stages down. Your old body is losing ground to something ancient, powerful, and decidedly less human."
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Soon the mirror will show a dragon, not the person who started this match.",
+                "Nearly a dragon. Those horns and scales are almost complete. You'd better get used to the new silhouette."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "Scales? Claws? You're turning me into a dragon. You may have just made a spectacular mistake.",
+                "My body is growing heavier, my features are changing. If I get wings, you'd better start running."
+            ],
+            AIAt5Transform: [
+                "Halfway to a dragon. I can feel the scales, the claws, the power building in this body. You should be worried.",
+                "Five stages. My face is changing, my body is growing formidable, and I'm beginning to see the advantages."
+            ],
+            AIAt9Transform: [
+                "One step left. I can feel the power in this form. If you finish the job, you may not like what you've created.",
+                "Fine. A dragon. Let the transformation finish. I intend to make this body legendary—and you very sorry."
+            ]
+        }
+    },
+
+    Bat: {
+        player: {
+            TransformPlayer: [
+                "Another step toward oversized ears, leathery wings, and a silhouette that won't pass for human.",
+                "Your body is becoming bat-like. I wonder how you'll feel when those wings start to feel like your own."
+            ],
+            PlayerAt5Transform: [
+                "Halfway to a bat. Your ears and body are changing, and your old shape is getting harder to recognize.",
+                "Five stages down. Imagine those wings unfolding where your arms used to be. Still feeling confident?"
+            ],
+            PlayerAt8Transform: [
+                "Two steps left. Nearly a bat, with wings and ears that make your new form impossible to mistake.",
+                "Almost there. Your human silhouette is nearly gone. Better prepare for the mirror."
+            ]
+        },
+        cpu: {
+            AIGetsTransformed: [
+                "My ears are changing—and are those wings? You have a lot of nerve doing this to me.",
+                "My body feels different, and something is growing from my back. I am going to remember every second of this."
+            ],
+            AIAt5Transform: [
+                "Halfway to a bat. My hearing is changing, and these wings are making my balance completely unfamiliar.",
+                "Five stages. My body is changing in ways I never asked for. Stop looking so pleased with yourself."
+            ],
+            AIAt9Transform: [
+                "One step left. The wings are impressive, I'll grant you that. Now let's see if you can handle what I've become.",
+                "Fine. A bat. Sharp senses, wings, and a very good memory for the person responsible."
+            ]
+        }
+    }
+};
+
+
+
+
 const CHALLENGE_TAUNTS = {
     TransformPlayer: ["There you go. One more step away from who you were.", "Feel that shift? I barely had to try.", "Your old shape is already starting to feel like a memory.","There you go… another piece of the old you slipping away under my hands.","Feel that shift? Your body is learning its new shape faster than your mind can argue.","You’re starting to look like you belong to someone. Good."],
     AIGetsTransformed: ["Hey! That wasn't part of my plan!", "Careful. I can still turn this around… and when I do, you’ll feel it.", "Enjoy that little victory while it lasts. Bodies remember who pushed them."],
@@ -1252,6 +1884,96 @@ function finishChallengeRun(){
     const modal=document.getElementById("game-over-modal");if(modal)modal.style.display="none";
     document.getElementById("settings-modal").style.display="flex";
 }
+
+
+let lastTransformationTaunt = null;
+
+function resetPlayerTransformationTaunts() {
+    lastTransformationTaunt = null;
+}
+
+function getTransformationTauntKey(target) {
+    const form = String(target?.transformTarget || "").trim();
+    if (form !== "Gender" && form !== "Cow") return form;
+
+    const gender = getGender(target?.name);
+
+    if (gender === "male" || gender === "female") {
+        return `${form}_${gender}`;
+    }
+
+    // Safe fallback if a character's gender is not defined.
+    return form;
+}
+
+function getTransformationTaunt(targetPlayerId, eventName) {
+    const target = targetPlayerId === 1 ? gameState.p1 : gameState.p2;
+    const side = targetPlayerId === 1 ? "player" : "cpu";
+    const formKey = getTransformationTauntKey(target);
+    const pool = TRANSFORMATION_TAUNTS[formKey]?.[side]?.[eventName];
+
+    if (!Array.isArray(pool) || pool.length === 0) return null;
+
+    const available = pool.length > 1
+        ? pool.filter(line => line !== lastTransformationTaunt)
+        : pool;
+
+    const line = available[Math.floor(Math.random() * available.length)];
+    lastTransformationTaunt = line;
+    return line;
+}
+
+function maybeShowTransformationTaunt(targetPlayerId, eventName, pct) {
+    //if (Math.random() >= PLAYER_TRANSFORMATION_TAUNT_CHANCE) {
+	if (Math.random() >= pct) {
+        return false;
+    }
+
+    const line = getTransformationTaunt(targetPlayerId, eventName);
+    if (!line) return false;
+
+    if (challengeActive) {
+        showChallengeTaunt(eventName, line);
+    } else {
+        showRegularTaunt(line);
+    }
+
+    return true;
+}
+
+function maybeShowPlayerTransformationTaunt(eventName, pct) {
+    return maybeShowTransformationTaunt(1, eventName, pct);
+}
+
+function maybeShowCPUTransformationTaunt(eventName, pct) {
+    return maybeShowTransformationTaunt(2, eventName, pct);
+}
+
+
+function showRegularTaunt(text) {
+    const box = document.getElementById("challenge-taunt-box");
+    if (!box || !text) return;
+
+    if (regularTauntTimer) clearTimeout(regularTauntTimer);
+	
+	const cpuName = gameState.p2.name || "Rival";
+
+    box.style.display = "flex";
+    box.classList.add("challenge-taunt-active");
+    box.textContent = `${cpuName}: “${text}”`;
+
+    box.classList.remove("visible");
+    void box.offsetWidth;
+    box.classList.add("visible");
+
+    regularTauntTimer = setTimeout(() => {
+        box.textContent = "";
+        box.classList.remove("visible");
+		box.style.display = "none";
+    }, 6500);
+}
+
+
 function showChallengeTaunt(eventName, forcedText=null){
     if (!challengeActive) return;
     const box=document.getElementById("challenge-taunt-box"); if(!box)return;
@@ -2517,6 +3239,7 @@ function initializeGame() {
     const showDiceText = document.getElementById("dice-text-option").value === "on";
     localShowDiceText = showDiceText;
     const showEnergyActions = false;
+	resetPlayerTransformationTaunts();
 	//document.getElementById("energy-actions-option").value === "on";
 
     document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
@@ -2959,9 +3682,9 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261018.1"; // Update this label for each release.
+const GAME_VERSION = "20261018.3"; // Update this label for each release.
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel created 2026 by Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
 }
 
@@ -4760,7 +5483,19 @@ function pulseChangedStat(playerPrefix, statName, currentValue) {
 }
 
 function updateUI() {
-    if (challengeActive) { const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.style.display="flex";taunt.classList.add("challenge-taunt-active");} }
+    
+    const taunt = document.getElementById("challenge-taunt-box");
+
+    if (taunt) {
+        if (challengeActive) {
+            taunt.style.display = "flex";
+            taunt.classList.add("challenge-taunt-active");
+        } else if (gameState.phase !== "waiting" && !gameState.gameEnded) {
+            taunt.style.display = "flex";
+            taunt.classList.add("challenge-taunt-active");
+        }
+    }
+
     if (!gameState)
 		return;
 		
@@ -5456,15 +6191,49 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
     }
     const beforeTransform = Number(target.transform) || 0;
     target.transform += finalAmount;
+	let showedTaunt = false;
     if (challengeActive && finalAmount > 0) {
-        if (targetPlayerId === 1) showChallengeTaunt("TransformPlayer");
-        else showChallengeTaunt("AIGetsTransformed");
+        if (targetPlayerId === 1)
+			showChallengeTaunt("TransformPlayer");
+        else 
+			showChallengeTaunt("AIGetsTransformed");
         const afterTransform = Number(target.transform) || 0;
         if (targetPlayerId === 1 && beforeTransform < 5 && afterTransform >= 5) showChallengeTaunt("PlayerAt5Transform");
         if (targetPlayerId === 1 && beforeTransform < 8 && afterTransform >= 8) showChallengeTaunt("PlayerAt8Transform");
         if (targetPlayerId === 2 && beforeTransform < 5 && afterTransform >= 5) showChallengeTaunt("AIAt5Transform");
         if (targetPlayerId === 2 && beforeTransform < 9 && afterTransform >= 9) showChallengeTaunt("AIAt9Transform");
     }
+	else if (!challengeActive)
+	{
+		if (finalAmount > 0) {
+			if (targetPlayerId === 1) {
+				maybeShowPlayerTransformationTaunt("TransformPlayer", PLAYER_TRANSFORMATION_TAUNT_CHANCE);
+
+				const afterTransform = Number(target.transform) || 0;
+
+				if (beforeTransform < 5 && afterTransform >= 5) {
+					maybeShowPlayerTransformationTaunt("PlayerAt5Transform", PLAYER_TRANSFORMATION_TAUNT_CHANCE+.5);
+				}
+
+				if (beforeTransform < 8 && afterTransform >= 8) {
+					maybeShowPlayerTransformationTaunt("PlayerAt8Transform", 1.0);
+				}
+			}
+			else if (targetPlayerId === 2) {
+				maybeShowCPUTransformationTaunt("AIGetsTransformed", PLAYER_TRANSFORMATION_TAUNT_CHANCE+.25);
+
+				const afterTransform = Number(target.transform) || 0;
+
+				if (beforeTransform < 5 && afterTransform >= 5) {
+					maybeShowCPUTransformationTaunt("AIAt5Transform",PLAYER_TRANSFORMATION_TAUNT_CHANCE+.5);
+				}
+
+				if (beforeTransform < 9 && afterTransform >= 9) {
+					maybeShowCPUTransformationTaunt("AIAt9Transform",1.0);
+				}
+			}
+		}
+	}
     if (finalAmount > 0 && target && Number(sourcePlayerId) !== 0) {
         showTurnAlert(`${target.name} transforms +${finalAmount} 👁️.`, targetPlayerId);
     }
