@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnotic Duel - Beta V20261017.5.8</title>
+    <title>Hypnotic Duel - Beta V20261017.6</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -4608,7 +4608,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261017.5.8"; // Update this label for each release.
+const GAME_VERSION = "20261017.6"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -6800,7 +6800,7 @@ function renderInventory(playerId) {
             if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
             if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
             if (card.id === 49 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
-            if (card.id === 54 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.burningUpUsed) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (+2 Rerolls)</button>`;
+            if (card.id === 54 && canUseBurningUp(playerId)) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (up to 2 extra rerolls)</button>`;
         }
         if (canSteal) {
 			const owned = inventoryHasName(buyer, card.name);
@@ -7426,7 +7426,7 @@ function startTurn() {
     gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false; gameState.vulnGrantedThisTurn = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
     activeP.shieldActive = false; activeP.simmeringUsed = false;
-    activeP.burningUpUsed = false; activeP.burningUpPending = 0;
+    activeP.burningUpUsed = false; activeP.burningUpPending = 0; activeP.burningUpUses = 0;
     activeP.lastRoll = [];
     cardResolvedThisTurn = new Set();
 
@@ -8288,9 +8288,11 @@ function executeCPUTurn() {
                 buyReroll(1, 16, 2);
                 return;
             }
-            if (hasCard(2, 54) && !gameState.p2.burningUpUsed) {
-                useBurningUp(2);
-                return;
+            // Burning Up uses the per-turn burningUpUses counter. Do not
+            // return from the CPU interval unless the card was actually used;
+            // otherwise a rejected use can leave the interval running forever.
+            if (cpuShouldUseBurningUp()) {
+                if (useBurningUp(2)) return;
             }
 
             clearInterval(rInterval);
