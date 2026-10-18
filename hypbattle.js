@@ -169,6 +169,7 @@ let diceAnimationInterval = null;
 let diceAnimationFaces = new Map();
 let lastPlayerTransformationTaunt = null;
 let regularTauntTimer = null;
+let cpuVictoryTaunt = null;
 
 
 let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
@@ -1090,6 +1091,129 @@ const TRANSFORMATION_TAUNTS = {
 };
 
 
+const CPU_VICTORY_TAUNTS = {
+    // These lines depend on what the HUMAN player became.
+    transformation: {
+        Statue: [
+            "A statue. Beautifully permanent, isn't it? I hope you enjoy being admired from a distance.",
+            "There you are, immortalized in stone. All that defiance, reduced to a pose I chose for you."
+        ],
+        Cow_female: [
+            "A cow. I wonder how long it'll take before you stop expecting that reflection to change back.",
+            "Look at you. Hooves, horns, and a whole new life. You were so certain I couldn't do this.",
+			"Such impressive udders. I bet you can't wait to be milked."
+        ],
+        Cow_male: [
+            "A bull. Quite the imposing figure. Pity you couldn't put up a fight when it mattered.",
+            "Well, look at those horns. You wanted to challenge me; now you're built for a very different pasture."
+        ],
+        Cat: [
+            "A cat. All those sharp remarks, and now you've got whiskers to go with them.",
+            "Look at those ears and that tail. I do hope you weren't too attached to looking human."
+        ],
+        Dog: [
+            "A dog. I wonder if you'll recognize the person you used to be beneath all that fur.",
+            "Floppy ears, paws, a muzzle. Quite a transformation. And you thought you could outplay me."
+        ],
+        Werewolf: [
+            "A werewolf. All those fangs and claws, and you still couldn't get your hands on a win.",
+            "Look at yourself. Something fierce, something wild—and still thoroughly beaten."
+        ],
+        Fox: [
+            "A fox. Clever, quick, and supposedly difficult to fool. So much for that reputation.",
+            "Those ears and that tail suit you. Perhaps next time you'll use that famous cunning a little better."
+        ],
+        Horse: [
+            "A horse. Strong legs, powerful frame, and absolutely nowhere to run from this result.",
+            "Quite the equine transformation. I hope you enjoy your new proportions as much as I enjoy winning.",
+			"Let me get a saddle and bridle so I can ride you like I did in this match."
+        ],
+        Pig: [
+            "A pig. I imagine that mirror is going to take some getting used to.",
+            "There you are. A snout, floppy ears, and a loss you won't be able to blame on bad luck.",
+			"A dirty, ugly, grunting pig. And that was before I transformed you!"
+        ],
+        Gender_male: [
+            "A woman now. Take a good look at that reflection—you won't be able to argue with it.",
+            "So soft and sexy now. I'm sure you will make a nice trophy for someone."
+        ],
+        Gender_female: [
+            "A man now. I wonder what you'll think when that new reflection finally feels familiar.",
+            "Look at you. A completely different silhouette, a different face—and the same thoroughly defeated opponent."
+        ],
+        Puppet: [
+            "A puppet. All that effort to stay in control, and now you're the one who's been remade.",
+            "Look at those joints. A body crafted into a new shape, with your defeat as the finishing touch."
+        ],
+        Bunny: [
+            "A bunny. Those long ears are going to make it awfully difficult to pretend this never happened.",
+            "All that stubbornness, and now look at you. Fluffy, long-eared, and made for breeding. Better get started!"
+        ],
+        Otter: [
+            "An otter. Sleek fur and nimble paws. I almost feel bad for how thoroughly I've outplayed you.",
+            "Well, now you could probably out swim me. As for this battle? Never."
+        ],
+        Eevee: [
+            "An Eevee. All that fluff and those enormous ears. You really are a long way from your old self.",
+            "Look at you—adorable, unmistakably transformed, and still on the losing side."
+        ],
+        Squirrel: [
+            "A squirrel. That tail is going to be hard to ignore, especially when you remember who made it happen.",
+            "All that energy, all those nimble paws—and you still couldn't scamper your way out of defeat."
+        ],
+        Robot: [
+            "A robot. Perhaps you can calculate exactly where you went wrong while you get used to that metal body.",
+            "Mechanical limbs, a new silhouette, and a decisive loss. I do appreciate an efficient result."
+        ],
+        Doll: [
+            "A doll. Such carefully crafted features. I think I'll enjoy watching you get used to your new reflection.",
+            "You've been remade into something polished and unfamiliar. Consider the defeat your finishing touch."
+        ],
+        Dragon: [
+            "A dragon. Scales, claws, all that intimidating power—and still not enough to beat me.",
+            "What a magnificent creature you've become. Shame the mighty dragon couldn't manage a victory."
+        ],
+        Bat: [
+            "A bat. Those wings might help you leave, but they won't help you escape this result.",
+            "Look at those ears and wings. You've become something extraordinary—and lost to me all the same."
+        ]
+    },
+
+    // These lines depend on the CPU CHARACTER'S personality.
+    character: {
+        Mark: [
+            "Victory confirmed. Your transformation completed successfully; your strategy, however, was full of bugs.",
+            "I ran the numbers. You lost, your form changed, and the outcome was entirely reproducible."
+        ],
+        Fable: [
+            "And that's the lesson for today: actions have consequences. I'm afraid your final grade is a rather decisive F.",
+            "Class dismissed! Today's homework is to get used to your new form. Extra credit if you can admit I outplayed you."
+        ],
+        Roz: [
+            "I won! I actually won! And you look SO different! Is it rude to stare? Because I'm definitely staring.",
+            "Okay, wow! You're really transformed! And I beat you! I should probably be more intimidating right now, huh?"
+        ],
+        Zixuan: [
+            "Result recorded: opponent defeated, transformation completed. The experiment was successful. Your objections are noted and irrelevant.",
+            "Fascinating. Your final form differs from your original baseline, and my win rate remains excellent. What a productive match."
+        ],
+        Hyeri: [
+            "Breathe in, and accept the result. Your old form has passed, your resistance has quieted, and I have won.",
+            "You fought so hard to hold on. Now settle into this new shape, and let the lesson become part of you."
+        ],
+        Tex: [
+            "Well, partner, looks like I came out on top. You can admire your new shape in the mirror while I enjoy the victory.",
+            "Reckon that's the end of the trail for you. New body, lost match, and no amount of grumbling's gonna change either one."
+        ],
+		Siobhán: [
+			"Oh, darling… you really should’ve known better than to play cat-and-mouse with me.",
+			"I do hope you enjoyed the view on the way down. Most men never get this close to the real pussy.",
+			"You fought like a lion… and still got stroked into submission by a mere kitty. How deliciously ironic.",
+			"Sweet dreams, little mouse. And if you wake up aching… just remember who left her mark all over you."
+		],
+    }
+};
+
 
 
 const CHALLENGE_TAUNTS = {
@@ -1600,7 +1724,8 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "See how easy that was? A little nudge, a little suggestion, and suddenly we're getting somewhere.",
             "Mmm. I could get used to this. Though I suspect you might have other ideas about that.",
 			"That was almost effortless. Thank you for making my work look easy.",
-            "A little suggestion and you simply obey. I do appreciate good taste in a rival."
+            "A little suggestion and you simply obey. I do appreciate good taste in a rival.",
+			"Feel free to keep squirming. I do so love the way you twitch when you've been thoroughly… dominated."
         ],
 
         AIIsObedient: [
@@ -1988,6 +2113,51 @@ function showChallengeTaunt(eventName, forcedText=null){
     log(`Rival — ${rival.name}: “${text}”`);
     challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
 }
+
+function selectCPUVictoryTaunt() {
+    const human = gameState.p1;
+    const cpu = gameState.p2;
+
+    const form = String(human.transformTarget || "").trim();
+    let formKey = form;
+
+    // Match the gender-aware transformation naming in the cinematic.
+    if (form === "Gender" || form === "Cow") {
+        const gender = getGender(human.name);
+        if (gender === "male" || gender === "female") {
+            formKey = `${form}_${gender}`;
+        }
+    }
+
+    const transformationLines =
+        CPU_VICTORY_TAUNTS.transformation[formKey];
+
+    const characterLines =
+        CPU_VICTORY_TAUNTS.character[cpu.name];
+
+    // Pick the category first: 50% transformation, 50% personality.
+    const useTransformation = Math.random() < 0.5;
+
+    let pool = useTransformation
+        ? transformationLines
+        : characterLines;
+
+    // Fall back if the chosen category has no lines for this entry.
+    if (!Array.isArray(pool) || pool.length === 0) {
+        pool = useTransformation
+            ? characterLines
+            : transformationLines;
+    }
+
+    if (!Array.isArray(pool) || pool.length === 0) {
+        // Defensive fallback; should not be needed once all entries exist.
+        pool = ["I won. Take a good look at your new form and remember this match."];
+    }
+
+    cpuVictoryTaunt = pool[Math.floor(Math.random() * pool.length)];
+    return cpuVictoryTaunt;
+}
+
 
 function toggleGameMode() {
     let mode = document.getElementById("game-mode-option").value;
@@ -3240,6 +3410,7 @@ function initializeGame() {
     localShowDiceText = showDiceText;
     const showEnergyActions = false;
 	resetPlayerTransformationTaunts();
+	cpuVictoryTaunt = null;
 	//document.getElementById("energy-actions-option").value === "on";
 
     document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
@@ -3682,9 +3853,9 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261018.3"; // Update this label for each release.
+const GAME_VERSION = "20261018.4"; // Update this label for each release.
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel created 2026 by Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
 }
 
@@ -5296,11 +5467,16 @@ async function playFinalTransformationCinematic(loserId) {
     const isForfeit =
 		gameState.endReason === "forfeit" &&
 		Number(gameState.forfeitingPlayerId) === Number(loserId);
-
-	const finalCaption = isForfeit
+	
+	let finalCaption = isForfeit
 		? `${loser.name}'s resistance finally crumbles before ${winner.name}. ` +
 		`“I surrender. I forfeit. I can't fight you any longer.”`
-		: `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;
+		: `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;	
+	if (loserId === 1 && cpuVictoryTaunt) {
+		finalCaption += `\n\n${gameState.p2.name}: "${cpuVictoryTaunt}"`;
+	}
+
+	
     const overlay = document.getElementById("final-transform-cinematic");
     const portrait = document.getElementById("cinematic-avatar");
     const caption = document.getElementById("cinematic-caption");
@@ -7716,8 +7892,29 @@ function presentFinishedGame() {
     syncFinalBoardPortrait(2);
 
     const p1Wins = winnerId === 1;
-    const winner = p1Wins ? gameState.p1 : gameState.p2;
-    const gameOverModal = document.getElementById("game-over-modal");
+	const winner = p1Wins ? gameState.p1 : gameState.p2;
+	const gameOverModal = document.getElementById("game-over-modal");
+
+	// Choose one taunt for this CPU victory.
+	// The same line will be used in the cinematic and results dialog.
+	cpuVictoryTaunt = null;
+	if (!p1Wins) {
+		selectCPUVictoryTaunt();
+	}
+
+	// Prepare the game-over dialog's taunt area.
+	const victoryTauntEl = document.getElementById("go-victory-taunt");
+
+	if (victoryTauntEl) {
+		if (!p1Wins && cpuVictoryTaunt) {
+			victoryTauntEl.textContent =
+				`${gameState.p2.name}: “${cpuVictoryTaunt}”`;
+			victoryTauntEl.style.display = "block";
+		} else {
+			victoryTauntEl.textContent = "";
+			victoryTauntEl.style.display = "none";
+		}
+	}
 
     document.getElementById("go-title").innerText = `${winner.name} Wins!`;
     document.getElementById("go-p1-name").innerText = gameState.p1.name;

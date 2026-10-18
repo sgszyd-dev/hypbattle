@@ -233,8 +233,8 @@
         }
         #final-transform-cinematic.cinematic-shimmer .cinematic-portrait-wrap::after { opacity:1; animation:cinematicShimmer 650ms ease-out; }
         #final-transform-cinematic.cinematic-intense .cinematic-portrait-wrap { animation:cinematicIntense 520ms ease-out both; }
-        #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation:cinematicFinal 950ms cubic-bezier(.15,.8,.2,1) both; }
-        #final-transform-cinematic .cinematic-caption { font-size:1.1rem; font-weight:700; min-height:1.4em; text-shadow:0 0 16px rgba(210,160,255,.65); }
+        #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation:cinematicFinal 950ms cubic-bezier(.15,.8,.2,1) both; white-space: pre-line;}
+        #final-transform-cinematic .cinematic-caption { font-size:1.1rem; font-weight:700; min-height:1.4em; text-shadow:0 0 16px rgba(210,160,255,.65); white-space: pre-line;}
         #final-transform-cinematic .cinematic-counter { width:min(68vw,390px); color:#d9d2e4; font-size:.85rem; font-variant-numeric:tabular-nums; }
         #final-transform-cinematic .cinematic-track { height:7px; margin-top:7px; background:#31283d; border-radius:99px; overflow:hidden; }
         #final-transform-cinematic .cinematic-fill { height:100%; width:0%; background:var(--cinematic-player-color,var(--accent)); box-shadow:0 0 12px var(--cinematic-player-color,var(--accent)); transition:width 260ms ease; }
@@ -247,7 +247,7 @@
         @media (prefers-reduced-motion: reduce) {
             #final-transform-cinematic *, #final-transform-cinematic.cinematic-enter .cinematic-portrait-wrap,
             #final-transform-cinematic.cinematic-intense .cinematic-portrait-wrap,
-            #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation-duration:1ms !important; transition-duration:1ms !important; }
+            #final-transform-cinematic.cinematic-final .cinematic-portrait-wrap { animation-duration:1ms !important; transition-duration:1ms !important; white-space: pre-line; }
         }
 
         .stat { display: flex; justify-content: space-between; margin: 8px 0; font-size: 1.1em; position: relative; }
