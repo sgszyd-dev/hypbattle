@@ -2037,9 +2037,16 @@ async function resetChallengeRecord(){
     if (!confirmed) return; saveChallengeRecord(emptyChallengeRecord()); showChallengeRecord(); 
 }
 function clearChallengeMatchAlerts(){ const toast=document.getElementById("card-trigger-toast"); if(toast){toast.innerHTML="";toast.classList.remove("visible");toast.removeAttribute("aria-hidden");} }
-function challengeTestFinish(result){
+async function challengeTestFinish(result){
     if(!challengeActive || !gameState || gameState.gameMode!=="solo" || gameState.gameEnded){ showPopup("Challenge Test Buttons","Start an active Solo Challenge match before using these test buttons."); return; }
-    if(!window.confirm(result==="win" ? "TEST: Instantly win this challenge match?" : "TEST: Instantly lose this challenge match?")) return;
+    
+    const confirmed = await showThemedConfirm(
+        result==="win" ? "TEST: Instantly win this challenge match?" : "TEST: Instantly lose this challenge match?",
+        "TEST: Instant Challenge Match Result"
+    );
+
+    if (!confirmed) return;
+
     if(result==="win"){ gameState.p2.transform=10; gameState.p1.transform=Math.min(9,Number(gameState.p1.transform)||0); }
     else { gameState.p1.transform=10; gameState.p2.transform=Math.min(9,Number(gameState.p2.transform)||0); }
     gameState.gameEnded=true;
@@ -2811,7 +2818,18 @@ function handleChallengeMatchEnded(winnerId){
     saveChallengeProgress();
     return true;
 }
-function quitChallengeRun(){ if (window.confirm("Abandon The Seven challenge and return to setup?")) { updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";}); finishChallengeRun(); } }
+async function quitChallengeRun() {
+
+    const confirmed = await showThemedConfirm(
+        "Abandon The Seven challenge and return to setup?",
+        "Abandon Challenge"
+    );
+
+    if (!confirmed) return;
+
+    updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";});
+    finishChallengeRun(); 
+ }
 function finishChallengeRun(){
     challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null;
     try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
@@ -3667,8 +3685,15 @@ function closeGameOverToBoard() {
         }
     }
 }
-function restartGameFromBoard() {
-    if (window.confirm("Restart Hypnotic Duel? The current match will be lost.")) window.location.reload();
+async function restartGameFromBoard() {
+    const confirmed = await showThemedConfirm(
+        "Restart Hypnotic Duel? The current match will be lost.",
+        "Restart Hypnotic Duel"
+    );
+
+    if (!confirmed) return;
+
+    window.location.reload();
 }
 
 function openOptionsModal(returnTarget = "game") {
@@ -3692,7 +3717,7 @@ function closeOptionsModal() {
 }
 
 
-function confirmResetGame() {
+async function confirmResetGame() {
     const isActiveOnlineGame =
         gameState &&
         gameState.gameMode === "online" &&
@@ -3701,11 +3726,15 @@ function confirmResetGame() {
         gameState.phase !== "waiting";
 
     if (isActiveOnlineGame) {
-        const confirmed = window.confirm(
+        
+        const confirmed = await showThemedConfirm(
             "Forfeit this online match?\n\n" +
             "If you proceed, your opponent will be declared the winner " +
-            "and will see your final transformation. This cannot be undone."
+            "and will see your final transformation. This cannot be undone.",
+            "Submit to Your Opponent"
         );
+
+        if (!confirmed) return;
 
         if (confirmed) {
             forfeitOnlineGameAndExit();
@@ -3713,12 +3742,15 @@ function confirmResetGame() {
         return;
     }
 
-    if (window.confirm(
+    const confirmed2 = await showThemedConfirm(
         "Reset Hypnotic Duel and return to the setup screen? " +
-        "The current match will be lost."
-    )) {
-        window.location.reload();
-    }
+        "The current match will be lost.",
+        "Submit to Your Opponent"
+    )
+
+    if (!confirmed) return;
+    
+    window.location.reload();
 }
 
 async function forfeitOnlineGameAndExit() {
