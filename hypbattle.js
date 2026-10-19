@@ -1911,7 +1911,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Halfway there already… look at you changing for me. You will make a lovely {HUMTRANS}.",
 			"You’re past the point of easy reversal. Every step from here only binds you tighter to my will.",
 			"Half transformed and already so much softer. I can’t wait to finish the job.",
-			"The mirror must be getting interesting. Keep staring while I push you the rest of the way into {AAN} {HUMTRANS}."
+			"The mirror must be getting interesting. Keep staring while I push you the rest of the way into {AAN} {HUMTRANS}.",
             "Five stages complete. You can still turn this around, of course. I simply wouldn't build a business plan around it.",
 			"You’re changing in places you can’t ignore. Good."
         ],
