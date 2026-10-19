@@ -17,6 +17,83 @@ function getGender(name) {
     const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
     return c ? c.gender : null;
 }
+
+// {HIM}	he or she for the human player
+// {HIM_CAP}	He or She
+// {HIS}	his or her
+// {HIS_CAP}	His or Her
+// {HIMSELF}	himself or herself
+// {CPU}	CPU character's name
+// {HUMAN}	Human player's name
+// {HUMGEN:He holds his ground.:She holds her ground.}
+// {CPUGEN:He refuses to surrender.:She refuses to surrender.}
+
+function processGenderTokens(text) {
+    if (text == null) return "";
+
+    const human = gameState?.p1;
+    const cpu = gameState?.p2;
+
+    const humanGender = getGender(human?.name);
+    const cpuGender = getGender(cpu?.name);
+
+    const pronouns = {
+        male:   { he: "he",   him: "him",  his: "his",  self: "himself" },
+        female: { he: "she",  him: "her",  his: "her",  self: "herself" },
+        neutral:{ he: "they", him: "them", his: "their", self: "themself" }
+    };
+
+    let result = String(text);
+
+    // Conditional text:
+    // {HUMGEN|male wording|female wording|optional neutral wording}
+    // {CPUGEN|male wording|female wording|optional neutral wording}
+    result = result.replace(
+        /\{(HUMGEN|CPUGEN)\|([^|{}]*)\|([^|{}]*)(?:\|([^{}]*))?\}/g,
+        (match, tag, maleText, femaleText, neutralText) => {
+            const gender = tag === "HUMGEN" ? humanGender : cpuGender;
+
+            if (gender === "male") return maleText;
+            if (gender === "female") return femaleText;
+            return neutralText ?? "";
+        }
+    );
+
+    // Pronouns for the human and CPU.
+    const replacements = {
+        HUM_HE: pronouns[humanGender]?.he ?? pronouns.neutral.he,
+        HUM_HIM: pronouns[humanGender]?.him ?? pronouns.neutral.him,
+        HUM_HIS: pronouns[humanGender]?.his ?? pronouns.neutral.his,
+        HUM_SELF: pronouns[humanGender]?.self ?? pronouns.neutral.self,
+
+        CPU_HE: pronouns[cpuGender]?.he ?? pronouns.neutral.he,
+        CPU_HIM: pronouns[cpuGender]?.him ?? pronouns.neutral.him,
+        CPU_HIS: pronouns[cpuGender]?.his ?? pronouns.neutral.his,
+        CPU_SELF: pronouns[cpuGender]?.self ?? pronouns.neutral.self,
+
+        HUMAN: human?.name ?? "Player",
+        CPU: cpu?.name ?? "CPU"
+    };
+
+    result = result.replace(
+        /\{(HUM_HE|HUM_HIM|HUM_HIS|HUM_SELF|CPU_HE|CPU_HIM|CPU_HIS|CPU_SELF|HUMAN|CPU)\}/g,
+        (match, token) => replacements[token]
+    );
+
+    // Capitalized pronouns, e.g. {HUM_HE_CAP} -> He / She / They.
+    result = result.replace(
+        /\{(HUM|CPU)_(HE|HIM|HIS|SELF)_CAP\}/g,
+        (match, side, type) => {
+            const key = `${side}_${type}`;
+            const value = replacements[key];
+            return value ? value.charAt(0).toUpperCase() + value.slice(1) : match;
+        }
+    );
+
+    return result;
+}
+
+
 const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon","Bat"];
 
 const CHARACTER_MANIFEST = {
@@ -44,7 +121,7 @@ const debugCards = [56, 59, 2]; // Set the 3 card IDs you want dealt first
 const KNOWN_CARDS = [
     { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {transformer: 12, adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
 	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {transformer: 40, adaptive: 30, aggressive: 30, defensive: 30, v23low: 30} },
-	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "Rolling 3+ Transform dice deals 1 extra Transform damage.", ai: {transformer: 85, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
+	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "When you roll 👁️👁️👁️ deal 1 extra 👁️.", ai: {transformer: 85, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
 	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {transformer: 30, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
 	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {transformer: 55, adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
     { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {transformer: 25, adaptive: 28, aggressive: 35, defensive: 15, v23low: 55} },
@@ -170,6 +247,7 @@ let diceAnimationFaces = new Map();
 let lastPlayerTransformationTaunt = null;
 let regularTauntTimer = null;
 let cpuVictoryTaunt = null;
+let cpuDefeatSubmission = null;
 
 
 let lucidityState = { available: 0, total: 0, allocations: { trance: 0, arousal: 0, vuln: 0 }, maxes: { trance: 0, arousal: 0, vuln: 0 } };
@@ -1096,82 +1174,153 @@ const CPU_VICTORY_TAUNTS = {
     transformation: {
         Statue: [
             "A statue. Beautifully permanent, isn't it? I hope you enjoy being admired from a distance.",
-            "There you are, immortalized in stone. All that defiance, reduced to a pose I chose for you."
+            "Look at you… cold, hard, and perfectly posed for me. I think I’ll keep you just like this.",
+			"No more struggling. No more running. Just beautiful, silent stone waiting for my hands.",
+			"I turned you into something exquisite… and completely helpless. How does it feel to be on display for me?",
+			"You’re still warm in places, but you can’t move a muscle. Perfect. Stay exactly where I put you.",
+			"A living statue on display that can still feel everything I do to it… I chose well when I made you mine."
         ],
         Cow_female: [
             "A cow. I wonder how long it'll take before you stop expecting that reflection to change back.",
             "Look at you. Hooves, horns, and a whole new life. You were so certain I couldn't do this.",
-			"Such impressive udders. I bet you can't wait to be milked."
+			"Such impressive udders. I bet you can't wait to be milked.",
+			"Look at those full, heavy udders… I made them just for me. Time to start milking my new cow.",
+			"You used to talk back. Now you just moo and present those teats. Good girl.",
+			"All that pride, reduced to soft, dripping livestock. I’m going to enjoy every drop.",
+			"On all fours where you belong. Those new udders aren’t going to empty themselves.",
         ],
         Cow_male: [
             "A bull. Quite the imposing figure. Pity you couldn't put up a fight when it mattered.",
-            "Well, look at those horns. You wanted to challenge me; now you're built for a very different pasture."
+            "Well, look at those horns. You wanted to challenge me; now you're built for a very different pasture.",
+			"Look at my new bull… strong, heavy, and already panting for me. I think I’ll keep him tightly collared.",
+			"All that power, and now it’s mine to direct. On your knees, bull.",
+			"I gave you those horns and that body… and I decide when and how they’re used.",
+			"You used to be human. Now you’re just a big, virile animal waiting for my command.",
         ],
         Cat: [
             "A cat. All those sharp remarks, and now you've got whiskers to go with them.",
-            "Look at those ears and that tail. I do hope you weren't too attached to looking human."
+            "Look at those ears and that tail. I do hope you weren't too attached to looking human.",
+			"There’s my pretty little cat… soft, purring, and already presenting. Come here.",
+			"I took your claws and your pride. All that’s left is a needy little pet for me to stroke.",
+			"Tail up, back arched… just how I like my cats. Stay like that.",
+			"You used to hunt. Now you’re the one getting caught and played with."
         ],
         Dog: [
             "A dog. I wonder if you'll recognize the person you used to be beneath all that fur.",
-            "Floppy ears, paws, a muzzle. Quite a transformation. And you thought you could outplay me."
+            "Floppy ears, paws, a muzzle. Quite a transformation. And you thought you could defeat me.",
+			"Sit. Stay. Good dog. Look at you, already so eager to please your new owner.",
+			"I took everything that made you human and left a panting, obedient pet. Perfect.",
+			"Belly up, tongue out… just how a good dog should greet its master.",
+			"You used to give orders. Now you wait for them. Heel."
         ],
         Werewolf: [
             "A werewolf. All those fangs and claws, and you still couldn't get your hands on a win.",
-            "Look at yourself. Something fierce, something wild—and still thoroughly beaten."
+            "Look at yourself. Something fierce, something wild—and still thoroughly beaten.",
+			"Look at my new pet wolf… all that feral strength, and it’s on its back for me.",
+			"I gave you the beast, and I decide when it gets to hunt… or get hunted.",
+			"Moon’s high, and my werewolf is already baring its throat. Good.",
+			"You used to be human. Now you’re a powerful animal that only answers to me.",
+			"My personal werewolf. Claws, fangs, and complete submission under the full moon."
         ],
         Fox: [
             "A fox. Clever, quick, and supposedly difficult to fool. So much for that reputation.",
-            "Those ears and that tail suit you. Perhaps next time you'll use that famous cunning a little better."
+            "Those ears and that tail suit you. Perhaps next time you'll use that famous cunning a little better.",
+			"There’s my clever little fox… bushy tail twitching and already presenting. Come here.",
+			"All that cunning, and I still caught you. Now you’re just a soft, sly pet for me.",
+			"I took your freedom and left you with a beautiful coat and a very needy body.",
+			"You used to outfox everyone. Now you’re the one getting played with.",
         ],
         Horse: [
             "A horse. Strong legs, powerful frame, and absolutely nowhere to run from this result.",
             "Quite the equine transformation. I hope you enjoy your new proportions as much as I enjoy winning.",
-			"Let me get a saddle and bridle so I can ride you like I did in this match."
+			"Let me get a saddle and bridle so I can ride you like I did in this match.",
+			"Look at my new horse… strong, powerful, and already broken to the saddle. Easy now.",
+			"I gave you those legs and that body… and I decide who gets to ride.",
+			"You used to run free. Now you stand still and wait for the bit. Good.",
+			"My personal mount. Strong flanks, eager body, and completely trained."
         ],
         Pig: [
             "A pig. I imagine that mirror is going to take some getting used to.",
             "There you are. A snout, floppy ears, and a loss you won't be able to blame on bad luck.",
-			"A dirty, ugly, grunting pig. And that was before I transformed you!"
+			"A dirty, ugly, grunting pig. And that was before I transformed you!",
+			"Look at my new pig… soft, heavy, and already rolling over for me. Good.",
+			"I took all that pride and left a fat, needy animal that only oinks for its owner.",
+			"On your back in the mud where you belong. I’m going to enjoy every soft inch.",
+			"You used to be human. Now you’re just warm, hungry livestock."
         ],
         Gender_male: [
             "A woman now. Take a good look at that reflection—you won't be able to argue with it.",
-            "So soft and sexy now. I'm sure you will make a nice trophy for someone."
+            "So soft and sexy now. I'm sure you will make a nice trophy for someone.",
+			"Look at you… soft new curves, open and ready. I made you into the perfect woman for me.",
+			"All that male pride, reduced to wet, needy femininity. How does it feel?",
+			"I took everything that made you a man and left something warm, soft, and completely mine.",
+			"Those new breasts, that new heat between your legs… all for me to enjoy.",
+			"My personal transformation project. A former man who now only knows how to take it."
         ],
         Gender_female: [
             "A man now. I wonder what you'll think when that new reflection finally feels familiar.",
-            "Look at you. A completely different silhouette, a different face—and the same thoroughly defeated opponent."
+            "Look at you. A completely different silhouette, a different face—and the same thoroughly defeated opponent.",
+			"Look at you… hard, heavy, and already aching for me. I made you into the perfect man.",
+			"All that feminine softness, replaced with something strong and needy. How does it feel?",
+			"I took everything that made you a woman and left a hard, eager body that only answers to me.",
+			"That new strength, that new heat… all mine to direct and enjoy."
         ],
         Puppet: [
             "A puppet. All that effort to stay in control, and now you're the one who's been remade.",
-            "Look at those joints. A body crafted into a new shape, with your defeat as the finishing touch."
+            "Look at those joints. A body crafted into a new shape, with your defeat as the finishing touch.",
+			"Look at my new puppet… strings firmly in my hands and already so obedient.",
+			"I decide how you move, what you say, and what happens to that pretty body.",
+			"No more free will. Just a beautiful toy that performs exactly as I command."
         ],
         Bunny: [
             "A bunny. Those long ears are going to make it awfully difficult to pretend this never happened.",
-            "All that stubbornness, and now look at you. Fluffy, long-eared, and made for breeding. Better get started!"
+            "All that stubbornness, and now look at you. Fluffy, long-eared, and made for breeding. Better get started!",
+			"There’s my soft little bunny… tail up and already presenting. Come here.",
+			"I took your freedom and left a warm, fertile pet that only hops when I say.",
+			"My personal bunny. Soft, eager, and ready to be bred whenever I want."
         ],
         Otter: [
             "An otter. Sleek fur and nimble paws. I almost feel bad for how thoroughly I've outplayed you.",
-            "Well, now you could probably out swim me. As for this battle? Never."
+            "Well, now you could probably out swim me. As for this battle? Never.",
+			"Look at my sleek little otter… wet, flexible, and already on its back for me.",
+			"Those whiskers are twitching so nicely. Stay still while I enjoy my new pet.",
+			"You used to swim free. Now you float right where I put you.",
+			"My personal otter. Soft, slippery, and completely mine to play with."
         ],
         Eevee: [
             "An Eevee. All that fluff and those enormous ears. You really are a long way from your old self.",
-            "Look at you—adorable, unmistakably transformed, and still on the losing side."
+            "Look at you—adorable, unmistakably transformed, and still on the losing side.",
+			"There’s my soft little Eevee… big eyes and already so ready to please. Come here.",
+			"I decide what you evolve into… or if you stay just like this for me to enjoy.",
+			"Those soft ears and that fluffy tail… all mine to stroke and claim.",
+			"You used to adapt to survive. Now you adapt to whatever I want from you."
         ],
         Squirrel: [
             "A squirrel. That tail is going to be hard to ignore, especially when you remember who made it happen.",
-            "All that energy, all those nimble paws—and you still couldn't scamper your way out of defeat."
+            "All that energy, all those nimble paws—and you still couldn't scamper your way out of defeat.",
+			"Look at my little squirrel… bushy tail up and already so eager. Come here.",
+			"I took your trees and left a soft, twitching pet that only gathers what I give it.",
+			"That fluffy tail and those quick little hands… all mine now."
         ],
         Robot: [
             "A robot. Perhaps you can calculate exactly where you went wrong while you get used to that metal body.",
-            "Mechanical limbs, a new silhouette, and a decisive loss. I do appreciate an efficient result."
+            "Mechanical limbs, a new silhouette, and a decisive loss. I do appreciate an efficient result.",
+			"I rewrote every protocol. You exist to serve, obey, and take whatever I give you.",
+			"You used to have free will. Now you have only my commands."
         ],
         Doll: [
             "A doll. Such carefully crafted features. I think I'll enjoy watching you get used to your new reflection.",
-            "You've been remade into something polished and unfamiliar. Consider the defeat your finishing touch."
+            "You've been remade into something polished and unfamiliar. Consider the defeat your finishing touch.",
+			"I decide how you’re posed, what you wear, and what happens to that pretty body.",
+			"No more will of your own. Just a lovely toy that exists for my pleasure.",
+			"My personal doll. Fragile, beautiful, and completely under my control."
         ],
         Dragon: [
             "A dragon. Scales, claws, all that intimidating power—and still not enough to beat me.",
-            "What a magnificent creature you've become. Shame the mighty dragon couldn't manage a victory."
+            "What a magnificent creature you've become. Shame the mighty dragon couldn't manage a victory.",
+			"I gave you all that power and fire… and I decide when it’s used.",
+			"Those claws and fangs are impressive… but they only move when I allow it.",
+			"My personal dragon. Powerful, beautiful, and completely tamed."
         ],
         Bat: [
             "A bat. Those wings might help you leave, but they won't help you escape this result.",
@@ -1210,6 +1359,192 @@ const CPU_VICTORY_TAUNTS = {
 			"I do hope you enjoyed the view on the way down. Most men never get this close to the real pussy.",
 			"You fought like a lion… and still got stroked into submission by a mere kitty. How deliciously ironic.",
 			"Sweet dreams, little mouse. And if you wake up aching… just remember who left her mark all over you."
+		],
+    }
+};
+
+const CPU_DEFEAT_SUBMISSIONS = {
+    transformation: {
+        Statue: [
+            "I’m cold… hard… and completely at your mercy. Pose me however you like.",
+			"Stone doesn’t struggle. It just stands there… waiting to be touched, admired… used.",
+			"You’ve turned me into something beautiful and helpless. Go on—run your hands over every inch.",
+			"I can’t move… can barely even speak. All I can do is stand here and take whatever you give me.",
+			"Marble flesh doesn’t resist. It simply yields… perfectly still for you."
+        ],
+        Cow: [
+            "Moo... oh, come on. I can't believe you've turned me into a cow. Fine, I surrender.",
+            "Moo… my udders are so full. Please… milk me. I can’t do it myself anymore.",
+			"I’ve been reduced to this—heavy, soft, and dripping. Use me however a cow is meant to be used.",
+			"I used to walk on two legs. Now I just stand here on all fours, waiting for your hands.",
+			"These teats ache… and so does everything else. Take what you want from this body."
+        ],
+        Cow_male: [
+            "Moo! All right, all right! You've turned me into a bull. I surrender!",
+            "I used to be human. Now I’m just a heavy, panting animal on my knees for you.",
+			"These horns… this body… and still I lost. Do whatever you want with the bull you’ve broken.",
+			"I’m strong enough to mount anything… yet here I am, waiting for you to decide my place.",
+			"My body is built for one thing. And right now that thing is submitting to you.",
+        ],
+        Cat: [
+            "Okay, you've made your point. I'm a cat, you've won, and I'm done fighting you. Meow.",
+            "I can't believe I'm purring... Fine, you win. Just don't expect me to admit this was dignified.",
+			"The claws are gone… the fight is gone. All that’s left is a soft, purring thing under your hands.",
+			"I used to hunt. Now I just arch and present, hoping you’ll take what’s offered.",
+			"My tail’s in the air and my pride is somewhere on the floor. Use this cat however you like.",
+			"I lost… and somehow that just makes me want to rub against you harder.",
+        ],
+        Dog: [
+            "All right! I give up! You win! ...Why am I wagging my tail? This is humiliating.",
+			"I’m on my back, belly up, tail tucked. Do whatever you want with this good dog.",
+			"I used to give orders. Now I just wait for yours… tongue out and ready.",
+			"The collar’s not even on yet and I’m already yours. Command me.",
+			"I lost the fight and somehow that only made me more eager to please."
+        ],
+        Werewolf: [
+            "The fight's over. I can feel the change taking hold... You win. Oooooooooooooo.",
+            "The beast is on its back… belly exposed, throat bared. Take what you want from me.",
+			"I can still feel the moon in my blood, but right now all I feel is you on top of me.",
+			"Claws, fangs, fur… and still I lost. Do what a victor does with a defeated animal.",
+			"I’m growling, but it’s not a threat anymore. It’s a plea.",
+        ],
+        Fox: [
+            "Well, that was clever. You outfoxed me, and now I'm the fox. I surrender.",
+            "I had a dozen tricks left, and none of them worked. You win. I'll stop trying to wriggle out of this.",
+			"My bushy tail is twitching and my pride is gone. Use this soft, sly body.",
+			"I tried to run. You caught me. Now do what hunters do with foxes.",
+			"I’m yours… soft fur, sharp little teeth, and a body that knows it’s been beaten."
+        ],
+        Horse: [
+            "All right, you win. I'm a horse now. I suppose there's no point in trying to gallop away.",
+            "I can't believe you've done this. Fine, I surrender. Just... please don't make me say neigh.",
+			"I’m on my knees, head down, completely broken to the saddle. Ride me if you want.",
+			"Strong legs, powerful body… and still I lost. Mount your prize.",
+			"I used to run free. Now I just stand here waiting for the bit and the rider.",
+			"You’ve broken the stallion/mare. Take what’s yours.",
+        ],
+        Pig: [
+            "Oink... I give up. You've beaten me, and I'm not going to make a bigger mess of this.",
+            "You've won. I'm a pig, I'm defeated, and I'm officially done squealing about it.",
+			"I used to be proud. Now I just oink and present for whoever wants me.",
+			"Fat, soft, and already dripping. Take what a pig is good for.",
+			"I’ve lost everything but the need to be used. Please… use me.",
+        ],
+        Gender: [
+            "Okay, I surrender. You've changed me completely, and I don't have a comeback for that.",
+            "I can't believe this is really happening... You've won. I'll stop fighting the transformation."
+        ],
+        Gender_male: [
+            "All right, I give up! You've turned me into a woman, and you've won. Can we please call it there?",
+            "I was trying so hard to keep control. Now I'm a woman, you've beaten me, and... fine. I surrender.",
+			"I used to be a man… now I’m soft, open, and completely at your mercy.",
+			"These new curves, this new heat… and I still lost. This body wants things and I can't resist you anymore.",
+			"I never knew how good it could feel to be the one on the bottom until now.",
+        ],
+        Gender_female: [
+            "Okay, you've won. I'm a man now, and I'm done pretending I can turn this around.",
+            "I never expected to end up like this. You've beaten me, and I surrender. No more resistance.",
+			"I used to be a woman… now I’m hard, heavy, and on my knees for you.",
+			"This new body is strong… and still I lost. Take what you want from it.",
+			"I never knew how good it could feel to be the one submitting until this moment.",
+        ],
+        Puppet: [
+            "I can't keep pulling against the strings. You win. I'll stop struggling and accept that you've beaten me.",
+            "All right... you've got control, and I've lost. I surrender. Just don't make me dance while I say it.",
+			"My strings are cut… or maybe they’re in your hands now. Move me however you like.",
+			"I can’t resist. I can’t even close my mouth unless you let me. Play with your puppet.",
+			"I’m limp, open, and completely controlled. Pose me. Play with me. Claim me.",
+			"Whatever you want this body to do… it will. Just pull the right string.",
+			"I’m not a person anymore. I’m a toy that knows it’s been beaten… and loves it."
+        ],
+        Bunny: [
+            "Okay, okay! I give up! You've beaten me, and I'm apparently the most defeated bunny in history.",
+            "You win. I'm a bunny, I'm out of tricks, and I'm done hopping around the issue.",
+			"I’m soft, twitching, and completely caught. Breed your bunny if you want… I won’t stop you.",
+			"My tail’s up and my fight is gone. Use this warm, fluffy body however you like.",
+			"I used to hop away. Now I just present and wait.",
+        ],
+        Otter: [
+            "All right, you win. I'm out of ways to slip away from this, so I surrender.",
+            "I’m sleek, wet, and completely at your mercy. Play with your otter however you like.",
+			"I used to swim free. Now I’m just floating here, waiting for you to take me.",
+			"Soft fur, flexible body, and no more fight left.",
+			"These whiskers are twitching and my belly is up. Claim your prize.",
+			"I’m an otter now… playful, slippery, and yours."
+        ],
+        Eevee: [
+            "I surrender! You've beaten me before I could find a way out of this. I guess this is my new beginning.",
+            "Okay, you win. No clever evolution is getting me out of this one. I give up.",
+			"I’m soft, adaptable, and completely caught. Evolve me however you want… or just use me as I am.",
+			"My ears are down and my tail is tucked. Take what you want from this little body.",
+			"I can become almost anything… but right now all I want is to submit to you.",
+			"These big eyes are watching you decide what to do with me. Please… decide soon.",
+        ],
+        Squirrel: [
+            "Fine! I surrender! I've run out of escape routes, and I'm not going to keep scrambling.",
+            "You win. I'm a squirrel, I'm cornered, and I'm officially out of nuts—I mean, options.",
+			"I’m a squirrel now… small, soft, and ready to be claimed."
+        ],
+        Robot: [
+            "Submission acknowledged. Resistance has failed. You are the winner. I will cease combat.",
+            "System status: defeated. Transformation complete. Further resistance is inefficient. I surrender.",
+			"I was built for efficiency. Now I’m built for whatever you want to do to me.",
+			"My chassis is open, my circuits are humming, and I can no longer refuse.",
+			"Program me. Overwrite every command with your own.",
+			"I am a machine that has been defeated… and is ready to obey."
+        ],
+        Doll: [
+            "All right, I give up. You've beaten me, and now I'm a doll. I don't think I can make this sound dignified.",
+            "I surrender. You've won, and I'm stuck looking like a doll. Please tell me this match isn't being recorded.",
+			"My joints only move when you move them. My mouth only opens when you want it to.",
+			"I used to have a will. Now I just wait to be dressed, undressed, and taken.",
+			"Pretty, fragile, and entirely yours.",
+			"I’m not a person anymore. I’m a toy that knows it’s been broken in… and loves it."
+        ],
+        Dragon: [
+            "Even a dragon has to know when it's beaten. You win. I'll stop fighting.",
+            "I thought I could overwhelm you. Instead, I've lost, and now I'm a dragon with nothing left to prove. I surrender.",
+			"These claws, these fangs… all useless now. I’m yours to claim.",
+			"A dragon submits only once. Make it count."
+        ],
+        Bat: [
+            "Fine, you win. I'm a bat, I'm defeated, and I'm done trying to fly out of this situation.",
+            "You've beaten me. I surrender... and I refuse to make a single bat pun about it.",
+			"These sharp little teeth aren’t for biting anymore… unless you want them to be.",
+        ]
+    },
+
+    character: {
+        Mark: [
+            "Fine. Your strategy was better than mine. I concede the match, although I'd like to review the data before accepting your conclusions.",
+            "I lost. I'll admit that much. The transformation outcome is confirmed, and I suppose the evidence is annoyingly conclusive."
+        ],
+        Fable: [
+            "I concede! Clearly, I have been outplayed, outmaneuvered, and thoroughly taught a lesson. I shall be revising my strategy.",
+            "All right, all right, you win. Consider this my formal admission that your performance exceeded expectations. Don't get used to the praise."
+        ],
+        Roz: [
+            "Oh wow, you actually beat me! Okay, I surrender! I'm not even sure what to say about the transformation part!",
+            "You win! I give up! This is kind of amazing and kind of embarrassing, and I'm definitely going to need a minute."
+        ],
+        Zixuan: [
+            "Outcome accepted: I have lost. Resistance is no longer productive. I concede the match and acknowledge your success.",
+            "The results are unambiguous. You won, I was transformed, and my remaining objections would serve no useful purpose. I surrender."
+        ],
+        Hyeri: [
+            "I fought to hold on, but the struggle is over. You have won. I surrender, and I'll take a breath and accept what has happened.",
+            "All right. I release my resistance. You have beaten me, and I will stop fighting the outcome."
+        ],
+        Tex: [
+            "Well, partner, you got the better of me. I reckon it's time to tip my hat and admit defeat. You win.",
+            "All right, you win this round. I'm not too proud to surrender when the trail runs out. Just don't expect me to stop giving you grief about it."
+        ],
+		Siobhán: [
+			"You've got me pinned, darling… claws and all. I suppose even the fiercest pussy sometimes has to yield.",
+			"Do be gentle with your conquered little pet… or don't.",
+			"Alright, darling… the pussy’s yours. You’ve earned every soft, trembling inch of her.",
+			"Such firm hands… holding me down like I belong here. I almost hate how good it feels to lose to you.",
+			"You’ve tamed the wild thing, haven’t you? Just don’t expect her not to arch a little when you take your prize."
 		],
     }
 };
@@ -2085,7 +2420,8 @@ function showRegularTaunt(text) {
 
     box.style.display = "flex";
     box.classList.add("challenge-taunt-active");
-    box.textContent = `${cpuName}: “${text}”`;
+    text = processGenderTokens(text);
+	box.textContent = `${cpuName}: "${text}"`;
 
     box.classList.remove("visible");
     void box.offsetWidth;
@@ -2107,10 +2443,11 @@ function showChallengeTaunt(eventName, forcedText=null){
     const lines=CHALLENGE_TAUNTS[eventName]||[];
     const text=forcedText || (Array.isArray(personal)?personal[Math.floor(Math.random()*personal.length)]:(personal || (lines.length?lines[Math.floor(Math.random()*lines.length)]:"")));
     if(!text)return;
+	const processedText = processGenderTokens(text);
     if(challengeTauntTimer) clearTimeout(challengeTauntTimer);
-    box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: “${text}”`;
+    box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: "${processedText}"`;
     box.classList.remove("visible");void box.offsetWidth;box.classList.add("visible");
-    log(`Rival — ${rival.name}: “${text}”`);
+    log(`Rival — ${rival.name}: "${processedText}"`);
     challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
 }
 
@@ -2156,6 +2493,56 @@ function selectCPUVictoryTaunt() {
 
     cpuVictoryTaunt = pool[Math.floor(Math.random() * pool.length)];
     return cpuVictoryTaunt;
+}
+
+function selectCPUDefeatSubmission() {
+    const cpu = gameState.p2;
+
+    // Use the form the CPU itself was assigned to transform into.
+    const form = String(cpu.transformTarget || "").trim();
+    let formKey = form;
+
+    if (form === "Gender" || form === "Cow") {
+        const gender = getGender(cpu.name);
+
+        if (gender === "male") {
+            formKey = `${form}_male`;
+        }
+        // Female characters use the base Cow/Gender pool.
+    }
+
+    const transformationLines =
+        CPU_DEFEAT_SUBMISSIONS.transformation[formKey];
+
+    const characterLines =
+        CPU_DEFEAT_SUBMISSIONS.character[cpu.name];
+
+    // 50% transformation-specific, 50% personality-specific.
+    const useTransformation = Math.random() < 0.5;
+
+    let pool = useTransformation
+        ? transformationLines
+        : characterLines;
+
+    // If one category has no lines for this character/form,
+    // use the other category instead.
+    if (!Array.isArray(pool) || pool.length === 0) {
+        pool = useTransformation
+            ? characterLines
+            : transformationLines;
+    }
+
+    // Final fallback for an unlisted form and character.
+    if (!Array.isArray(pool) || pool.length === 0) {
+        pool = [
+            "You win. I concede the match and accept the transformation."
+        ];
+    }
+
+    cpuDefeatSubmission =
+        pool[Math.floor(Math.random() * pool.length)];
+
+    return cpuDefeatSubmission;
 }
 
 
@@ -3411,6 +3798,7 @@ function initializeGame() {
     const showEnergyActions = false;
 	resetPlayerTransformationTaunts();
 	cpuVictoryTaunt = null;
+	cpuDefeatSubmission = null;
 	//document.getElementById("energy-actions-option").value === "on";
 
     document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
@@ -3853,7 +4241,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261018.4"; // Update this label for each release.
+const GAME_VERSION = "20261018.5"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -5470,12 +5858,16 @@ async function playFinalTransformationCinematic(loserId) {
 	
 	let finalCaption = isForfeit
 		? `${loser.name}'s resistance finally crumbles before ${winner.name}. ` +
-		`“I surrender. I forfeit. I can't fight you any longer.”`
+		`"I surrender. I forfeit. I can't fight you any longer."`
 		: `${winner.name} has transformed ${loser.name} into ${targetArticle} ${displayForm}`;	
 	if (loserId === 1 && cpuVictoryTaunt) {
-		finalCaption += `\n\n${gameState.p2.name}: "${cpuVictoryTaunt}"`;
+		// CPU won; use the already-selected victory taunt.
+		finalCaption += `\n\n${playerDisplayName(gameState.p2)}: "${cpuVictoryTaunt}"`;
+	} else if (loserId === 2 && cpuDefeatSubmission && !isForfeit) {
+		// Human won; the CPU submits.
+		finalCaption += `\n\n${playerDisplayName(gameState.p2)}: "${cpuDefeatSubmission}"`;
 	}
-
+	finalCaption = processGenderTokens(finalCaption);
 	
     const overlay = document.getElementById("final-transform-cinematic");
     const portrait = document.getElementById("cinematic-avatar");
@@ -6980,7 +7372,7 @@ async function resolveDice() {
     activeP.energy = activeP.energy || 0;
 
     if (hasCard(activePlayerNum, 55)) {
-        // “Kept” means the dice remaining at the end of the roll sequence, not only dice locked against rerolls.
+        // "Kept" means the dice remaining at the end of the roll sequence, not only dice locked against rerolls.
         const finalRollHasTransform = gameState.dice.some(d => d && d.face === "👁️ TRANSFORM");
         if (!finalRollHasTransform) {
             const lost = Math.min(3, activeP.energy);
@@ -7898,22 +8290,28 @@ function presentFinishedGame() {
 	// Choose one taunt for this CPU victory.
 	// The same line will be used in the cinematic and results dialog.
 	cpuVictoryTaunt = null;
+	cpuDefeatSubmission = null;
 	if (!p1Wins) {
 		selectCPUVictoryTaunt();
+	}
+	else {
+		selectCPUDefeatSubmission();
 	}
 
 	// Prepare the game-over dialog's taunt area.
 	const victoryTauntEl = document.getElementById("go-victory-taunt");
 
 	if (victoryTauntEl) {
-		if (!p1Wins && cpuVictoryTaunt) {
-			victoryTauntEl.textContent =
-				`${gameState.p2.name}: “${cpuVictoryTaunt}”`;
-			victoryTauntEl.style.display = "block";
-		} else {
-			victoryTauntEl.textContent = "";
-			victoryTauntEl.style.display = "none";
+		let finalLine = "";
+		
+		if (p1Wins && cpuDefeatSubmission) {
+			finalLine = `${playerDisplayName(gameState.p2)}: "${cpuDefeatSubmission}"`;
+		} else if (!p1Wins && cpuVictoryTaunt) {
+			finalLine = `${playerDisplayName(gameState.p2)}: "${cpuVictoryTaunt}"`;
 		}
+		
+		victoryTauntEl.textContent = processGenderTokens(finalLine);
+		victoryTauntEl.style.display = finalLine ? "block" : "none";
 	}
 
     document.getElementById("go-title").innerText = `${winner.name} Wins!`;
