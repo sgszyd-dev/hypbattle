@@ -39,8 +39,8 @@ function processGenderTokens(text) {
     const humanGender = getGender(human?.name);
     const cpuGender = getGender(cpu?.name);
 	
-	const humanTrans = getTransformationConv(human?.transformTarget);
-	const cpuTrans = getTransformationConv(cpu?.transformTarget);
+	const humanTrans = getTransformationConv(human);
+	const cpuTrans = getTransformationConv(cpu;
 
     const pronouns = {
         male:   { he: "he",   him: "him",  his: "his",  self: "himself" },
@@ -7190,15 +7190,15 @@ function startTurn() {
 		gameState.somnambulismPenalty = 0;
 	}
 	
-	console.log("LONG TRACE startTurn:", {
-	seed: window.__longTraceSeed,
-    turn: window.__longTraceTurn,
-    active: gameState.activePlayer,
-    vulnerability: activeP.vulnerability,
-    anchorBonus,
-    somnambulism: gameState.somnambulismTurn,
-    diceCount,
-    inventory: activeP.inventory.map(c => c.id)
+	//console.log("LONG TRACE startTurn:", {
+	//seed: window.__longTraceSeed,
+    //turn: window.__longTraceTurn,
+    //active: gameState.activePlayer,
+    //vulnerability: activeP.vulnerability,
+    //anchorBonus,
+    //somnambulism: gameState.somnambulismTurn,
+    //diceCount,
+    //inventory: activeP.inventory.map(c => c.id)
 });
     
     gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
