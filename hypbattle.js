@@ -1871,7 +1871,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "That’s it… feel the change sinking deeper with every breath. You’re becoming exactly what I want, {HUMAN}.",
 			"Watch yourself slip further under my design. Every new change makes you more obedient… and more mine.",
 			"Good. The transformation to {AAN} {HUMTRANS} is taking hold nicely. Soon you won’t even remember how it felt to be human.",
-			"Deeper into the change now. You are becoming {AAN} {HUMTRANS}. I can already see how perfectly you’ll serve once it’s finished."
+			"Deeper into the change now. You are becoming {AAN} {HUMTRANS}. I can already see how perfectly you’ll serve once it’s finished.",
 			"Feel that shift? Your body is choosing a different truth: {AAN} {HUMTRANS}. I’m just helping it along.",
             "You’re starting to look like someone who knows what they are: {AAN} {HUMTRANS}."
         ],
