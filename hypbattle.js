@@ -248,6 +248,8 @@ let gameOverPresentationStarted = false;
 let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
+let lastComboSignature = null;      // so the ×3 pop plays once per settled roll, not on every redraw
+const milestoneTimers = {};
 let diceAnimationToken = 0;
 let diceComboFlashUntil = 0;
 let diceAnimationInterval = null;
@@ -4280,6 +4282,15 @@ function showAboutBox() {
 }
 
 function closePopup(){ const e=document.getElementById("game-popup"); if(e)e.style.display="none"; }
+// showToast was called by the challenge "copy save code" buttons but never defined, so the copy confirmation threw an error
+function showToast(message) {
+    const t = document.createElement("div");
+    t.textContent = message;
+    t.setAttribute("role", "status");
+    t.style.cssText = "position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#222; color:#fff; border:1px solid var(--accent); border-radius:6px; padding:8px 16px; z-index:600; box-shadow:0 4px 18px rgba(0,0,0,.5); font-size:.9rem; transition:opacity .3s ease;";
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 350); }, 1800);
+}
 function showPopup(title, body) {
     document.getElementById("popup-title").innerText = title;
     document.getElementById("popup-body").innerHTML = body;
@@ -5816,6 +5827,14 @@ let lastObservedActivePlayer = null;
 let lastDisplayedSubmission = null;
 const transformEffectTimers = {};
 
+function showTransformMilestone(playerKey, text) {
+    const el = document.getElementById(`${playerKey}-transform-milestone`);
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("visible"); void el.offsetWidth; el.classList.add("visible");
+    if (milestoneTimers[playerKey]) window.clearTimeout(milestoneTimers[playerKey]);
+    milestoneTimers[playerKey] = window.setTimeout(() => { el.classList.remove("visible"); el.textContent = ""; }, 900);
+}
 function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stageChanged, cumulativeGainThisTurn) {
     const portrait = document.getElementById(`${playerKey}-image`);
     const progressTrack = document.getElementById(`${playerKey}-transform-progress-track`);
@@ -5835,6 +5854,13 @@ function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stag
     }
 
     if (amountChanged > 0) {
+    // NOTE: CHECK THIS???
+        const prevLevel = currentLevel - amountChanged;       // Stage 10 is the only one that opens the cinematic; 5 and 8 get a short caption
+        let caption = null;
+        if (currentLevel < 10) { if (prevLevel < 8 && currentLevel >= 8) caption = "Almost gone"; else if (prevLevel < 5 && currentLevel >= 5) caption = "Halfway"; }
+        if (caption) showTransformMilestone(playerKey, caption);
+        const tickEl = document.getElementById(`${playerKey}-transform-progress-label`);
+        if (tickEl) { tickEl.classList.remove("label-tick"); void tickEl.offsetWidth; tickEl.classList.add("label-tick"); window.setTimeout(() => tickEl.classList.remove("label-tick"), 450); }
         const crossedMilestone = currentLevel >= 10 || (currentLevel >= 8 && currentLevel - amountChanged < 8) || (currentLevel >= 5 && currentLevel - amountChanged < 5);
         playSound(crossedMilestone ? "transformBig" : "transform");
         if (stageChanged || amountChanged >= 2 || currentLevel >= 8) triggerHaptic("transform");
@@ -6041,6 +6067,16 @@ function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     const commit = () => {
         if (container.dataset.portraitToken !== token) return;
         if (!img.complete || img.naturalWidth === 0) return;
+        const old = container.querySelector("img");
+        const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS && old && !reduce) {          // crossfade: the new art fades in over the old
+            img.style.cssText = "position:absolute; top:0; left:0; opacity:0; transition:opacity .65s ease;";
+            container.appendChild(img);
+            void img.offsetWidth;
+            img.style.opacity = "1";
+            window.setTimeout(() => { if (container.dataset.portraitToken === token) { img.style.cssText = ""; container.replaceChildren(img); } }, 700);
+            return;
+        }
         container.replaceChildren(img);
         if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
             img.classList.add("art-stage-transition");
@@ -6264,12 +6300,21 @@ function updateUI() {
         turnIndicator.innerText = `${dirArrowsLeft}${playerDisplayName(activeP)}'s Turn${dirArrowsRight}`;
         turnIndicator.style.color = isP1 ? "var(--player)" : "var(--cpu)";
     }
+    if (turnIndicator) { turnIndicator.classList.toggle("turn-p1", gameLive && isP1); turnIndicator.classList.toggle("turn-p2", gameLive && !isP1); }
+    {   // 1px top border in the active player's colour, and fade the controls that are not yours
+        const panel1 = document.getElementById("p1-image") && document.getElementById("p1-image").closest(".panel");
+        const panel2 = document.getElementById("p2-image") && document.getElementById("p2-image").closest(".panel");
+        const hotSeat = gameState.gameMode === "pvp";
+        if (panel1) { panel1.classList.toggle("panel-active-p1", gameLive && isP1); panel1.classList.toggle("panel-inactive", gameLive && hotSeat && !isP1); }
+        if (panel2) { panel2.classList.toggle("panel-active-p2", gameLive && !isP1); panel2.classList.toggle("panel-inactive", gameLive && hotSeat && isP1); }
+    }
     
     document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
     const boardEl = document.querySelector(".board");
     if (boardEl) {
         boardEl.classList.toggle("phase-rolling", gameState.phase === "rolling");
         boardEl.classList.toggle("phase-shop", gameState.phase === "shop");
+        boardEl.classList.toggle("not-my-turn", !gameState.gameEnded && !isHumanTurn);      // fade the action buttons as a group when it is not your turn
         const phaseCueText = document.getElementById("phase-cue-text");
         if (phaseCueText) {
             phaseCueText.textContent = gameState.phase === "shop" ? "Spend energy" : "Keep or reroll";
@@ -6285,6 +6330,7 @@ function updateUI() {
     
     let btnEnd1 = document.getElementById("btn-end-turn-1");
     btnEnd1.disabled = !isHumanTurn || !isP1 || gameState.phase !== "shop" || isChoicePending();
+    btnEnd1.classList.toggle("choice-blocked", !btnEnd1.disabled && isChoicePending());
     btnEnd1.style.background = btnEnd1.disabled ? '' : 'var(--player)';
 
     // UI Button Toggles P2
@@ -6296,6 +6342,7 @@ function updateUI() {
         
         let btnEnd2 = document.getElementById("btn-end-turn-2");
         btnEnd2.disabled = !isHumanTurn || !isP2 || gameState.phase !== "shop" || isChoicePending();
+        btnEnd2.classList.toggle("choice-blocked", !btnEnd2.disabled && isChoicePending());
         btnEnd2.style.background = btnEnd2.disabled ? '' : 'var(--cpu)';
     }
 
@@ -6319,6 +6366,13 @@ function updateUI() {
 
 function renderDiceAndActions(isHumanTurn) {
     const dc = document.getElementById("dice-container"); dc.innerHTML = "";
+    // Combo badge: "×3" on Submission / Transform dice once they reach three of a kind, popped once when the tumble settles
+    const comboSettled = diceAnimating.size === 0 && gameState.dice.length > 0 && gameState.dice[0].face !== "-";
+    const comboCounts = {};
+    if (comboSettled) gameState.dice.forEach(d => { if (/SUBMISSION|TRANSFORM/.test(d.face)) comboCounts[d.face] = (comboCounts[d.face] || 0) + 1; });
+    const comboSig = comboSettled ? gameState.dice.map(d => d.face).join("|") + "#" + gameState.activePlayer + "#" + gameState.rerollsLeft : null;
+    const comboPop = comboSettled && comboSig !== lastComboSignature;
+    if (comboSettled) lastComboSignature = comboSig;
     gameState.dice.forEach((die, index) => {
         const isAnimating = diceAnimating.has(index);
         const visibleFace = isAnimating ? (diceAnimationFaces.get(index) || FACES[Math.floor(Math.random() * FACES.length)]) : die.face;
@@ -6333,6 +6387,13 @@ function renderDiceAndActions(isHumanTurn) {
             div.innerText = localShowDiceText ? visibleFace : visibleFace.split(" ")[0];
             // Text + symbol labels need the compact base size; symbol-only gets the larger glyph.
             div.style.fontSize = localShowDiceText ? "0.8em" : "2.5em";
+        }
+        if (comboSettled && comboCounts[die.face] >= 3) {
+            if (comboPop) div.classList.add("combo-die");
+            const badge = document.createElement("span");
+            badge.className = "die-combo-badge";
+            badge.textContent = `×${comboCounts[die.face]}`;
+            div.appendChild(badge);
         }
         if (isHumanTurn && gameState.phase === "rolling" && die.face !== "-") div.onclick = () => {
             if (diceAnimating.size) return;
@@ -6383,9 +6444,9 @@ function renderMarket() {
         let btnDisabled = purchasable ? "" : "disabled";
         const reject = !purchasable && isHumanTurn && gameState.phase === "shop" ? ` onclick="rejectMarketCard(this)"` : "";
         mc.innerHTML += `
-            <div class="card ${affordClass}"${reject}>
+            <div class="card ${affordClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}"${reject}>
                 <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
-                <div class="card-type">${card.type}</div>
+                <div class="card-type"><span class="card-type-chip">${card.type}</span></div>
                 <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
                 <button ${btnDisabled} onclick="buyCard(${index})">${alreadyOwned ? "Already owned" : "Purchase"}</button>
             </div>`;
@@ -6431,6 +6492,11 @@ function queueCardTrigger(playerId, cardId, detail = "Effect activated", kind = 
             const inv = document.getElementById(`p${n.playerId}-inventory`);
             const el = inv && inv.querySelector(`.inv-card[data-card-id="${n.cardId}"]`);
             if (!el) return;
+            {   // if the row is clipped by the scrolling inventory, bring it into view
+                const ir = el.getBoundingClientRect(), cr = inv.getBoundingClientRect();
+                if (ir.top < cr.top) inv.scrollBy({ top: ir.top - cr.top - 4, behavior: "smooth" });
+                else if (ir.bottom > cr.bottom) inv.scrollBy({ top: ir.bottom - cr.bottom + 4, behavior: "smooth" });
+            }
             el.classList.remove('card-triggered');
             void el.offsetWidth;
             el.classList.add('card-triggered');
@@ -6477,7 +6543,7 @@ function renderInventory(playerId) {
     p.inventory.forEach((card, idx) => {
         const keepClass = card.type === "Keep" ? " active-keep-card" : "";
         const ownerColor = playerId === 1 ? "var(--player)" : "var(--cpu)";
-        let html = `<div class="inv-card${keepClass}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};"><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
+        let html = `<div class="inv-card${keepClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};"><div class="card-type-chip">${card.type === "Instant" ? "Instant" : "Keep"}</div><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
         if (isHuman && isTurn) {
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
             if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
@@ -6487,6 +6553,7 @@ function renderInventory(playerId) {
             if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
             if (card.id === 49 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
             if (card.id === 54 && canUseBurningUp(playerId)) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (up to 2 extra rerolls)</button>`;
+            //if (card.id === 54 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.burningUpUsed) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (+2 Rerolls)</button>`;
         }
         if (canSteal) {
 			const owned = inventoryHasName(buyer, card.name);
@@ -7555,6 +7622,8 @@ async function resolveDice() {
 
 function animateSubmissionOverflow(targetPlayerId, overflowAmount) {
     const prefix = targetPlayerId === 1 ? 'p1' : 'p2';
+    const flashEl = document.getElementById(`${prefix}-image`);       // one hard white flash on the portrait: overflow just became Transform
+    if (flashEl) { flashEl.classList.remove('portrait-flash'); void flashEl.offsetWidth; flashEl.classList.add('portrait-flash'); window.setTimeout(() => flashEl.classList.remove('portrait-flash'), 400); }
     const targets = [document.getElementById(`${prefix}-image`), document.getElementById(`${prefix}-transform-progress-wrap`), document.getElementById(`${prefix}-transform-progress-track`)];
     // Progress wrapper currently has no id in older markup, so locate it through the progress track if needed.
     const progressTrack = document.getElementById(`${prefix}-transform-progress-track`);
