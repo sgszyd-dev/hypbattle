@@ -40,7 +40,7 @@ function processGenderTokens(text) {
     const cpuGender = getGender(cpu?.name);
 	
 	const humanTrans = getTransformationConv(human);
-	const cpuTrans = getTransformationConv(cpu;
+	const cpuTrans = getTransformationConv(cpu);
 
     const pronouns = {
         male:   { he: "he",   him: "him",  his: "his",  self: "himself" },
