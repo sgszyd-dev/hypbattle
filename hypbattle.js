@@ -7199,7 +7199,7 @@ function startTurn() {
     //somnambulism: gameState.somnambulismTurn,
     //diceCount,
     //inventory: activeP.inventory.map(c => c.id)
-});
+//});
     
     gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
     log(`--- ${activeP.name}'s Turn ---`);
