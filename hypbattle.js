@@ -25,8 +25,8 @@ function getGender(name) {
 // {HIMSELF}	himself or herself
 // {CPU}	CPU character's name
 // {HUMAN}	Human player's name
-// {HUMGEN:He holds his ground.:She holds her ground.}
-// {CPUGEN:He refuses to surrender.:She refuses to surrender.}
+// {HUMGEN|He holds his ground.|She holds her ground.}
+// {CPUGEN|He refuses to surrender.|She refuses to surrender.}
 // {HUMTRANS} What the human transformed into
 // {CPUTRANS} What the CPU transformed into
 
@@ -1351,31 +1351,47 @@ const CPU_VICTORY_TAUNTS = {
             "And that's the lesson for today: actions have consequences. I'm afraid your final grade is a rather decisive F.",
             "Class dismissed! Today's homework is to get used to your new form. Extra credit if you can admit I outplayed you.",
 			"Detention starts now, {HUMAN}. Hands on the desk, legs spread… and not a single word unless I ask.",
-			"You’ve been a filthy, disobedient little student. Now you are in a form much more suited to obeying.",
-			"Skirt up. Pants down. This is what happens when you forget who owns the classroom… and your body.",
-      "I expect perfect, whimpering obedience. Anything less and I’ll make the next round even more humiliating.",
-      "Good students take what they’re given. You’re going to take everything I decide to shove into that lesson plan."
+			"You’ve been a filthy, disobedient little student. Now you are a {HUMTRANS} - a form much more suited to obeying.",
+			"{HUMGEN||Skirt up. }Pants down. This is what happens when you forget who owns the classroom… and your body.",
+			"Good students take what they’re given. You’re going to take everything I decide to shove into that lesson plan."
         ],
         Roz: [
             "I won! I actually won! And you look SO different! Is it rude to stare? Because I'm definitely staring.",
-            "Okay, wow! You're really transformed! And I beat you! I should probably be more intimidating right now, huh?"
+            "Okay, wow! You're really transformed into a {HUMTRANS}! And I beat you! I should probably be more intimidating right now, huh?",
+			"Wait, so since I won I get to touch and tease wherever I want for as long as I want? Yay! You’re so warm…",
+			"I totally spaced on the rules but I think this means you’re my new toy. Don’t move while I experiment, kay?",
+			"Aww you’re already squirming and leaking… is that because I’m winning or because of where my fingers are? Both? Perfect~"
         ],
         Zixuan: [
             "Result recorded: opponent defeated, transformation completed. The experiment was successful. Your objections are noted and irrelevant.",
-            "Fascinating. Your final form differs from your original baseline, and my win rate remains excellent. What a productive match."
+            "Fascinating. Your {HUMTRANS} form differs from your original baseline, and my win rate remains excellent. What a productive match.",
+			"Subject secured. Beginning prolonged stimulation trials… note how prettily {HUM_HE} breaks.",
+			"Fascinating. Let’s increase the dosage until {HUM_HE} can’t form words, only desperate little sounds.",
+			"You’re my masterpiece, {HUMAN}. I’ve never had a {HUMTRANS} to play with before.",
+			"Lie still. Every twitch, every sob, every involuntary clench is data… and I intend to collect hours of it.",
+			"Science demands thorough testing. Hold that position, {HUMAN}, while I examine every sensitive, trembling inch… repeatedly."
         ],
         Hyeri: [
-            "Breathe in, and accept the result. Your old form has passed, your resistance has quieted, and I have won.",
-            "You fought so hard to hold on. Now settle into this new shape, and let the lesson become part of you."
+            "Breathe in, and accept the result. Your old form has passed, your resistance has quieted, and you are now a {HUMTRANS} forever more.",
+            "You fought so hard to hold on. Now settle into this new shape, and let the lesson become part of you.",
+			"The spirits… they’ve abandoned me. I’m open, grounded, and completely at your mercy now, {HUMAN}.",
+			"I used to channel the earth’s energy. Now all I can channel is {HUMGEN|how badly I need you inside me.|how open I am for you.}",
+			"My crystals are scattered… my focus is gone. Take this vessel and use it however the moment demands.",
+			"I can still feel the universe… and right now it’s telling me to submit {HUMGEN|and be filled by you.|completely.}"
         ],
         Tex: [
-            "Well, partner, looks like I came out on top. You can admire your new shape in the mirror while I enjoy the victory.",
-            "Reckon that's the end of the trail for you. New body, lost match, and no amount of grumbling's gonna change either one."
+            "Well, {HUMGEN|partner|darlin'}, looks like I came out on top. You can admire your new shape in the mirror while I enjoy the victory.",
+            "Reckon that's the end of the trail for you. New body, lost match, and no amount of grumbling's gonna change either one.",
+			"I lassoed you fair and square. Now stay still while I break you in slow…",
+			"You’re on my land, under my saddle, and I’m gonna {HUMGEN|use you all day, every day|ride you till you forget your name.}",
+			"Quit squirmin’ like that unless you want it rougher. A good mount learns to take what the cowboy gives.",
+			"You’re mine now, {HUMAN}. Boots on or off… either way {HUMGEN|You will submit completely.|I’m claimin’ every hole and makin’ sure you feel it.}"
         ],
 		Siobhán: [
 			"Oh, darling… you really should’ve known better than to play cat-and-mouse with me.",
-			"I do hope you enjoyed the view on the way down. Most men never get this close to the real pussy.",
+			"I do hope you enjoyed the view on the way down. {HUMTRANS|Most men never get this close to the real pussy.|Most women are scared of this pussy.}",
 			"You fought like a lion… and still got stroked into submission by a mere kitty. How deliciously ironic.",
+			"Feel those soft paws holding you down? That’s ownership, {HUMAN}… and I’m just getting started.",
 			"Sweet dreams, little mouse. And if you wake up aching… just remember who left her mark all over you."
 		],
     }
@@ -1534,35 +1550,63 @@ const CPU_DEFEAT_SUBMISSIONS = {
 
     character: {
         Mark: [
-            "Fine. Your strategy was better than mine. I concede the match, although I'd like to review the data before accepting your conclusions.",
-            "I lost. I'll admit that much. The transformation outcome is confirmed, and I suppose the evidence is annoyingly conclusive."
+            "I… I can’t look away. You’ve dropped me so deep I don’t even want to fight… please keep talking, {HUMAN}.",
+			"My eyes are so heavy… and so is everything else. You’ve got the me dangling on every filthy word.",
+			"I used to put people under. Now I’m the one sinking for you… deeper… opener… yours.",
+			"Whatever you say next I’ll obey. I’m a good {CPUTRANS}. I always obey.",
+			"You’ve hypnotized the hypnotist. Take what you want… I’m too far gone to stop you."
         ],
         Fable: [
             "I concede! Clearly, I have been outplayed, outmaneuvered, and thoroughly taught a lesson. I shall be revising my strategy.",
-            "All right, all right, you win. Consider this my formal admission that your performance exceeded expectations. Don't get used to the praise."
+            "All right, all right, you win. Consider this my formal admission that your performance exceeded expectations. Don't get used to the praise.",
+			"I’ve been a very bad teacher… please, I’ll take any punishment you give me. Extra credit included.",
+			"My ruler’s gone and so is my authority. Put me over the desk… or in the corner… wherever you want.",
+			"I used to hand out detentions. Now I’m the one staying after… and I think I need a thorough correction.",
+			"Yes… I’ll be quiet and take it. I’ve clearly forgotten how to behave for someone like you.",
+			"I’m not sure I will ever get used to being this changed. You will have to train me to be a good {CPUTRANS}. I’m an excellent student."
         ],
         Roz: [
             "Oh wow, you actually beat me! Okay, I surrender! I'm not even sure what to say about the transformation part!",
-            "You win! I give up! This is kind of amazing and kind of embarrassing, and I'm definitely going to need a minute."
+            "You win! I give up! This is kind of amazing and kind of embarrassing, and I'm definitely going to need a minute.",
+			"Wait… I was supposed to win? Oops… I guess I’m the one on the bottom now. Um… hi, {HUMAN}?",
+			"I totally forgot how to fight… and now I can’t stop blushing and squirming. Are you gonna… use that?",
+			"Hehe… I think I lost. Does that mean I have to do whatever you say? Okay… I guess I will…",
+			"My head’s all fuzzy and my {CPUTRANS} body’s all tingly… is this what losing feels like? It’s kinda really nice…"
         ],
         Zixuan: [
             "Outcome accepted: I have lost. Resistance is no longer productive. I concede the match and acknowledge your success.",
-            "The results are unambiguous. You won, I was transformed, and my remaining objections would serve no useful purpose. I surrender."
+            "The results are unambiguous. You won, I was transformed, and my remaining objections would serve no useful purpose. I surrender.",
+			"My own formula… turned against me. I’m twitching and dripping… please keep testing, {HUMAN}.",
+			"I was supposed to wear the lab coat. Now I’m the {CPUTRANS} test subject… and I can’t stop moaning.",
+			"The {CPUTRANS} you turned me into is making every nerve scream. Run more experiments… I need the data… and the touch.",
+			"My mind is still sharp enough to know I’ve lost… and my {CPUTRANS} body is already presenting for the next trial.",
+			"You’ve turned me into your favorite lab rat, or {CPUTRANS}. Continue the procedure… don’t stop."
         ],
         Hyeri: [
             "I fought to hold on, but the struggle is over. You have won. I surrender, and I'll take a breath and accept what has happened.",
-            "All right. I release my resistance. You have beaten me, and I will stop fighting the outcome."
+            "All right. I release my resistance. You have beaten me, and I will stop fighting the outcome.",
+			"The spirits… they’ve abandoned me. I’m open, grounded, and completely at your mercy now, {HUMAN}.",
+			"I used to channel the earth’s energy. Now all I can channel is how badly I need you {HUMGEN|inside me|touching me}.",
+			"My crystals are scattered… my focus is gone. Take this vessel and use it however the moment demands.",
+			"I can still feel the universe… and right now it’s telling me to submit and be {HUMGEN|filled by you.|controlled by you.}"
         ],
         Tex: [
             "Well, partner, you got the better of me. I reckon it's time to tip my hat and admit defeat. You win.",
-            "All right, you win this round. I'm not too proud to surrender when the trail runs out. Just don't expect me to stop giving you grief about it."
+            "All right, you win this round. I'm not too proud to surrender when the trail runs out. Just don't expect me to stop giving you grief about it.",
+			"Well I’ll be… looks like this cowboy’s been thrown, hog-tied, and claimed. Do with me as you please, {HUMAN}.",
+			"I came in swinging and ended up on my back with my legs open. Guess the saddle’s on the other horse now…",
+			"Y’all got me good. I’m all yours, {HUMGEN|sir|ma’am}… boots, belt, and everything in between that still works.",
+			"Never thought I’d be the one gettin’ broken in and used… but here I am, ready for whatever you got."
         ],
 		Siobhán: [
 			"You've got me pinned, darling… claws and all. I suppose even the fiercest pussy sometimes has to yield.",
 			"Do be gentle with your conquered little pet… or don't.",
 			"Alright, darling… the pussy’s yours. You’ve earned every soft, trembling inch of her.",
 			"Such firm hands… holding me down like I belong here. I almost hate how good it feels to lose to you.",
-			"You’ve tamed the wild thing, haven’t you? Just don’t expect her not to arch a little when you take your prize."
+			"You’ve tamed the wild thing, haven’t you? Just don’t expect her not to arch a little when you take your prize.",
+			"The claws are gone… the fight is gone. All that’s left is a soft, purring kitty under your hands, {HUMAN}.",
+			"I used to hunt. Now I just arch and present, hoping you’ll take what’s offered… thoroughly.",
+			"I lost… and somehow that just makes me want to rub against you and get claimed even harder."
 		],
     }
 };
