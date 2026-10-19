@@ -80,7 +80,7 @@ function processGenderTokens(text) {
         CPU: cpu?.name ?? "CPU",
 		
 		HUMTRANS: humanTrans ?? "Player",
-		CPUTRANS: cupTrans ?? "CPU",
+		CPUTRANS: cpuTrans ?? "CPU",
     };
 
     result = result.replace(
