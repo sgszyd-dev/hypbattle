@@ -27,6 +27,8 @@ function getGender(name) {
 // {HUMAN}	Human player's name
 // {HUMGEN:He holds his ground.:She holds her ground.}
 // {CPUGEN:He refuses to surrender.:She refuses to surrender.}
+// {HUMTRANS} What the human transformed into
+// {CPUTRANS} What the CPU transformed into
 
 function processGenderTokens(text) {
     if (text == null) return "";
@@ -36,6 +38,9 @@ function processGenderTokens(text) {
 
     const humanGender = getGender(human?.name);
     const cpuGender = getGender(cpu?.name);
+	
+	const humanTrans = getTransformationConv(human?.transformTarget);
+	const cpuTrans = getTransformationConv(cpu?.transformTarget);
 
     const pronouns = {
         male:   { he: "he",   him: "him",  his: "his",  self: "himself" },
@@ -72,11 +77,14 @@ function processGenderTokens(text) {
         CPU_SELF: pronouns[cpuGender]?.self ?? pronouns.neutral.self,
 
         HUMAN: human?.name ?? "Player",
-        CPU: cpu?.name ?? "CPU"
+        CPU: cpu?.name ?? "CPU",
+		
+		HUMTRANS: humanTrans ?? "Player",
+		CPUTRANS: cupTrans ?? "CPU",
     };
 
     result = result.replace(
-        /\{(HUM_HE|HUM_HIM|HUM_HIS|HUM_SELF|CPU_HE|CPU_HIM|CPU_HIS|CPU_SELF|HUMAN|CPU)\}/g,
+        /\{(HUM_HE|HUM_HIM|HUM_HIS|HUM_SELF|CPU_HE|CPU_HIM|CPU_HIS|CPU_SELF|HUMAN|CPU|HUMTRANS|CPUTRANS)\}/g,
         (match, token) => replacements[token]
     );
 
@@ -1331,12 +1339,20 @@ const CPU_VICTORY_TAUNTS = {
     // These lines depend on the CPU CHARACTER'S personality.
     character: {
         Mark: [
-            "Victory confirmed. Your transformation completed successfully; your strategy, however, was full of bugs.",
-            "I ran the numbers. You lost, your form changed, and the outcome was entirely reproducible."
+            "Look into my eyes, {HUMAN}. That’s it… feel your will leaking out of you like warm honey. You’re already mine.",
+			"By the time I finish counting you’ll be on your knees, mouth open, mind empty… and grateful for it.",
+			"I’m going to plant suggestions so deep you’ll beg for things you never knew you wanted. And you’ll thank me.",
+			"Sleep. When you wake, the only thing left in that pretty head will be how good it feels to be used by me.",
+			"I’ve got you so far under you won’t even notice when I start breaking you in. Delicious, isn’t it?"
         ],
         Fable: [
             "And that's the lesson for today: actions have consequences. I'm afraid your final grade is a rather decisive F.",
-            "Class dismissed! Today's homework is to get used to your new form. Extra credit if you can admit I outplayed you."
+            "Class dismissed! Today's homework is to get used to your new form. Extra credit if you can admit I outplayed you.",
+			"Detention starts now, {HUMAN}. Hands on the desk, legs spread… and not a single word unless I ask.",
+			"You’ve been a filthy, disobedient little student. Now you are in a form much more suited to obeying.",
+			"Skirt up. Pants down. This is what happens when you forget who owns the classroom… and your body.",
+      "I expect perfect, whimpering obedience. Anything less and I’ll make the next round even more humiliating.",
+      "Good students take what they’re given. You’re going to take everything I decide to shove into that lesson plan."
         ],
         Roz: [
             "I won! I actually won! And you look SO different! Is it rude to stare? Because I'm definitely staring.",
@@ -2350,6 +2366,22 @@ let lastTransformationTaunt = null;
 
 function resetPlayerTransformationTaunts() {
     lastTransformationTaunt = null;
+}
+
+function getTransformationConv(target) {
+	const form = String(target?.transformTarget || "").trim();
+	if (form !== "Gender" && form !== "Cow") return form;
+	const gender = getGender(target?.name);
+
+    if (gender === "male" || gender === "female") {
+		if (form === "Gender")
+			return gender;
+		else if (form == "Cow")
+			return gender === "male" ? "Bull" : "Cow";
+    }
+
+    // Safe fallback if a character's gender is not defined.
+    return form;
 }
 
 function getTransformationTauntKey(target) {
@@ -4241,9 +4273,9 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261018.5"; // Update this label for each release.
+const GAME_VERSION = "20261019.1"; // Update this label for each release.
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel ©2026 Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content with this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
 }
 
