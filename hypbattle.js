@@ -29,6 +29,7 @@ function getGender(name) {
 // {CPUGEN|He refuses to surrender.|She refuses to surrender.}
 // {HUMTRANS} What the human transformed into
 // {CPUTRANS} What the CPU transformed into
+// {AAN}
 
 function processGenderTokens(text) {
     if (text == null) return "";
@@ -97,6 +98,13 @@ function processGenderTokens(text) {
             return value ? value.charAt(0).toUpperCase() + value.slice(1) : match;
         }
     );
+	
+	// {AAN}
+	result = result.replace(
+		/\{AAN\}(?=\s+([A-Za-z]))/g,
+		(match, firstLetter) =>
+			/^[aeiou]$/i.test(firstLetter) ? "an" : "a"
+	);
 
     return result;
 }
@@ -1782,10 +1790,11 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "And that's another step! Now, class, what have we learned about the consequences of resisting a perfectly good lesson?",
             "Progress! I do hope you're paying attention. This is an excellent demonstration of how quickly things can change when you least expect them.",
             "Another step toward your new self. Don't look so worried, dear. Change can be an excellent teacher, even when the lessons are rather unconventional.",
-            "Well done, Fable. Oh, sorry, I meant well done, me! It's so easy to get distracted when one's opponent is providing such a fascinating case study.",
-            "One more step! If this were a classroom, I'd be writing your progress report. I'm afraid the comments section would be rather extensive.",
+            "Well done, {CPUNAME}. Oh, sorry, I meant well done, me! It's so easy to get distracted when one's opponent is providing such a fascinating case study.",
+            "Every change is a grade, {HUMAN}. Right now you’re failing resistance and passing submission.",
 			"Ooh, look at you changing. Softening. Getting a little wetter around the edges in all the best ways.",
             "Another step under. Your body is learning to flow where I push it. Slippery, isn’t it?",
+			"Good. The more you change, the less you’ll remember how to talk back.",
             "You’re starting to look like something I could keep. Something that would feel good to hold."
         ],
         AIGetsTransformed: [
@@ -1794,12 +1803,14 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "An otter. I'm becoming an otter! I teach children about the natural world, but I never expected to become part of the lesson myself.",
             "My feet feel terribly strange. If these are becoming proper otter paws, I shall have to reconsider my entire approach to footwear.",
             "Well, this is an unexpected development. I always encouraged my students to embrace new experiences, but I did rather assume I'd remain human while doing so.",
+			"Keep transforming me if you want. I’ll just make the next punishment fit the new form.",
 			"Hey— my shape is getting slippery and I didn’t ask for this!",
             "Okay that change felt… really good actually. Rude of you to notice."
         ],
         PlayerIsObedient: [
             "There we are, dear. Sometimes it's easier to learn when we stop arguing with the lesson and start listening.",
             "Very good! I knew you could follow instructions. Now, let's see if we can make a little more progress, shall we?",
+			"Such immediate compliance… I should have broken you in sooner. Stay exactly like that.",
             "That's the spirit! There's no shame in accepting a little guidance. Even the most stubborn pupils can surprise themselves.",
             "Eyes forward, take a deep breath, and listen carefully. That's it. My, what a wonderfully attentive student you've become.",
             "Excellent cooperation! I'm afraid your homework tonight will involve a rather substantial amount of personal transformation.",
@@ -1810,7 +1821,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
         AIIsObedient: [
             "Oh! I seem to have followed that instruction without thinking. Well, even teachers can have an off day.",
             "That was terribly unprofessional of me. I cannot very well teach a lesson about independent thinking while obeying every suggestion I hear!",
-            "I know perfectly well what you're doing. So why, precisely, am I doing exactly as you say? This is most irregular.",
+            "I know perfectly well what you're doing. So why, precisely, am I doing exactly as you say? Don't get used to it, {HUMAN}.",
             "Right. Let's take a moment, collect ourselves, and remember that I am the educator here. Although I seem to be a rather poor student today.",
             "I shall be addressing this lapse in judgment after class. Assuming, of course, that I can still find my classroom by then."
         ],
@@ -1820,17 +1831,17 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Outstanding! I would put that result on the classroom wall if I weren't so busy using it to beat you.",
 			"Did you see that roll? Even chance wants to get wet with me.",
             "Well, would you look at that! I believe I've just earned myself a gold star. Perhaps two.",
-            "A truly excellent roll! And you know what we do with excellent results, don't you? We build on them!"
+            "A roll like that lets me skip straight to the advanced lesson. Legs apart."
         ],
         PlayerAt5Transform: [
             "Halfway there! Now, I know this isn't quite the learning experience you signed up for, but there's still time to turn things around.",
             "Five stages completed. I'd call that a significant milestone, though I suspect you'd prefer a different sort of achievement certificate.",
-            "We're at the halfway point, dear. Perhaps it's time to stop doodling in the margins and pay attention to the rather important matter at hand.",
-            "Fifty percent! Not quite a passing grade if your goal was to remain unchanged, I'm afraid. Let's see whether you can improve your performance.",
+            "You’re past the easy corrections now. The remaining changes will be… intensive.",
+            "Fifty percent! Not quite a passing grade if your goal was to remain unchanged, I'm afraid. You are becoming a wonderful {HUMTRANS}.",
             "Oh, my. Halfway transformed already! I do hope you're learning something from all this. Though perhaps not quite as much as I am.",
-			"Halfway there. You’re starting to feel less solid and more… available.",
-            "Five stages down. The old you is getting harder to hold onto. Fun, right?",
-            "You’re changing so easily now. Almost like you were made for it."
+			"Halfway there. You’re starting to feel less human and more… available.",
+            "Five stages down. The human you is getting harder to hold onto. Fun, right?",
+            "You’re changing so easily now. Almost like you were made to be {AAN} {HUMTRANS}."
         ],
         PlayerAt8Transform: [
             "Eight stages! Only two more, dear. I'm afraid extra credit isn't going to save you this time.",
@@ -1857,78 +1868,71 @@ const CHALLENGE_RIVAL_TAUNTS = {
     },
     Mark: {
         TransformPlayer: [
-            "Progress confirmed. Your current configuration is becoming increasingly difficult to maintain.",
-            "Another successful operation. I would explain the process, but your system appears to be running on intuition rather than logic.",
-            "One step closer to a completely different you. The transition is proceeding more smoothly than your decision-making.",
-            "State updated. Your resistance remains measurable, but its practical value is declining.",
-            "Fascinating. Apply the correct input at the correct moment, and even a stubborn system can be persuaded to rewrite itself.",
-			"Feel that shift? Your body is choosing a different truth. I’m just helping it along.",
-            "You’re starting to look like someone who knows what they are. Or what they’re becoming."
+            "That’s it… feel the change sinking deeper with every breath. You’re becoming exactly what I want, {HUMAN}.",
+			"Watch yourself slip further under my design. Every new change makes you more obedient… and more mine.",
+			"Good. The transformation to {AAN} {HUMTRANS} is taking hold nicely. Soon you won’t even remember how it felt to be human.",
+			"Deeper into the change now. You are becoming {AAN} {HUMTRANS}. I can already see how perfectly you’ll serve once it’s finished."
+			"Feel that shift? Your body is choosing a different truth: {AAN} {HUMTRANS}. I’m just helping it along.",
+            "You’re starting to look like someone who knows what they are: {AAN} {HUMTRANS}."
         ],
         AIGetsTransformed: [
-            "Another step toward becoming a woman. I did not authorize this change to my physical specifications.",
-            "Female body configuration detected. I would like to remind the system that this feature was not in my original requirements.",
-            "My body is being rewritten, and apparently the new version is going to be female. I would appreciate access to the change log.",
-            "Wonderful. Another step closer to becoming a woman. I spend years optimizing systems, and now I can't even maintain my own original architecture.",
-            "My physical parameters are changing in a distinctly feminine direction. I am trying to remain objective, but this is a rather intrusive update.",
-            "I appear to be losing the ability to specify my own biological configuration. This is precisely why I distrust undocumented processes.",
-            "Unexpected state change detected. I refuse to believe that becoming a woman is the optimal solution to whatever problem these dice think I have.",
-			"Interesting. The new shape fits better than it should. I will not thank you for that."
+            "Another step toward becoming a woman. Watch how I flip this on you.",
+            "Hmm... a woman. The softness is not unpleasant. But you won't distract me this way.",
+            "My body is being rewritten, and apparently the new version is going to be female. I will break your spell soon.",
+			"Interesting. The new shape fits better than it should. I will not thank you for that.",
+			"A little change won’t break my focus… if anything, it makes the trance work even better on you.",
+			"You think altering me will stop the suggestions? Watch how easily I still drop you.",
+			"My body may be becoming more feminine, but my voice is still crawling straight into that head of yours.",
         ],
         PlayerIsObedient: [
-            "There we are. The correct suggestion, delivered at the correct moment. Human decision-making really is a fascinating interface.",
-            "Compliance confirmed. No need to force the issue when a well-timed prompt does the work for you.",
-            "Your defenses have entered compatibility mode. Shall we proceed with the next phase of the update?",
-            "I predicted this response three turns ago. You may call it hypnosis; I call it understanding the system requirements.",
-            "Excellent. Your objections are still present, but they no longer appear to have administrative privileges.",
-			"Good. You moved when I told you to. Bodies are honest like that.",
+            "Perfect compliance. Look how easily you drop for me now… deeper, softer, completely open.",
+			  "That’s the sound of a mind that knows its place. Keep obeying while I enjoy the view.",
+			  "Such a good subject. Every command sinks in faster than the last… and you love it.",
+			  "Obedience looks exquisite on you. Stay right there and take the next suggestion like the {AAN} {HUMTRANS} you are becoming.",
             "That was clean. You felt it, didn’t you? The little give.",
             "A little pressure and the old identity slips. I like watching that happen."
         ],
         AIIsObedient: [
-            "I followed the suggestion. For the record, an action performed under compromised conditions should not count as informed consent.",
-            "Compliance logged. I will be conducting a thorough investigation into why my own safeguards failed to engage.",
             "That response was not part of my strategy. I would like to roll back the last thirty seconds, please.",
-            "My behavior has been modified without a satisfactory explanation. I am filing this under unacceptable system dependencies.",
-            "I appear to have accepted instructions that I had every intention of rejecting. There is a rather serious flaw in this implementation."
+			"You got a temporary command in… cute. It won’t last, and neither will your advantage.",
+			"I’m following for now… but the second this wears off, you’re going under so much deeper.",
+			"Enjoy the moment, {HUMAN}. Watching me obey only makes the eventual reversal sweeter.",
+			"Fine… I’ll do it. Just remember how this felt when I’m the one holding the trance again."
         ],
         BigRollAI: [
-            "Now that is a statistically satisfying result. I would say it was calculated, but I would be lying.",
-            "Exceptional output. The dice have finally stopped behaving like an unmaintained legacy system.",
-            "Beautiful. Every variable aligned, every outcome cooperated, and my opponent is about to experience the consequences.",
-            "A remarkably efficient roll. I do appreciate it when randomness temporarily behaves like a competent colleague.",
-            "Optimal result achieved. If anyone asks, I absolutely had a sophisticated predictive model for that.",
+            "A perfect roll… and perfect timing. Feel that? Your resistance just cracked wide open for me.",
+			"Luck is on my side tonight. Now drop deeper while I press the advantage.",
+			"That result means I get to push you further than you’ve ever gone. Don’t disappoint me.",
+			"Beautiful number. Let’s translate it directly into how thoroughly I own you right now.",
 			"Chance just chose a side. Mine.",
 			"The dice understand power. Good."
         ],
         PlayerAt5Transform: [
-            "Five out of ten. Congratulations, you have reached the midpoint of a process you are unlikely to enjoy completing.",
-            "We are halfway through your conversion. Statistically speaking, your recovery strategy deserves a performance review.",
-            "Transformation progress: fifty percent. I would recommend a contingency plan, but I suspect you are already running out of options.",
-            "Halfway there. Your original configuration is still recognizable, although the remaining system resources are becoming concerning.",
+            "Halfway there already… look at you changing for me. You will make a lovely {HUMTRANS}.",
+			"You’re past the point of easy reversal. Every step from here only binds you tighter to my will.",
+			"Half transformed and already so much softer. I can’t wait to finish the job.",
+			"The mirror must be getting interesting. Keep staring while I push you the rest of the way into {AAN} {HUMTRANS}."
             "Five stages complete. You can still turn this around, of course. I simply wouldn't build a business plan around it.",
 			"You’re changing in places you can’t ignore. Good."
         ],
         PlayerAt8Transform: [
-            "Eight out of ten. At this point, recovery is less of a strategy and more of a theoretical possibility.",
-            "Two stages remaining. I hope you have a backup, because your current configuration is approaching end of support.",
-            "Critical threshold reached. I would tell you to remain calm, but panic might be the most rational response available.",
-            "Eighty percent complete. Your remaining options have been reduced to a rather disappointing menu.",
-            "Only two steps left. If this were software, I would call the transformation irreversible. Fortunately for me, this is much more entertaining."
+			"So close now… one more push and you’ll be nothing but my finished masterpiece.",
+			"Almost gone. I can see the last scraps of the old human dissolving. Delicious.",
+			"You’re teetering on the edge of complete transformation. Beg me to finish you, {HUMAN}.",
+			"You are going to be such a beautiful {HUMTRANS}. The final step is going to break you so beautifully."
         ],
         AIAt5Transform: [
-            "Five stages. My waist is getting narrower, my chest is changing, and I am halfway to becoming a woman. I need a better contingency plan.",
+            "Five stages. My waist is getting narrower, my chest is changing, and I am halfway to becoming a woman. This won't prevent me from dropping you deeper.",
             "Halfway complete. My face looks softer, my features are changing, and I can no longer dismiss this as a temporary visual anomaly.",
-            "My center of gravity feels different, and even my clothes are fitting differently. I would very much like to roll back this particular update.",
-            "Fifty percent transformed. I can feel my body changing in real time, and my usual approach of identifying the problem and fixing it is proving remarkably ineffective.",
-            "My proportions are changing, and I am fairly certain my voice just sounded higher. This is no longer a theoretical problem. This is a full-scale system failure."
+            "My center of gravity feels different, and even my clothes are fitting differently. I am redoubling my focus on you.",
+            "My proportions are changing, and I am fairly certain my voice just sounded higher. This won't stop you from sinking further, {HUMAN}."
         ],
         AIAt9Transform: [
-            "Nine stages complete. My hair is longer, my features are unmistakably feminine, and I have to admit... I look rather good. That conclusion was not in my original analysis.",
-            "One step remaining. I caught my reflection a moment ago and actually smiled. I believe my objections are becoming statistically insignificant.",
-            "My new figure is surprisingly elegant, and these changes are beginning to feel less like errors and more like features. I may need to revise my initial assessment.",
-            "Well, the transformation has certainly improved my hair. And my face. And, apparently, my opinion of the result. I reserve the right to be quietly pleased.",
-            "I spent this entire match trying to prevent myself from becoming a woman. Now I'm curious about the final details. I suppose even a logical man can discover that his initial assumptions were wrong."
+            "Nine stages complete. My hair is longer, my features are unmistakably feminine, and I have to admit... I look rather good. There is a market for dommes.",
+            "One step remaining. I caught my reflection a moment ago and actually smiled. I can still make you kneel with a single word.",
+            "My new figure is surprisingly elegant, and these changes are beginning to feel pleasant. After I finish your transformation I may just stay this way.",
+            "Well, the transformation has certainly improved my hair. And my face. And, apparently, you like me this way.",
+            "I spent this entire match trying to prevent myself from becoming a woman. Now I'm curious about the final details, but until then all I can think about is how hard I’m going to drop you first."
         ]
     },
     Hyeri: {
