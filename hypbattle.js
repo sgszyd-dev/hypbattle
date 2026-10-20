@@ -118,7 +118,7 @@ const CHARACTER_MANIFEST = {
     "Xander": ["Robot","Werewolf","Otter","Bat"],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
-    "Luci": ["Robot"],
+    "Luci": ["Robot","Bunny"],
     "Zixuan": ["Dog","Fox","Pig","Doll"],
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"],
     "Mark": ["Robot","Puppet","Statue","Gender"],
