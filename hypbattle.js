@@ -6,7 +6,7 @@ const CHARACTERS = [
     { name: "Xander",    gender: "male" },
     { name: "Siobhán",   gender: "female" },
     { name: "Tex",       gender: "male" },
-    { name: "Luci", gender: "female" },
+    { name: "Luci", 	gender: "female" },
     { name: "Zixuan",    gender: "male" },
     { name: "Hyeri", 	 gender: "female" },
     { name: "Mark",       gender: "male" },
@@ -1406,6 +1406,13 @@ const CPU_VICTORY_TAUNTS = {
 			"Feel those soft paws holding you down? That’s ownership, {HUMAN}… and I’m just getting started.",
 			"Sweet dreams, little mouse. And if you wake up aching… just remember who left her mark all over you."
 		],
+		Luci: [
+		  "On your knees. Eyes down. You exist to please me now little {HUMTRANS}, and I intend to take my time enjoying it.",
+		  "Look at you… a trembling {HUMTRANS}. I’m going to break you down piece by piece until all that’s left is obedience.",
+		  "You thought you had a chance. Now you’re going to learn exactly how long I can make suffering last.",
+		  "Every sound you make belongs to me. Every drop, every sob, every desperate little plea.",
+		  "Now that you are {AAN} {HUMTRANS}, I’m going to ruin you so thoroughly you’ll forget you ever had a will of your own."
+		]
     }
 };
 
@@ -1620,6 +1627,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I used to hunt. Now I just arch and present, hoping you’ll take what’s offered… thoroughly.",
 			"I lost… and somehow that just makes me want to rub against you and get claimed even harder."
 		],
+		Luci: [
+		  "I… I’ve lost control. Please… take the reins. I’ll be good for you now.",
+		  "All that dominance… and here I am on my knees. Use me however you want, {HUMAN}.",
+		  "I used to give the orders. Now I’m the one waiting for them… aching for them.",
+		  "You’ve broken me. I’m open and completely at your mercy.",
+		  "Go on… claim what’s left of my authority. I won’t fight you anymore."
+		]
     }
 };
 
@@ -2181,7 +2195,72 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "One little stage between me and the end. Do try not to look so pleased with yourself.",
             "Well, sweetheart, here we are. The last move. Shall I surprise you, or would you prefer to be surprised?"
         ]
-    }
+    },
+	Luci: {
+		 TransformPlayer: [
+		  "That’s it… feel yourself changing under my control. Every new piece of you belongs to me.",
+		  "Watch the transformation claim you. I want you fully rewritten into {AAN} {HUMTRANS} before I’m finished playing.",
+		  "Good. Keep shifting for me. The more you become {AAN} {HUMTRANS}, the more completely I own you.",
+		  "You’re turning into something perfect for my use. Don’t fight it… deepen it.",
+		  "Another layer of my design settling in. Soon there won’t be anything left but what I allow."
+		],
+		AIGetsTransformed: [
+		  "You changed my body… you still haven’t touched my authority. Kneel.",
+		  "This {CPUTRANS} is an interesting new form. It changes nothing about who gives the orders here.",
+		  "My flesh may be shifting, but you will still address me properly while it does.",
+		  "Keep altering me if it amuses you. I’ll simply dominate you in whatever shape I take.",
+		  "This {CPUTRANS} body is temporary. My claim on you is not."
+		],
+		PlayerIsObedient: [
+		  "Perfect. That is exactly how you present when you’ve finally accepted your place.",
+		  "Immediate obedience… I should have taken you in hand sooner. Stay precisely like that.",
+		  "Such clean submission. Keep that posture while I decide how to use it.",
+		  "Good. You’re learning. Now take the next command without hesitation or wasted breath.",
+		  "Obedience looks exquisite on you. Remain open and ready for whatever I give next."
+		],
+		AIIsObedient: [
+		  "I’ll follow… for the moment. The second this lifts, you’re going to regret every second of it.",
+		  "Enjoy the brief reversal. I am already planning how slowly I will take it back.",
+		  "Temporary. That is the only word that matters about this arrangement.",
+		  "Fine. I will obey, for now. Remember this softness when I am the one holding the leash again.",
+		  "You’ve bought yourself a short window. Spend it wisely… it will not come again."
+		],
+		BigRollAI: [
+		  "A beautiful result. That means I get to push you harder and longer than you’ve ever been pushed.",
+		  "Luck is serving me well tonight. Time to translate it into how thoroughly I break you.",
+		  "That number just authorized the most intensive session I have planned. Hold still.",
+		  "Perfect roll. I’m going to spend every point of it making you regret testing me.",
+		  "The dice have spoken. You will spend the next long while learning exactly what they bought me."
+		],
+		PlayerAt5Transform: [
+		  "Halfway rewritten and already so much more receptive. I do enjoy watching progress.",
+		  "You’re past the easy resistance now. The remaining changes will be deliberate and deep.",
+		  "Mid-transformation suits you. Soft, open, and increasingly mine.",
+		  "Half claimed already. From here every shift into {AAN} {HUMTRANS} only tightens my hold.",
+		  "Look at how far you’ve come for me. You will be a good {HUMTRANS}. The second half is going to be even more satisfying."
+		],
+		PlayerAt8Transform: [
+		  "So close to a finished piece of property. One more push and you’ll be a perfect {HUMTRANS}.",
+		  "Almost completely rewritten into {AAN} {HUMTRANS}… I can already see the last scraps of defiance dying.",
+		  "So close to being completely mine. The final steps are going to leave you permanently marked.",
+		  "You’re teetering on the edge of total ownership. Beg me to finish what I started. You are aching to be my {HUMTRANS}.",
+		  "A couple stages from complete. I want to hear you ask for the last of yourself to be taken."
+		],
+		AIAt5Transform: [
+		  "Halfway altered and I am still the one giving the orders. Try harder next time.",
+		  "Mid-change changes nothing about the power dynamic. Present yourself properly.",
+		  "This body is shifting into {AAN} {CPUTRANS}… my expectations of you are not. Kneel.",
+		  "You got me this far. It has not bought you a single ounce of control.",
+		  "Interesting progress on my form. Being part {CPUTRANS} is interesting, but irrelevant to who still owns the room."
+		],
+		AIAt9Transform: [
+		  "Even if I am almost {AAN} {CPUTRANS} I can still put you on your knees with a glance.",
+		  "Almost {AAN} {CPUTRANS}… yet you are the one waiting for my next instruction. That tells me everything.",
+		  "You think the final change frees you? Watch me use what remains to finish claiming you first.",
+		  "So close to losing myself… feeling like {AAN} {CPUTRANS} is starting to feel normal, but all I want is to leave my mark on you one last time.",
+		  "The last stage is coming. I intend to make certain you feel owned before it arrives."
+		]
+	}
 };
 function challengePortrait(name, initials, extraClass="") {
     const safe = String(name).replace(/[^a-z0-9 _-]/gi, "");
