@@ -114,7 +114,7 @@ const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "
 
 const CHARACTER_MANIFEST = {
     "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
-    "Roz": ["Werewolf","Cow","Eevee"],
+    "Roz": ["Werewolf","Cow","Eevee","Doll"],
     "Xander": ["Robot","Werewolf","Otter","Bat"],
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
     "Tex": ["Cow", "Cat","Werewolf","Horse"],
@@ -273,6 +273,9 @@ let lucidityResolve = null;
 
 window.onload = () => {
     loadLocalDisplayPreferences();
+    if (window.firebaseAuthReady && typeof window.initializeLeaderboardProfile === "function") {
+        window.initializeLeaderboardProfile().catch(error => console.warn("Leaderboard profile setup is not available yet:", error));
+    }
     setGameLogVisible(localShowGameLog);
     const diceOption = document.getElementById("dice-text-option");
     if (diceOption) diceOption.value = localShowDiceText ? "on" : "off";
@@ -427,6 +430,7 @@ let challengeCompleted = [];
 let challengeLastResult = null;
 let challengeTauntTimer = null;
 let challengeRunStartedAt = null;
+let challengeRunMatchesPlayed = 0;
 const safeStorage = {
     get(key) {
         try { return localStorage.getItem(key); }
@@ -447,7 +451,7 @@ function loadChallengeRecord(){ try { const raw=safeStorage.get(CHALLENGE_RECORD
 function saveChallengeRecord(record){ try { safeStorage.set(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
 const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
-function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], savedAt:new Date().toISOString()}; }
+function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], challengeRunMatchesPlayed, savedAt:new Date().toISOString()}; }
 function saveChallengeProgress() {
     if(!challengeActive) return;
 	
@@ -475,7 +479,7 @@ function applyChallengeSave(data){
     const modeSelect=document.getElementById("game-mode-option"); if(modeSelect){modeSelect.value="solo";toggleGameMode();}
     challengeModifierNext=["none","bonus","handicap"].includes(data.challengeModifierNext)?data.challengeModifierNext:"none";
     challengeCompleted=Array.isArray(data.challengeCompleted)?data.challengeCompleted.filter(i=>Number.isInteger(i)&&i>=0&&i<CHALLENGE_RIVALS.length):[];
-    challengeLastResult=null; challengeRunStartedAt=Date.now();
+    challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=Math.max(0, Number(data.challengeRunMatchesPlayed)||0);
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     closeChallengeScreen();
     showPopup("Challenge Progress Loaded", `Your challenge has been restored at <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong>.<p>To keep the save compact and portable, it restores your gauntlet position and bonuses, not an in-progress match's dice, cards, or stats. Start the current rival's match again.</p><button onclick="closePopup();renderChallengeScreen('roadmap')">Continue</button>`);
@@ -2244,7 +2248,7 @@ function resumeSavedChallenge(){
 }
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
 function startChallengeRun(){
-    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now();
+    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0;
     updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
     saveChallengeProgress();
     closeChallengeScreen(); renderChallengeScreen("roadmap");
@@ -2354,6 +2358,7 @@ async function playChallengeVictoryCinematic(){
 }
 function handleChallengeMatchEnded(winnerId){
     if (!challengeActive || gameState.gameMode!=="solo") return false;
+    challengeRunMatchesPlayed++;
     const rivalIndex=challengeIndex, rival=CHALLENGE_RIVALS[rivalIndex], won=winnerId===1;
     updateChallengeRecord(r=>{
         if(won) r.matchesWon++; else r.matchesLost++;
@@ -2400,7 +2405,7 @@ async function quitChallengeRun() {
     finishChallengeRun(); 
  }
 function finishChallengeRun(){
-    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null;
+    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; challengeRunMatchesPlayed=0;
     try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
     closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
@@ -3735,6 +3740,286 @@ async function restartGameFromBoard() {
     window.location.reload();
 }
 
+// ============================================================
+// GLOBAL PLAYER PROFILE (Stage 1 of trustworthy leaderboards)
+// ------------------------------------------------------------
+// This stores only a display name under players/<Firebase Auth UID>.
+// Competitive statistics will NOT be written by this client; they will
+// be submitted to a trusted backend in a later stage.
+// ============================================================
+const GLOBAL_PROFILE_NAME_KEY = "hypnoticDuel.globalProfile.displayName.v1";
+const GLOBAL_PROFILE_PENDING_KEY = "hypnoticDuel.globalProfile.pendingSync.v1";
+let globalProfileInitialization = null;
+
+function normalizeLeaderboardDisplayName(value) {
+    return String(value == null ? "" : value)
+        .trim()
+        .replace(/\s+/g, " ");
+}
+
+function isValidLeaderboardDisplayName(value) {
+    return value.length >= 3 && value.length <= 20 && /^[A-Za-z0-9 ._\-]+$/.test(value);
+}
+
+function generatedLeaderboardName(uid) {
+    const suffix = String(uid || "").replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase();
+    return `Player-${suffix || "0000"}`;
+}
+
+function setLeaderboardProfileStatus(message, isError = false) {
+    const el = document.getElementById("global-player-profile-status");
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = isError ? "#ff9b9b" : "#b8adc6";
+}
+
+function setLeaderboardProfileInput(value) {
+    const input = document.getElementById("global-player-display-name");
+    if (input) input.value = value || "";
+}
+
+async function initializeLeaderboardProfile() {
+    // Avoid concurrent initializers triggered by both onload and auth state change.
+    if (globalProfileInitialization) return globalProfileInitialization;
+    globalProfileInitialization = (async () => {
+        const input = document.getElementById("global-player-display-name");
+        if (!input) return;
+
+        const localName = normalizeLeaderboardDisplayName(safeStorage.get(GLOBAL_PROFILE_NAME_KEY));
+        const uid = String(window.firebaseUserId || "");
+        if (!window.firebaseAuthReady || !uid || !window.db || !window.dbRef || !window.dbGet || !window.dbSet) {
+            const fallback = isValidLeaderboardDisplayName(localName) ? localName : "";
+            setLeaderboardProfileInput(fallback);
+            setLeaderboardProfileStatus(fallback
+                ? "Name saved on this device. Firebase sign-in is still pending; it will sync when available."
+                : "Choose a display name. It will sync to Firebase when sign-in is ready.");
+            return;
+        }
+
+        const profileRef = window.dbRef(window.db, `players/${uid}/displayName`);
+        try {
+            const snapshot = await window.dbGet(profileRef);
+            const remoteName = normalizeLeaderboardDisplayName(snapshot.exists() ? snapshot.val() : "");
+            const pendingLocalChange = safeStorage.get(GLOBAL_PROFILE_PENDING_KEY) === "1";
+            if (isValidLeaderboardDisplayName(remoteName) && !pendingLocalChange) {
+                safeStorage.set(GLOBAL_PROFILE_NAME_KEY, remoteName);
+                setLeaderboardProfileInput(remoteName);
+                setLeaderboardProfileStatus("Display name loaded from your Firebase profile.");
+                return;
+            }
+
+            const initialName = isValidLeaderboardDisplayName(localName)
+                ? localName
+                : (isValidLeaderboardDisplayName(remoteName) ? remoteName : generatedLeaderboardName(uid));
+            setLeaderboardProfileInput(initialName);
+            await window.dbSet(profileRef, initialName);
+            safeStorage.set(GLOBAL_PROFILE_NAME_KEY, initialName);
+            safeStorage.remove(GLOBAL_PROFILE_PENDING_KEY);
+            setLeaderboardProfileStatus(isValidLeaderboardDisplayName(remoteName)
+                ? "Your updated display name is synced to Firebase."
+                : "Profile created. You can change this name at any time.");
+        } catch (error) {
+            console.warn("Could not load or create Firebase player profile:", error);
+            const fallback = isValidLeaderboardDisplayName(localName) ? localName : generatedLeaderboardName(uid);
+            setLeaderboardProfileInput(fallback);
+            if (isValidLeaderboardDisplayName(fallback)) safeStorage.set(GLOBAL_PROFILE_PENDING_KEY, "1");
+            setLeaderboardProfileStatus("Name is available locally, but Firebase profile sync failed. Check the database rules and connection.", true);
+        }
+    })().finally(() => {
+        globalProfileInitialization = null;
+    });
+    return globalProfileInitialization;
+}
+window.initializeLeaderboardProfile = initializeLeaderboardProfile;
+
+async function saveLeaderboardProfile() {
+    const input = document.getElementById("global-player-display-name");
+    if (!input) return;
+    const name = normalizeLeaderboardDisplayName(input.value);
+    if (!isValidLeaderboardDisplayName(name)) {
+        setLeaderboardProfileStatus("Use 3–20 characters: letters, numbers, spaces, periods, underscores, or hyphens.", true);
+        input.focus();
+        return;
+    }
+
+    input.value = name;
+    safeStorage.set(GLOBAL_PROFILE_NAME_KEY, name);
+    if (!window.firebaseAuthReady || !window.firebaseUserId || !window.db || !window.dbRef || !window.dbSet) {
+        safeStorage.set(GLOBAL_PROFILE_PENDING_KEY, "1");
+        setLeaderboardProfileStatus("Saved on this device. Firebase is not ready yet; it will sync when available.");
+        return;
+    }
+
+    const saveButton = input.parentElement && input.parentElement.querySelector("button");
+    if (saveButton) saveButton.disabled = true;
+    setLeaderboardProfileStatus("Saving profile to Firebase…");
+    try {
+        await window.dbSet(
+            window.dbRef(window.db, `players/${window.firebaseUserId}/displayName`),
+            name
+        );
+        safeStorage.remove(GLOBAL_PROFILE_PENDING_KEY);
+        setLeaderboardProfileStatus("Display name saved to your Firebase profile.");
+    } catch (error) {
+        console.error("Could not save Firebase player profile:", error);
+        safeStorage.set(GLOBAL_PROFILE_PENDING_KEY, "1");
+        setLeaderboardProfileStatus("Saved locally, but Firebase rejected the profile update. Check the database rules.", true);
+    } finally {
+        if (saveButton) saveButton.disabled = false;
+    }
+}
+
+// ============================================================
+// GLOBAL LEADERBOARD (client-reported, no paid backend required)
+// ============================================================
+const GLOBAL_STATS_SCHEMA = 1;
+const GLOBAL_STATS_LOCAL_KEY = "hypnoticDuel.globalStatsCache.v1";
+const GLOBAL_STATS_PROCESSED_KEY = "hypnoticDuel.globalStatsProcessedMatches.v1";
+const GLOBAL_DIFFICULTY_LABELS = {
+    random: "Random", smart: "Smart", aggressive: "Aggressive", defensive: "Defensive",
+    v23low: "V23 Low", trans: "Transformer", transformer: "Transformer", adaptive: "Adaptive"
+};
+function emptyGlobalStats() {
+    return { schemaVersion: GLOBAL_STATS_SCHEMA, gamesVsCpu: 0, winsVsCpu: 0, lossesVsCpu: 0,
+        cpuByDifficulty: {}, challenge: { matchesWon: 0, matchesLost: 0, runsCompleted: 0, bestRivalIndex: 0, bestGames: null },
+        transformations: {}, cardsPurchased: {}, updatedAt: null };
+}
+function normalizeGlobalStats(raw) {
+    const out = emptyGlobalStats();
+    if (!raw || typeof raw !== "object") return out;
+    out.gamesVsCpu = Math.max(0, Number(raw.gamesVsCpu) || 0);
+    out.winsVsCpu = Math.max(0, Number(raw.winsVsCpu) || 0);
+    out.lossesVsCpu = Math.max(0, Number(raw.lossesVsCpu) || 0);
+    out.cpuByDifficulty = raw.cpuByDifficulty && typeof raw.cpuByDifficulty === "object" ? raw.cpuByDifficulty : {};
+    out.challenge = Object.assign(out.challenge, raw.challenge && typeof raw.challenge === "object" ? raw.challenge : {});
+    out.transformations = raw.transformations && typeof raw.transformations === "object" ? raw.transformations : {};
+    out.cardsPurchased = raw.cardsPurchased && typeof raw.cardsPurchased === "object" ? raw.cardsPurchased : {};
+    out.updatedAt = raw.updatedAt || null;
+    return out;
+}
+function globalStatsIncrement(map, key, amount=1) {
+    const safeKey = String(key || "Unknown").slice(0, 100);
+    map[safeKey] = Math.max(0, Number(map[safeKey]) || 0) + amount;
+}
+function loadGlobalStatsCache() {
+    try { return normalizeGlobalStats(JSON.parse(safeStorage.get(GLOBAL_STATS_LOCAL_KEY) || "{}")); }
+    catch (_) { return emptyGlobalStats(); }
+}
+function saveGlobalStatsCache(stats) {
+    try { safeStorage.set(GLOBAL_STATS_LOCAL_KEY, JSON.stringify(stats)); } catch (_) {}
+}
+function getProcessedGlobalMatches() {
+    try { const a=JSON.parse(safeStorage.get(GLOBAL_STATS_PROCESSED_KEY)||"[]"); return Array.isArray(a)?a:[]; }
+    catch (_) { return []; }
+}
+async function recordGlobalMatchResult(winnerId, challengeContext=null) {
+    if (!gameState || gameState.gameMode !== "solo" || !window.firebaseAuthReady || !window.firebaseUserId || !window.db || !window.dbRef || !window.dbGet || !window.dbSet) return;
+    const matchId = String((gameRec && gameRec.id) || `${Date.now()}-${gameState.round}-${gameState.p1.name}`);
+    const processed = getProcessedGlobalMatches();
+    if (processed.includes(matchId)) return;
+    processed.push(matchId);
+    while (processed.length > 100) processed.shift();
+    safeStorage.set(GLOBAL_STATS_PROCESSED_KEY, JSON.stringify(processed));
+
+    let stats = loadGlobalStatsCache();
+    const statsRef = window.dbRef(window.db, `players/${window.firebaseUserId}/stats`);
+    try {
+        const snapshot = await window.dbGet(statsRef);
+        if (snapshot.exists()) stats = normalizeGlobalStats(snapshot.val());
+    } catch (error) {
+        console.warn("Could not load existing global stats; using the local cache for this update.", error);
+    }
+
+    if (challengeContext && challengeContext.isChallenge) {
+        if (winnerId === 1) stats.challenge.matchesWon++;
+        else stats.challenge.matchesLost++;
+        stats.challenge.bestRivalIndex = Math.max(Number(stats.challenge.bestRivalIndex)||0, challengeContext.rivalIndex + 1);
+        if (challengeContext.completed) {
+            stats.challenge.runsCompleted++;
+            const games = Math.max(1, Number(challengeContext.gamesInRun)||1);
+            if (!stats.challenge.bestGames || games < stats.challenge.bestGames) stats.challenge.bestGames = games;
+        }
+    } else {
+        const difficulty = String(gameState.p2.difficulty || "random").toLowerCase();
+        const row = stats.cpuByDifficulty[difficulty] && typeof stats.cpuByDifficulty[difficulty] === "object"
+            ? stats.cpuByDifficulty[difficulty] : { played: 0, wins: 0, losses: 0 };
+        row.played = (Number(row.played)||0) + 1;
+        if (winnerId === 1) { row.wins = (Number(row.wins)||0)+1; stats.winsVsCpu++; }
+        else { row.losses = (Number(row.losses)||0)+1; stats.lossesVsCpu++; }
+        stats.cpuByDifficulty[difficulty] = row;
+        stats.gamesVsCpu++;
+    }
+
+    // Count the human's chosen avatar/form once per completed solo match where transformation occurred.
+    if ((Number(gameState.p1.transform)||0) > 0) {
+        globalStatsIncrement(stats.transformations, `${gameState.p1.name} → ${gameState.p1.transformTarget || "Unknown"}`);
+    }
+    // Purchase history is captured by the existing game recorder for the human player.
+    if (gameRec && Array.isArray(gameRec.globalCardPurchases)) {
+        gameRec.globalCardPurchases.forEach(name => globalStatsIncrement(stats.cardsPurchased, name));
+    }
+    stats.schemaVersion = GLOBAL_STATS_SCHEMA;
+    stats.updatedAt = new Date().toISOString();
+    saveGlobalStatsCache(stats);
+    try {
+        await window.dbSet(statsRef, stats);
+        console.info("Global leaderboard stats synced.");
+    } catch (error) {
+        console.warn("Global stats are cached locally but could not be synced to Firebase:", error);
+        showToast("Global stats could not sync. Check your Firebase rules/connection.");
+    }
+}
+function escapeLeaderboardText(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[ch]));
+}
+function leaderboardTopRows(players, metricFn, limit=10) {
+    return players.map(p => ({name:p.name, value:Math.max(0,Number(metricFn(p.stats))||0)}))
+        .filter(p => p.value > 0).sort((a,b)=>b.value-a.value || a.name.localeCompare(b.name)).slice(0,limit);
+}
+function leaderboardTable(title, rows, valueLabel) {
+    const body = rows.length ? rows.map((r,i)=>`<tr><td style="padding:5px 8px">${i+1}</td><td style="padding:5px 8px">${escapeLeaderboardText(r.name)}</td><td style="padding:5px 8px;text-align:right">${r.value}</td></tr>`).join("") : `<tr><td colspan="3" style="padding:8px;color:#b8adc6">No records yet.</td></tr>`;
+    return `<h3 style="margin:18px 0 6px;color:#c4b5fd">${escapeLeaderboardText(title)}</h3><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th style="padding:5px 8px">#</th><th style="padding:5px 8px">Player</th><th style="padding:5px 8px;text-align:right">${escapeLeaderboardText(valueLabel)}</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+function aggregateGlobalMapRows(players, mapName, valueLabel) {
+    const totals = {};
+    players.forEach(p => {
+        const map = p.stats && p.stats[mapName];
+        if (!map || typeof map !== "object") return;
+        Object.entries(map).forEach(([key,value]) => { totals[key] = (Number(totals[key])||0) + Math.max(0,Number(value)||0); });
+    });
+    return Object.entries(totals).map(([name,value])=>({name,value})).filter(r=>r.value>0)
+        .sort((a,b)=>b.value-a.value || a.name.localeCompare(b.name)).slice(0,10);
+}
+async function showGlobalLeaderboard() {
+    if (!window.firebaseAuthReady || !window.db || !window.dbRef || !window.dbGet) {
+        showPopup("Global Leaderboard", "Firebase sign-in is still starting. Please wait a moment and try again."); return;
+    }
+    showPopup("Global Leaderboard", "Loading community records…");
+    try {
+        const snapshot = await window.dbGet(window.dbRef(window.db, "players"));
+        const raw = snapshot.exists() ? snapshot.val() : {};
+        const players = Object.entries(raw || {}).map(([uid,p]) => ({uid, name: normalizeLeaderboardDisplayName(p && p.displayName) || generatedLeaderboardName(uid), stats: normalizeGlobalStats(p && p.stats)}));
+        const difficultyTables = ["random","smart","aggressive","defensive","v23low","transformer","adaptive","trans"]
+            .map(d => leaderboardTable(`Most Wins vs ${GLOBAL_DIFFICULTY_LABELS[d] || d}`, leaderboardTopRows(players,s=>s.cpuByDifficulty[d] && s.cpuByDifficulty[d].wins), "Wins"))
+            .join("");
+        const html = `<p style="color:#b8adc6;font-size:.85rem">Community-reported records; stats are not independently verified.</p>` +
+            leaderboardTable("Most CPU Wins", leaderboardTopRows(players,s=>s.winsVsCpu), "Wins") +
+            difficultyTables +
+            leaderboardTable("Most The Seven Completions", leaderboardTopRows(players,s=>s.challenge.runsCompleted), "Runs") +
+            leaderboardTable("Most CPU Matches Played", leaderboardTopRows(players,s=>s.gamesVsCpu), "Matches") +
+            leaderboardTable("Most Card Purchases", leaderboardTopRows(players,s=>Object.values(s.cardsPurchased||{}).reduce((a,b)=>a+(Number(b)||0),0)), "Purchases") +
+            leaderboardTable("Most Common Avatar → Target Form", aggregateGlobalMapRows(players,"transformations"), "Matches") +
+            leaderboardTable("Most Purchased Cards", aggregateGlobalMapRows(players,"cardsPurchased"), "Purchases") +
+            `<h3 style="margin:18px 0 6px;color:#c4b5fd">The Seven — Fewest Games to Complete</h3>` +
+            (()=>{const rows=players.filter(p=>Number(p.stats.challenge.bestGames)>0).map(p=>({name:p.name,value:Number(p.stats.challenge.bestGames)})).sort((a,b)=>a.value-b.value||a.name.localeCompare(b.name)).slice(0,10);return rows.length?`<table style="width:100%;border-collapse:collapse"><tbody>${rows.map((r,i)=>`<tr><td style="padding:5px 8px">${i+1}</td><td style="padding:5px 8px">${escapeLeaderboardText(r.name)}</td><td style="padding:5px 8px;text-align:right">${r.value} games</td></tr>`).join("")}</tbody></table>`:`<p style="color:#b8adc6">No completed runs recorded yet.</p>`;})();
+        showPopup("Global Leaderboard", html);
+    } catch (error) {
+        console.error("Could not load global leaderboard:", error);
+        showPopup("Global Leaderboard", "Could not load global records. Confirm that your Realtime Database rules allow signed-in users to read /players, then try again.");
+    }
+}
+window.showGlobalLeaderboard = showGlobalLeaderboard;
+
 function openOptionsModal(returnTarget = "game") {
     optionsReturnTarget = returnTarget === "setup" ? "setup" : "game";
     const diceSelect = document.getElementById("dice-text-option");
@@ -3755,6 +4040,9 @@ function openOptionsModal(returnTarget = "game") {
     if (brainToggle) brainToggle.checked = localShowBrainComments;
     const modal = document.getElementById("options-modal");
     if (modal) modal.style.display = "flex";
+    if (window.firebaseAuthReady && typeof window.initializeLeaderboardProfile === "function") {
+        window.initializeLeaderboardProfile().catch(error => console.warn("Leaderboard profile setup is not available yet:", error));
+    }
 }
 
 function closeOptionsModal() {
@@ -7921,6 +8209,10 @@ function buyCard(index) {
     }
 
     log(`Bought card: ${card.name}`);
+    if (playerId === 1 && gameState.gameMode === "solo" && gameRec) {
+        if (!Array.isArray(gameRec.globalCardPurchases)) gameRec.globalCardPurchases = [];
+        gameRec.globalCardPurchases.push(String(card.name || `Card ${card.id}`));
+    }
     playSound("card");
 
     if (hasCard(playerId, 46)) {
@@ -8420,6 +8712,9 @@ function presentFinishedGame() {
     gameOverPresentationStarted = true;
     playSound("win");
     const challengeMatch = challengeActive && gameState.gameMode === "solo";
+    const challengeStatsContext = challengeMatch ? { isChallenge: true, rivalIndex: challengeIndex,
+        completed: winnerId === 1 && challengeIndex === CHALLENGE_RIVALS.length - 1,
+        gamesInRun: challengeRunMatchesPlayed + 1 } : null;
     if (challengeMatch) handleChallengeMatchEnded(winnerId);
     const challengeContinue = document.getElementById("go-challenge-continue");
     if (challengeContinue) {
@@ -8485,6 +8780,7 @@ function presentFinishedGame() {
     if (!p1Wins) document.getElementById("go-p2-panel").classList.add("winner-highlight");
 
     recFinish(p1Wins ? 1 : 2);
+    recordGlobalMatchResult(winnerId, challengeStatsContext).catch(error => console.warn("Global leaderboard update failed:", error));
     ["p1-image", "p2-image"].forEach(id => {
         const e = document.getElementById(id);
         if (e) e.classList.remove("active-portrait-glow-p1", "active-portrait-glow-p2");

@@ -33,7 +33,7 @@
 	  // note: can remove analytics later
 	  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 	  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-	  import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+	  import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 	  import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js";
 
 	  // Initialize Firebase & Auth
@@ -83,8 +83,12 @@
 			onAuthStateChanged(auth, (user) => {
 			  if (user) {
 				console.log("Authenticated anonymously as UID:", user.uid);
+				window.firebaseUserId = user.uid;
 				window.firebaseAuthReady = true;
 				window.firebaseReady = true;
+				if (typeof window.initializeLeaderboardProfile === "function") {
+					window.initializeLeaderboardProfile().catch(error => console.warn("Leaderboard profile setup is not available yet:", error));
+				}
 			  } else {
 				window.firebaseAuthReady = false;
 			  }
@@ -99,6 +103,7 @@
 			  window.db = db;
 			  window.dbRef = ref;
 			  window.dbSet = set;
+			  window.dbGet = get;
 			  window.dbOnValue = onValue;
 			  window.dbUpdate = update;
 		} catch (error) {
@@ -270,11 +275,31 @@
                 </div>
             </section>
 
+            <section class="options-section" aria-labelledby="options-profile-heading">
+                <h3 id="options-profile-heading">Player Profile</h3>
+                <p style="margin:0 0 10px;color:#b8adc6;font-size:.9rem;line-height:1.45;">
+                    Choose the public display name that will appear on global leaderboards. Your character selection is separate.
+                </p>
+                <div class="option-row" style="align-items:flex-start;gap:10px;">
+                    <label for="global-player-display-name" style="min-width:110px;">Display name</label>
+                    <div style="display:flex;flex:1;gap:8px;flex-wrap:wrap;">
+                        <input type="text" id="global-player-display-name" maxlength="20" minlength="3"
+                            autocomplete="nickname" spellcheck="false" placeholder="3–20 letters, numbers, spaces, . _ -"
+                            pattern="[A-Za-z0-9 ._\-]{3,20}" style="flex:1;min-width:180px;">
+                        <button type="button" onclick="saveLeaderboardProfile()" style="width:auto;">Save Name</button>
+                    </div>
+                </div>
+                <div id="global-player-profile-status" role="status" aria-live="polite" style="font-size:.82rem;color:#b8adc6;margin-top:6px;">
+                    Profile is being prepared…
+                </div>
+            </section>
+
             <section class="options-section" aria-labelledby="options-tools-heading">
                 <h3 id="options-tools-heading">Game Tools</h3>
                 <div class="options-tool-grid">
                     <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
                     <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
+                    <button type="button" onclick="showGlobalLeaderboard()">🌐 Global Leaderboard</button>
                     <button type="button" onclick="showChallengeRecord()">✦ The Seven Record</button>
 					<button type="button" onclick="resetChallengeRecord()">↻ Reset Seven Record</button>
                     <button type="button" onclick="exportChallengeSave()">⇧ Export Challenge Save</button>
