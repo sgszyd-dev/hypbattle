@@ -1009,8 +1009,8 @@ const TRANSFORMATION_TAUNTS = {
         player: {
             TransformPlayer: [
                 "Another step toward a plastic body. I wonder how much control you'll have left.",
-                "Your movements are becoming less natural. Soon you'll look like something made to be posed.",
-				"I'm going to enjoy dressing and undressing you."
+                "Your movements are becoming less natural. Soon you'll look like something made to be posed."
+				
             ],
             PlayerAt5Transform: [
                 "Halfway to a mannequin. How does it feel when your body starts moving like it was designed by someone else?",
