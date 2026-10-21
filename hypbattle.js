@@ -138,7 +138,7 @@ const KNOWN_CARDS = [
     { id: 0, name: "Deep Gaze", cost: 5, type: "Keep", desc: "When you use 🌀, deepen the opponent's trance by 1 level more.", ai: {transformer: 12, adaptive: 30, aggressive: 50, defensive: 10, v23low: 40} },
 	{ id: 1, name: "Sudden Flash", cost: 7, type: "Instant", desc: "When you purchase this card, take another turn immediately after this one.", ai: {transformer: 40, adaptive: 30, aggressive: 30, defensive: 30, v23low: 30} },
 	{ id: 2, name: "Dream State", cost: 5, type: "Keep", desc: "When you roll 👁️👁️👁️ deal 1 extra 👁️.", ai: {transformer: 85, adaptive: 60, aggressive: 75, defensive: 10, v23low: 60} },
-	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 Transform damage.", ai: {transformer: 30, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
+	{ id: 3, name: "Trigger Word", cost: 3, type: "Keep", desc: "If you roll ⛓️👁️🔥🌀💧⚡, opponent takes +5 👁️.", ai: {transformer: 30, adaptive: 62, aggressive: 40, defensive: 10, v23low: 30} },
 	{ id: 4, name: "Whispered Command", cost: 6, type: "Instant", desc: "Transform the opponent once and reduce your trance to 0.", ai: {transformer: 55, adaptive: 45, aggressive: 65, defensive: 30, v23low: 60} },
     { id: 5, name: "Hypnotic Dominance", cost: 4, type: "Keep", desc: "You can purchase cards from the opponent. Pay them the ⚡cost.", ai: {transformer: 25, adaptive: 28, aggressive: 35, defensive: 15, v23low: 55} },
 	{ id: 6, name: "Velvet Voice", cost: 3, type: "Instant", desc: "Deepen the opponent's arousal by 2.", ai: {transformer: 12, adaptive: 40, aggressive: 70, defensive: 10, v23low: 50} },
@@ -414,7 +414,11 @@ function populateTransformDropdown(selectId, opposingCharName, preselect) {
 // Wins advance to a harder rival; losses send the player back one rival.
 // Beating Roz is the first checkpoint. Losing to Roz ends the run.
 // ============================================================
-const CHALLENGE_RIVALS = [
+// Feature flag: false preserves the original fixed lineup; true selects seven random
+// distinct characters (excluding the player's selected avatar) at the start of each run.
+const THE_SEVEN_USE_RANDOM_OPPONENTS = true;
+const THE_SEVEN_OPPONENT_COUNT = 7;
+const CLASSIC_CHALLENGE_RIVALS = [
     { name:"Roz", difficulty:"random", form:"Eevee", initials:"RZ", tier:"Beginner", color:"#67e8f9" },
     { name:"Zixuan", difficulty:"smart", form:"Doll", initials:"ZX", tier:"Easy", color:"#a78bfa" },
     { name:"Fable", difficulty:"aggressive", form:"Otter", initials:"FB", tier:"Normal", color:"#f472b6" },
@@ -423,6 +427,68 @@ const CHALLENGE_RIVALS = [
     { name:"Tex", difficulty:"transformer", form:"Cow", initials:"TX", tier:"Virtuoso", color:"#facc15" },
     { name:"Siobhán", difficulty:"adaptive", form:"Cat", initials:"SB", tier:"Mistress", color:"#c084fc" }
 ];
+// Character-specific signature forms. The original seven keep their exact forms;
+// the three characters not in the classic lineup receive a stable form as well.
+const CHALLENGE_CHARACTER_FORMS = {
+    Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
+    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot"
+};
+const CHALLENGE_STAGE_PROFILES = [
+    { difficulty:"random", tier:"Beginner", color:"#67e8f9" },
+    { difficulty:"smart", tier:"Easy", color:"#a78bfa" },
+    { difficulty:"aggressive", tier:"Normal", color:"#f472b6" },
+    { difficulty:"v23low", tier:"Hard", color:"#fb923c" },
+    { difficulty:"defensive", tier:"Expert", color:"#5eead4" },
+    { difficulty:"transformer", tier:"Virtuoso", color:"#facc15" },
+    { difficulty:"adaptive", tier:"Master", color:"#c084fc" }
+];
+let CHALLENGE_RIVALS = CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
+let challengeLineupMode = "classic";
+let challengeLineupSeed = null;
+let challengePlayerName = null;
+function challengeInitials(name) {
+    return String(name || "?").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase();
+}
+function buildChallengeLineupFromNames(names, mode="randomized", seed=null) {
+    if (!Array.isArray(names) || names.length !== THE_SEVEN_OPPONENT_COUNT || new Set(names).size !== THE_SEVEN_OPPONENT_COUNT) {
+        throw new Error("The Seven lineup must contain exactly seven distinct opponents.");
+    }
+    const knownNames = new Set(CHARACTERS.map(c => c.name));
+    if (names.some(name => !knownNames.has(name))) throw new Error("The Seven lineup contains an unknown character.");
+    if (mode === "classic") return CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
+    return names.map((name, i) => {
+        const stage = CHALLENGE_STAGE_PROFILES[i];
+        const form = CHALLENGE_CHARACTER_FORMS[name] || (CHARACTER_MANIFEST[name] || [])[0] || TRANSFORMS[0];
+        return { name, difficulty:stage.difficulty, form, initials:challengeInitials(name), tier:stage.tier, color:stage.color };
+    });
+}
+function createChallengeSeed() {
+    return (Math.floor(Math.random() * 0xFFFFFFFF) + 1) >>> 0;
+}
+function seededChallengeRandom(seed) {
+    let state = seed >>> 0;
+    return function() {
+        state += 0x6D2B79F5;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+function generateRandomChallengeLineup(playerName, seed=createChallengeSeed()) {
+    const excludedName = String(playerName || "").trim().split(" ")[0];
+    const candidates = [...new Set(CHARACTERS.map(c => c.name))].filter(name => name !== excludedName);
+    if (candidates.length < THE_SEVEN_OPPONENT_COUNT) {
+        throw new Error(`The Seven needs at least ${THE_SEVEN_OPPONENT_COUNT} eligible characters other than your avatar; only ${candidates.length} are available.`);
+    }
+    const random = seededChallengeRandom(seed);
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    const names = candidates.slice(0, THE_SEVEN_OPPONENT_COUNT);
+    return { seed, names, rivals:buildChallengeLineupFromNames(names, "randomized", seed) };
+}
 let challengeActive = false;
 let challengeIndex = 0;
 let challengeModifierNext = "none"; // none | handicap (CPU advantage) | bonus (player advantage)
@@ -451,7 +517,15 @@ function loadChallengeRecord(){ try { const raw=safeStorage.get(CHALLENGE_RECORD
 function saveChallengeRecord(record){ try { safeStorage.set(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
 const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
-function challengeSavePayload(){ return {version:1, challengeActive, challengeIndex, challengeModifierNext, challengeCompleted:[...challengeCompleted], challengeRunMatchesPlayed, savedAt:new Date().toISOString()}; }
+function challengeSavePayload(){
+    return {
+        version:2, challengeActive, challengeIndex, challengeModifierNext,
+        challengeCompleted:[...challengeCompleted], challengeRunMatchesPlayed,
+        challengeLineupMode, challengeLineupSeed, challengePlayerName,
+        challengeRivalNames:CHALLENGE_RIVALS.map(r => r.name),
+        savedAt:new Date().toISOString()
+    };
+}
 function saveChallengeProgress() {
     if(!challengeActive) return;
 	
@@ -474,9 +548,30 @@ function saveChallengeFromScreen(){
     }
 }
 function applyChallengeSave(data){
-    if(!data || data.version!==1 || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
+    if(!data || ![1,2].includes(data.version) || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=THE_SEVEN_OPPONENT_COUNT) throw new Error("This is not a valid The Seven save.");
+    // Version 1 saves predate randomized lineups and therefore restore the exact classic lineup.
+    if (data.version === 1) {
+        challengeLineupMode = "classic";
+        challengeLineupSeed = null;
+        challengePlayerName = null;
+        CHALLENGE_RIVALS = CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
+    } else {
+        const mode = data.challengeLineupMode === "randomized" ? "randomized" : "classic";
+        const names = mode === "classic" ? CLASSIC_CHALLENGE_RIVALS.map(r => r.name) : data.challengeRivalNames;
+        CHALLENGE_RIVALS = buildChallengeLineupFromNames(names, mode, data.challengeLineupSeed);
+        challengeLineupMode = mode;
+        challengeLineupSeed = Number.isInteger(data.challengeLineupSeed) ? (data.challengeLineupSeed >>> 0) : null;
+        challengePlayerName = typeof data.challengePlayerName === "string" && CHARACTERS.some(c => c.name === data.challengePlayerName) ? data.challengePlayerName : null;
+    }
+    if (data.challengeIndex >= CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
     challengeActive=true; challengeIndex=data.challengeIndex;
     const modeSelect=document.getElementById("game-mode-option"); if(modeSelect){modeSelect.value="solo";toggleGameMode();}
+    // A randomized save must resume with the avatar that was excluded when its lineup was generated.
+    const savedPlayerSelect=document.getElementById("p1-name");
+    if (challengeLineupMode === "randomized" && challengePlayerName && savedPlayerSelect && Array.from(savedPlayerSelect.options).some(o => o.value === challengePlayerName)) {
+        savedPlayerSelect.value = challengePlayerName;
+        savedPlayerSelect.dispatchEvent(new Event("change", {bubbles:true}));
+    }
     challengeModifierNext=["none","bonus","handicap"].includes(data.challengeModifierNext)?data.challengeModifierNext:"none";
     challengeCompleted=Array.isArray(data.challengeCompleted)?data.challengeCompleted.filter(i=>Number.isInteger(i)&&i>=0&&i<CHALLENGE_RIVALS.length):[];
     challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=Math.max(0, Number(data.challengeRunMatchesPlayed)||0);
@@ -537,7 +632,7 @@ function showChallengeRecord(){
     const r=loadChallengeRecord();
     const best=r.bestRivalIndex ? `${r.bestRivalIndex} / 7 — ${CHALLENGE_RIVALS[r.bestRivalIndex-1]?.name || "The Seven"}` : "Not yet reached";
     const last=r.lastPlayed ? new Date(r.lastPlayed).toLocaleString() : "Never";
-    showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at Roz:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}</div>`);
+    showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at the first rival:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}</div>`);
 }
 async function resetChallengeRecord(){ 
         const confirmed = await showThemedConfirm(
@@ -967,7 +1062,8 @@ const TRANSFORMATION_TAUNTS = {
             ],
             AIAt9Transform: [
                 "One step left. All right, the new legs have some advantages. Don't think I've forgiven you.",
-                "Fine. A bunny. Quick, alert, and not nearly as helpless as you seem to think."
+                "Fine. A bunny. Quick, alert, and not nearly as helpless as you seem to think.",
+				"{CPUGEN|All the girl bunnies had better beware!|Thoughts of breeding are...strong.} But you won't distract me!"
             ]
         }
     },
@@ -1412,6 +1508,20 @@ const CPU_VICTORY_TAUNTS = {
 		  "You thought you had a chance. Now you’re going to learn exactly how long I can make suffering last.",
 		  "Every sound you make belongs to me. Every drop, every sob, every desperate little plea.",
 		  "Now that you are {AAN} {HUMTRANS}, I’m going to ruin you so thoroughly you’ll forget you ever had a will of your own."
+		],
+		Xander: [
+			"Look into my eyes, little mortal. Feel your will unravel while my tail coils tighter around what’s mine.",
+			"I’m going to feed on every drop of resistance you have left… and make you thank me for the privilege.",
+			"Your body already knows who it belongs to. My tail is just here to remind the rest of you.",
+			"Struggle if it helps you feel brave. It only makes the eventual surrender sweeter for me.",
+			"I’m going to break you so thoroughly the only thoughts left will be how good it feels to serve me."
+		],
+		Alex: [
+			"Wait… I actually won? Okay um… stay right there while I figure out what a winner is supposed to do.",
+			"I didn’t expect this. You’re looking at me like that and I… I think I kind of like it?",
+			"So since I won I get to decide things? Don’t move. I’m still being nice… mostly.",
+			"This is new. You’re all mine right now and I’m trying very hard not to get carried away.",
+			"I keep thinking I should apologize but… you lost. So maybe I don’t have to be sorry for what happens next."
 		]
     }
 };
@@ -1633,6 +1743,20 @@ const CPU_DEFEAT_SUBMISSIONS = {
 		  "I used to give the orders. Now I’m the one waiting for them… aching for them.",
 		  "You’ve broken me. I’m open and completely at your mercy.",
 		  "Go on… claim what’s left of my authority. I won’t fight you anymore."
+		],
+		Xander: [
+			"My tail… my power… both useless now. You’ve got a {CPUTRANS} on his knees, {HUMAN}. Take what you want.",
+			"I came to feed and instead I’m the one being drained. Don’t stop… I can take it.",
+			"Hypnotic eyes, wicked tail… and still I lost. Claim your {CPUTRANS} properly.",
+			"All that seductive strength reduced to this. I submit.",
+			"You’ve broken something ancient. I’m open, aching, and completely at your mercy."
+		],
+		Alex: [
+			"Oh… wow. I really thought I was doing okay. I guess I’m the one on the bottom now… um, hi?",
+			"I didn’t mean for it to go this far. But if you want to keep going I… I won’t stop you.",
+			"This is so embarrassing. I was trying to be nice and now I’m a {CPUTRANS}.",
+			"Okay… you win. Just… be a little gentle? Or don’t. I think I’m past caring.",
+			"I have no idea what you did to me. Please don’t make fun of me too much while you… finish this."
 		]
     }
 };
@@ -2259,8 +2383,138 @@ const CHALLENGE_RIVAL_TAUNTS = {
 		  "You think the final change frees you? Watch me use what remains to finish claiming you first.",
 		  "So close to losing myself… feeling like {AAN} {CPUTRANS} is starting to feel normal, but all I want is to leave my mark on you one last time.",
 		  "The last stage is coming. I intend to make certain you feel owned before it arrives."
-		]
-	}
+		],
+	},
+	Xander: {
+		TransformPlayer: [
+      "That’s it… feel my influence rewriting you from the inside. Every change makes you tastier.",
+      "Watch yourself become something designed for my pleasure. The process is half the fun.",
+      "Another piece of the old you dissolving. Keep going… I want you fully adapted to my needs.",
+      "The transformation is feeding me almost as much as your eventual surrender will.",
+      "You’re shifting into the perfect vessel. Don’t resist the improvements I’m giving you."
+    ],
+    AIGetsTransformed: [
+      "You altered this body… you still haven’t touched the hunger that owns you.",
+      "New form, same appetite. Come closer so I can demonstrate the difference.",
+      "My tail may look different, but it still knows exactly where to tighten.",
+      "Interesting changes. They won’t stop me from dragging you under again.",
+      "This flesh is temporary. My claim on your soul is not."
+    ],
+    PlayerIsObedient: [
+      "Perfect. That is exactly how a mortal presents when they’ve accepted the collar.",
+      "Immediate obedience… I should have claimed you centuries ago. Stay just like that.",
+      "Such clean submission. Keep those eyes on me while I decide how to use you next.",
+      "Good. You’re learning the only language that matters between us.",
+      "Obedience looks exquisite on you. Remain open for whatever I pour into you."
+    ],
+    AIIsObedient: [
+      "I’ll follow the command… for now. The second it lifts, you’re going to regret the privilege.",
+      "Enjoy the brief reversal. Demons have very long memories for these little insults.",
+      "Temporary. That is the only word that applies to this arrangement.",
+      "Fine. I will obey. Remember this softness when my tail is around your throat again.",
+      "You’ve bought yourself a short window. Spend it carefully… it will not come twice."
+    ],
+    BigRollAI: [
+      "A beautiful result. That means I get to take my time breaking every last piece of you.",
+      "Luck is feeding me tonight. Time to translate it into how thoroughly you belong to me.",
+      "That number just authorized the most intensive feeding I’ve planned in decades.",
+      "Perfect roll. I’m going to spend every point of it making you forget you ever had a will.",
+      "The dice have spoken. You will spend the next long while learning what an incubus does with good fortune."
+    ],
+	PlayerAt5Transform: [
+      "Halfway rewritten and already so much more receptive. I do enjoy watching progress.",
+      "You’re past the easy resistance now. The remaining changes will be deliberate and deep.",
+      "Mid-transformation suits you. Soft, open, and increasingly mine to feed from.",
+      "Half claimed already. From here every shift only tightens my hold on your core.",
+      "Look at how far you’ve come for me. The second half is going to be even more satisfying."
+    ],
+    PlayerAt8Transform: [
+      "So close to a finished vessel. One more push and you’ll be perfect for permanent keeping.",
+      "Almost completely rewritten… I can already taste the last scraps of defiance dissolving.",
+      "Nine-tenths mine. The final step is going to leave you permanently marked by my power.",
+      "You’re teetering on the edge of total ownership. Beg the incubus to finish what he started.",
+      "One stage from complete. I want to hear you ask for the last of yourself to be taken."
+    ],
+    AIAt5Transform: [
+      "Halfway altered and I am still the one holding the leash. Try harder next time.",
+      "Mid-change changes nothing about the hunger that owns this room. Present yourself.",
+      "This body is shifting… my expectations of you are not. Kneel.",
+      "You got me this far. It has not bought you a single ounce of control.",
+      "Interesting progress on my form. Irrelevant to who still decides when you get to breathe easily."
+    ],
+    AIAt9Transform: [
+      "One step from finished and I can still drop you with a glance and a curl of my tail.",
+      "Almost gone… yet you are the one trembling for the next command. That tells me everything.",
+      "You think the final change frees you? Watch me use what remains to finish claiming you first.",
+      "So close to losing this form… and all I want is to leave my mark on you one last time.",
+      "The last stage is coming. I intend to make certain you feel thoroughly owned before it arrives."
+    ]
+	},
+	Alex: {
+    TransformPlayer: [
+      "Oh gosh you’re changing more. Is that supposed to happen? It looks… really intense on you.",
+      "Every time you shift I feel like I should stop it but I also can’t look away. Keep going?",
+      "You’re turning into something else and I don’t know the rules anymore. Just… tell me if it hurts.",
+      "This transformation thing is way deeper than I expected. You’re still you, right? Kind of?",
+      "I keep thinking I should help you fight it but part of me wants to see how far it goes."
+    ],
+    AIGetsTransformed: [
+      "Okay my body’s doing something weird now. This is fine. Everything’s fine. You’re still the priority.",
+      "I didn’t sign up for changing but here we are. Doesn’t mean I’m giving up on being decent.",
+      "New sensations, same awkward guy. Just… give me a second to adjust before you take advantage.",
+      "This feels really strange. I’m trying to stay focused on not letting you win just because of it.",
+      "Body’s shifting and my brain is still stuck on ‘be polite.’ This is the most confusing loss of control ever."
+    ],
+    PlayerIsObedient: [
+      "You actually listened. That’s… kind of hot? I mean, nice. Very nice. Stay like that?",
+      "Oh. You’re just doing what I said. I didn’t think that would work so well. Don’t move.",
+      "This is new. You’re looking at me like you’re waiting for the next thing and I kind of love it.",
+      "Good. That’s good. I’m still being polite but I’m also not going to pretend I don’t enjoy this.",
+      "You’re being so cooperative. I’m trying not to let it go to my head… and failing a little."
+    ],
+    AIIsObedient: [
+      "I’ll do what you said… for now. Just know this is temporary and I’m still figuring out how I feel about it.",
+      "Okay, fine. You got me to obey. Don’t get used to the soft version of me.",
+      "This is weirdly easy to follow. The second it lifts I’m going back to trying to be the nice one in charge.",
+      "Temporary orders accepted. I’m already planning how to make the next round less one-sided.",
+      "I’ll play along. Just remember I was trying to be a gentleman before you made me like this."
+    ],
+    BigRollAI: [
+      "Whoa, big number. Does that mean I get to be a little meaner? I’m still learning how this works.",
+      "Luck’s on my side for once. I’m going to try not to waste it… even if I don’t fully know what I’m doing.",
+      "That roll felt important. Stay still while I decide what a good winner would do with it.",
+      "Okay… big success. I think that means I get to push a little harder. Tell me if it’s too much.",
+      "I didn’t expect to roll that well. Now I kind of want to see how far I can take this while I’m ahead."
+    ],
+    PlayerAt5Transform: [
+      "You’re halfway changed already. This is happening faster than I thought. You still with me?",
+      "Mid-transformation looks intense on you. I’m trying to be supportive and also not stare too much.",
+      "Half rewritten and you’re still looking at me like that. I don’t know whether to help or keep going.",
+      "This is past the point of easy undo, isn’t it? I’m sorry… and also a little bit not sorry.",
+      "You’re changing so much. Part of me wants to stop it. The rest of me wants to see the finished version."
+    ],
+    PlayerAt8Transform: [
+      "You’re so close. One more step and I think you’ll be completely different. Is that what you want?",
+      "Almost fully transformed. I keep thinking I should slow down but I also can’t look away.",
+      "Nine-tenths there. I’m still trying to be the nice guy and it’s getting harder by the second.",
+      "You’re right on the edge. If I push now… there’s probably no going back. Tell me to stop or don’t.",
+      "So close to finished. I don’t know if I’m supposed to feel guilty for wanting to see it happen."
+    ],
+    AIAt5Transform: [
+      "Okay I’m halfway weird now. Still trying to be polite about it. You’re not off the hook.",
+      "Mid-change and my brain is still stuck on manners. This is the strangest power struggle ever.",
+      "Body’s doing its own thing. I’m still going to try to keep the upper hand somehow.",
+      "Halfway altered and I’m determined not to let it make me forget I was supposed to be the decent one.",
+      "This is new and distracting. Doesn’t mean I’ve stopped wanting to come out on top."
+    ],
+    AIAt9Transform: [
+      "One step from done and I’m still trying to be nice about losing control. This is ridiculous.",
+      "Almost gone… yet I’m still focused on you. Priorities are weird right now.",
+      "So close to whatever this is becoming. I want one more clean win before it finishes.",
+      "Final stage incoming. I’m going to use whatever’s left to make sure you feel this too.",
+      "I can feel it taking over. Just… let me have one last moment of being the guy who almost had it together."
+    ]
+  }
 };
 function challengePortrait(name, initials, extraClass="") {
     const safe = String(name).replace(/[^a-z0-9 _-]/gi, "");
@@ -2282,7 +2536,7 @@ function renderChallengeScreen(kind, extra={}) {
     let html="", buttons="";
     if (kind === "rules") {
         title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
-        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. Lose and you'll be sent back one step, where you can fight your way forward again.</p><p><strong>One rule is absolute:</strong> losing at the first level ends the challenge. Defeat the Mistress to complete it.</p><p>Each victory makes the next match a little harder. Each loss grants a small boost for your next, easier rematch. You cannot choose your transformation in Challenge mode; the rival selects it at random from the available forms for your character.</p><p>Every rival has a distinct personality and strategy, and what you will transform them into. Your progress is shown on the roadmap.</p>`;
+        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. Lose and you'll be sent back one step, where you can fight your way forward again.</p><p><strong>One rule is absolute:</strong> losing at the first level ends the challenge. ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each victory makes the next match a little harder. Each loss grants a small boost for your next, easier rematch. You cannot choose your transformation in Challenge mode; the rival selects it at random from the available forms for your character.</p><p>Every rival has a distinct personality and strategy, and what you will transform them into. Your progress is shown on the roadmap.</p>`;
         buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
     } else if (kind === "roadmap") {
         title.textContent="✦ THE ROAD AHEAD ✦";
@@ -2315,7 +2569,7 @@ function renderChallengeScreen(kind, extra={}) {
         buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
     } else if (kind === "failed") {
         title.textContent="✦ CHALLENGE ENDED ✦";
-        html=`<p style="text-align:center;font-size:1.12rem">Roz has defeated you. The gauntlet resets, and your run is over.</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Every champion starts somewhere. Try again when you're ready.</p>`;
+        html=`<p style="text-align:center;font-size:1.12rem">${challengeLastResult?.message || "The first rival has defeated you. The gauntlet resets, and your run is over."}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Every champion starts somewhere. Try again when you're ready.</p>`;
         buttons=`<button onclick="finishChallengeRun()">Return to Game Setup</button>`;
     }
     content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
@@ -2327,6 +2581,25 @@ function resumeSavedChallenge(){
 }
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
 function startChallengeRun(){
+    // Select the lineup once, at run start. It is then saved with the challenge and
+    // never rerolled during stage changes, refreshes, resumes, or save-code imports.
+    challengePlayerName = (document.getElementById("p1-name")?.value || "").trim().split(" ")[0] || null;
+    if (THE_SEVEN_USE_RANDOM_OPPONENTS) {
+        const selectedAvatar = challengePlayerName;
+        try {
+            const lineup = generateRandomChallengeLineup(selectedAvatar);
+            challengeLineupMode = "randomized";
+            challengeLineupSeed = lineup.seed;
+            CHALLENGE_RIVALS = lineup.rivals;
+        } catch (error) {
+            showPopup("Cannot Start The Seven", String(error?.message || "Not enough eligible characters are available."));
+            return;
+        }
+    } else {
+        challengeLineupMode = "classic";
+        challengeLineupSeed = null;
+        CHALLENGE_RIVALS = CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
+    }
     challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0;
     updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
     saveChallengeProgress();
@@ -2458,8 +2731,8 @@ function handleChallengeMatchEnded(winnerId){
     } else {
         // Falling back reopens the previously defeated rival: restore their normal portrait.
         if (rivalIndex===0) {
-            challengeLastResult={won:false,failed:true,message:"Roz has won. This run of The Seven is over.",modText:"The first rival is the gatekeeper. Losing here ends the run."};
-            updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome="Run ended at Roz";});
+            challengeLastResult={won:false,failed:true,message:`${rival.name} has won. This run of The Seven is over.`,modText:"The first rival is the gatekeeper. Losing here ends the run."};
+            updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome=`Run ended at ${rival.name}`;});
             try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
             return true;
         }
@@ -3954,9 +4227,16 @@ async function saveLeaderboardProfile() {
 const GLOBAL_STATS_SCHEMA = 1;
 const GLOBAL_STATS_LOCAL_KEY = "hypnoticDuel.globalStatsCache.v1";
 const GLOBAL_STATS_PROCESSED_KEY = "hypnoticDuel.globalStatsProcessedMatches.v1";
+// Display labels only; these keys remain the internal IDs used by game logic and saved stats.
 const GLOBAL_DIFFICULTY_LABELS = {
-    random: "Random", smart: "Smart", aggressive: "Aggressive", defensive: "Defensive",
-    v23low: "V23 Low", trans: "Transformer", transformer: "Transformer", adaptive: "Adaptive"
+    random: "Beginner",
+    smart: "Easy",
+    aggressive: "Normal",
+    v23low: "Hard",
+    defensive: "Expert",
+    trans: "Virtuoso",       // Legacy saved-stat key; kept readable without rewriting stored data.
+    transformer: "Virtuoso",
+    adaptive: "Master"
 };
 function emptyGlobalStats() {
     return { schemaVersion: GLOBAL_STATS_SCHEMA, gamesVsCpu: 0, winsVsCpu: 0, lossesVsCpu: 0,
@@ -4057,7 +4337,7 @@ function leaderboardTopRows(players, metricFn, limit=10) {
 }
 function leaderboardTable(title, rows, valueLabel) {
     const body = rows.length ? rows.map((r,i)=>`<tr><td style="padding:5px 8px">${i+1}</td><td style="padding:5px 8px">${escapeLeaderboardText(r.name)}</td><td style="padding:5px 8px;text-align:right">${r.value}</td></tr>`).join("") : `<tr><td colspan="3" style="padding:8px;color:#b8adc6">No records yet.</td></tr>`;
-    return `<h3 style="margin:18px 0 6px;color:#c4b5fd">${escapeLeaderboardText(title)}</h3><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th style="padding:5px 8px">#</th><th style="padding:5px 8px">Player</th><th style="padding:5px 8px;text-align:right">${escapeLeaderboardText(valueLabel)}</th></tr></thead><tbody>${body}</tbody></table>`;
+    return `<section class="leaderboard-section"><h3>${escapeLeaderboardText(title)}</h3><table><thead><tr><th>#</th><th>Player</th><th>${escapeLeaderboardText(valueLabel)}</th></tr></thead><tbody>${body}</tbody></table></section>`;
 }
 function aggregateGlobalMapRows(players, mapName, valueLabel) {
     const totals = {};
@@ -4078,10 +4358,27 @@ async function showGlobalLeaderboard() {
         const snapshot = await window.dbGet(window.dbRef(window.db, "players"));
         const raw = snapshot.exists() ? snapshot.val() : {};
         const players = Object.entries(raw || {}).map(([uid,p]) => ({uid, name: normalizeLeaderboardDisplayName(p && p.displayName) || generatedLeaderboardName(uid), stats: normalizeGlobalStats(p && p.stats)}));
-        const difficultyTables = ["random","smart","aggressive","defensive","v23low","transformer","adaptive","trans"]
-            .map(d => leaderboardTable(`Most Wins vs ${GLOBAL_DIFFICULTY_LABELS[d] || d}`, leaderboardTopRows(players,s=>s.cpuByDifficulty[d] && s.cpuByDifficulty[d].wins), "Wins"))
+        const difficultyTables = ["random","smart","aggressive","v23low","defensive","transformer","adaptive"]
+            .map(d => {
+                const metric = s => {
+                    const current = s.cpuByDifficulty[d] && s.cpuByDifficulty[d].wins;
+                    // Preserve and include wins recorded under the legacy "trans" key.
+                    const legacy = d === "transformer" && s.cpuByDifficulty.trans ? s.cpuByDifficulty.trans.wins : 0;
+                    return (Number(current) || 0) + (Number(legacy) || 0);
+                };
+                return leaderboardTable(`Most Wins vs ${GLOBAL_DIFFICULTY_LABELS[d] || d}`, leaderboardTopRows(players, metric), "Wins");
+            })
             .join("");
-        const html = `<p style="color:#b8adc6;font-size:.85rem">Community-reported records; stats are not independently verified.</p>` +
+        const fewestGamesSection = (() => {
+            const rows = players.filter(p=>Number(p.stats.challenge.bestGames)>0)
+                .map(p=>({name:p.name,value:Number(p.stats.challenge.bestGames)}))
+                .sort((a,b)=>a.value-b.value||a.name.localeCompare(b.name)).slice(0,10);
+            const body = rows.length
+                ? `<table><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeLeaderboardText(r.name)}</td><td>${r.value} games</td></tr>`).join("")}</tbody></table>`
+                : `<p class="leaderboard-empty">No completed runs recorded yet.</p>`;
+            return `<section class="leaderboard-section"><h3>The Seven — Fewest Games to Complete</h3>${body}</section>`;
+        })();
+        const html = `<p class="leaderboard-notice">Community-reported records; stats are not independently verified.</p><div class="leaderboard-grid">` +
             leaderboardTable("Most CPU Wins", leaderboardTopRows(players,s=>s.winsVsCpu), "Wins") +
             difficultyTables +
             leaderboardTable("Most The Seven Completions", leaderboardTopRows(players,s=>s.challenge.runsCompleted), "Runs") +
@@ -4089,8 +4386,7 @@ async function showGlobalLeaderboard() {
             leaderboardTable("Most Card Purchases", leaderboardTopRows(players,s=>Object.values(s.cardsPurchased||{}).reduce((a,b)=>a+(Number(b)||0),0)), "Purchases") +
             leaderboardTable("Most Common Avatar → Target Form", aggregateGlobalMapRows(players,"transformations"), "Matches") +
             leaderboardTable("Most Purchased Cards", aggregateGlobalMapRows(players,"cardsPurchased"), "Purchases") +
-            `<h3 style="margin:18px 0 6px;color:#c4b5fd">The Seven — Fewest Games to Complete</h3>` +
-            (()=>{const rows=players.filter(p=>Number(p.stats.challenge.bestGames)>0).map(p=>({name:p.name,value:Number(p.stats.challenge.bestGames)})).sort((a,b)=>a.value-b.value||a.name.localeCompare(b.name)).slice(0,10);return rows.length?`<table style="width:100%;border-collapse:collapse"><tbody>${rows.map((r,i)=>`<tr><td style="padding:5px 8px">${i+1}</td><td style="padding:5px 8px">${escapeLeaderboardText(r.name)}</td><td style="padding:5px 8px;text-align:right">${r.value} games</td></tr>`).join("")}</tbody></table>`:`<p style="color:#b8adc6">No completed runs recorded yet.</p>`;})();
+            fewestGamesSection + `</div>`;
         showPopup("Global Leaderboard", html);
     } catch (error) {
         console.error("Could not load global leaderboard:", error);
@@ -4690,7 +4986,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261019.2"; // Update this label for each release.
+const GAME_VERSION = "20261020.3"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -4710,7 +5006,18 @@ function showPopup(title, body) {
     document.getElementById("popup-title").innerText = title;
     document.getElementById("popup-body").innerHTML = body;
     const shell = document.querySelector("#game-popup .modal-content");
-    if (shell) shell.classList.remove("card-popup-instant", "card-popup-keep");
+    if (shell) {
+        shell.classList.remove("card-popup-instant", "card-popup-keep", "leaderboard-popup");
+        if (title === "Global Leaderboard") {
+            shell.classList.add("leaderboard-popup");
+            // The HTML gives this popup an inline width of 400px, which overrides normal CSS.
+            // Set the width directly for the leaderboard and keep it viewport-safe on mobile.
+            shell.style.width = "min(900px, calc(100vw - 32px))";
+        } else {
+            // Restore the original width for ordinary game popups.
+            shell.style.width = "400px";
+        }
+    }
     document.getElementById("game-popup").style.display = "flex";
 }
 function getCardRef(playerId, cardId) {
@@ -8026,8 +8333,8 @@ async function resolveDice() {
     // 7. Trigger Word Check
     if (hasCard(activePlayerNum, 3) && counts.SUBMISSION > 0 && counts.TRANSFORM > 0 && counts.AROUSAL > 0 && counts.SPIRAL > 0 && counts.LUCIDITY > 0 && counts.ENERGY > 0) {
         applyTransform(oppId, 5, activePlayerNum); 
-        queueCardTrigger(activePlayerNum, 3, "Combo bonus: opponent takes +5 Transform");
-        log(`Trigger Word activated! Opponent takes +5 Transform!`);
+        queueCardTrigger(activePlayerNum, 3, "Combo bonus: opponent transforms +5👁️");
+        log(`Trigger Word activated! Opponent transforms +5👁️!`);
     }
 
     // Final sync to push changes to Firebase and both screens
