@@ -128,7 +128,7 @@ const CHARACTER_MANIFEST = {
 
 
 // --- DEBUG CONFIGURATION ---
-const cardDebugOn = true;
+const cardDebugOn = false;
 const debugCards = [58, 5, 2]; // Set the 3 card IDs you want dealt first
 
 // remove virtual dice: 5, 21
