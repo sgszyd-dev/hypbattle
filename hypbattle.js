@@ -110,19 +110,19 @@ function processGenderTokens(text) {
 }
 
 
-const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon","Bat"];
+const TRANSFORMS = ["Statue", "Cow", "Cat", "Dog", "Werewolf", "Fox", "Horse", "Pig", "Gender", "Puppet", "Bunny","Otter","Eevee","Squirrel","Robot","Doll","Dragon","Bat","Mannequin"];
 
 const CHARACTER_MANIFEST = {
-    "Alex": ["Bunny", "Pig","Dog","Cat","Gender"],
-    "Roz": ["Werewolf","Cow","Eevee","Doll"],
-    "Xander": ["Robot","Werewolf","Otter","Bat"],
-    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"],
-    "Tex": ["Cow", "Cat","Werewolf","Horse"],
-    "Luci": ["Robot","Bunny","Horse"],
-    "Zixuan": ["Dog","Fox","Pig","Doll"],
-    "Hyeri": ["Bunny","Squirrel","Cat","Dragon"],
-    "Mark": ["Robot","Puppet","Statue","Gender"],
-    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"]
+    "Alex": ["Bunny", "Pig","Dog","Cat","Gender"], // Bunny
+    "Roz": ["Werewolf","Cow","Eevee","Doll"], // Eveee
+    "Xander": ["Robot","Werewolf","Otter","Bat"], // Bat
+    "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"], // Cat
+    "Tex": ["Cow", "Cat","Werewolf","Horse"], // Cow/Bull
+    "Luci": ["Robot","Bunny","Horse","Mannequin"], // Robot
+    "Zixuan": ["Dog","Fox","Pig","Doll"], // Doll
+    "Hyeri": ["Bunny","Squirrel","Cat","Dragon"], // Squirrel
+    "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
+    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"] // Otter
 	};
 
 
@@ -1005,33 +1005,34 @@ const TRANSFORMATION_TAUNTS = {
         }
     },
 
-    Puppet: {
+    Mannequin: {
         player: {
             TransformPlayer: [
-                "Another step toward a body built with joints instead of freedom. I wonder how much control you'll have left.",
-                "Your movements are becoming less natural. Soon you'll look like something made to be handled."
+                "Another step toward a plastic body. I wonder how much control you'll have left.",
+                "Your movements are becoming less natural. Soon you'll look like something made to be posed.".
+				"I'm going to enjoy dressing and undressing you."
             ],
             PlayerAt5Transform: [
-                "Halfway to a puppet. How does it feel when your body starts moving like it was designed by someone else?",
-                "Five stages down. Your joints are changing, your movements feel strange, and you still can't stop me."
+                "Halfway to a mannequin. How does it feel when your body starts moving like it was designed by someone else?",
+                "Five stages down. Feeling harder to move, I'm sure. You should get up on that pedestal and pose for me now."
             ],
             PlayerAt8Transform: [
-                "Two steps left. Soon every movement will remind you what I've turned you into.",
-                "Almost a puppet. Imagine seeing those joints in the mirror and knowing exactly who made them."
+                "Two steps left. Soon every movement -- or in your case, lack of movement -- will remind you what I've turned you into.",
+                "Almost a mannequin. Imagine seeing that unreal, smooth plastic in the mirror and knowing exactly who made you that way."
             ]
         },
         cpu: {
             AIGetsTransformed: [
-                "My joints feel wrong. Are you turning me into a puppet? You have no idea what you're risking.",
-                "My movements are changing. I refuse to become some toy you can show off."
+                "My arms and legs feel wrong. Are you turning me into a mannequin? You have no idea what you're risking.",
+                "My movements are getting harder. I refuse to become some toy you can show off."
             ],
             AIAt5Transform: [
-                "Halfway to a puppet. My limbs move differently, and I hate how aware I am of every joint.",
+                "Halfway to a mannequin. I'm having trouble moving my limbs, and I hate how aware I am of my fake skin.",
                 "Five stages. I can feel my body becoming something crafted rather than born. This is deeply unsettling."
             ],
             AIAt9Transform: [
-                "One step left. If I become a puppet, I'll be the one pulling the strings.",
-                "Fine. Let the joints settle. A puppet can still have a mind, and mine is already plotting."
+                "One step left. I know you want me on a pedestal looking down on you.",
+                "Fine. Let my body settle. This mannequin will still have a mind, and mine is already plotting."
             ]
         }
     },
@@ -1390,6 +1391,13 @@ const CPU_VICTORY_TAUNTS = {
 			"I decide how you move, what you say, and what happens to that pretty body.",
 			"No more free will. Just a beautiful toy that performs exactly as I command."
         ],
+		Mannequin: [
+            "A mannequin. All that effort to stay in control, and now you're the one who's been remade to pose for me -- permanently.",
+            "Look at you. A body crafted into a new frozen shape, with your defeat as the finishing touch.",
+			"Look at my new mannequin… I can pose you any way I want. You are so obedient.",
+			"I decide how you move, how you dress, and what happens to that pretty body.",
+			"No more free will. Just a beautiful frozen image posed exactly as I command."
+        ],
         Bunny: [
             "A bunny. Those long ears are going to make it awfully difficult to pretend this never happened.",
             "All that stubbornness, and now look at you. Fluffy, long-eared, and made for breeding. Better get started!",
@@ -1619,6 +1627,15 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I’m limp, open, and completely controlled. Pose me. Play with me. Claim me.",
 			"Whatever you want this body to do… it will. Just pull the right string.",
 			"I’m not a person anymore. I’m a toy that knows it’s been beaten… and loves it."
+        ],
+		Mannequin: [
+            "I can't move. You win. I'll stop struggling and accept that you've beaten me.",
+            "All right... you've got control, and I've lost. I surrender. Just don't make me pose in any embarrassing ways.",
+			"My legs are locked… or maybe they’re in your hands now. Move me however you like.",
+			"I can’t resist. I can’t even open my mouth anymore. Pose me as you like.",
+			"I’m solid, open, and completely controlled. Pose me. Play with me. Claim me.",
+			"Whatever you want this body to do… it will. Just move me in the right position.",
+			"I’m not a person anymore. I’m a mannequin that knows it’s been beaten… and loves it."
         ],
         Bunny: [
             "Okay, okay! I give up! You've beaten me, and I'm apparently the most defeated bunny in history.",
