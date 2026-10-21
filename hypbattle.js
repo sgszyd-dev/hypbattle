@@ -128,8 +128,8 @@ const CHARACTER_MANIFEST = {
 
 
 // --- DEBUG CONFIGURATION ---
-const cardDebugOn = false;
-const debugCards = [56, 59, 2]; // Set the 3 card IDs you want dealt first
+const cardDebugOn = true;
+const debugCards = [58, 5, 2]; // Set the 3 card IDs you want dealt first
 
 // remove virtual dice: 5, 21
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
@@ -189,14 +189,14 @@ const KNOWN_CARDS = [
 	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {transformer: 50, adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
 	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the oppenent's side, deepen their submission all the way to the end.", ai: {transformer: 15, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
 	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {transformer: 25, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "🔥 Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
-    { id: 55, name: "Transformation Ritual", cost: 6, type: "Keep", desc: "⚡ At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 93, adaptive: 90, aggressive: 90, defensive: 85, v23low: 90} },
-    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "👁️ When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {transformer: 100, adaptive: 65, aggressive: 70, defensive: 80, v23low: 60} },
-    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "🌀 At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {transformer: 15, adaptive: 55, aggressive: 25, defensive: 60, v23low: 35} },
-    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "⛓️ When purchased, discard one active Keep card belonging to either player, provided it has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {transformer: 45, adaptive: 55, aggressive: 45, defensive: 55, v23low: 50} },
-    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "👁️ When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {transformer: 30, adaptive: 50, aggressive: 30, defensive: 55, v23low: 35} },
-    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "🪞 Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {transformer: 35, adaptive: 45, aggressive: 40, defensive: 45, v23low: 40} },
-    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "⬜ Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {transformer: 25, adaptive: 45, aggressive: 35, defensive: 55, v23low: 40} },
+    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
+    { id: 55, name: "Transformation Ritual", cost: 6, type: "Keep", desc: "At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 93, adaptive: 90, aggressive: 90, defensive: 85, v23low: 90} },
+    { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {transformer: 100, adaptive: 65, aggressive: 70, defensive: 80, v23low: 60} },
+    { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {transformer: 15, adaptive: 55, aggressive: 25, defensive: 60, v23low: 35} },
+    { id: 58, name: "Submissive Break", cost: 6, type: "Keep", desc: "When used, destroy one active Keep card belonging to either player that has not resolved this turn. Its owner gains 2 ⚡. Then discard this card.", ai: {transformer: 45, adaptive: 55, aggressive: 45, defensive: 55, v23low: 50} },
+    { id: 59, name: "Transformation Sigil", cost: 5, type: "Keep", desc: "When you would be transformed, roll 2 dice. If at least one shows 👁️, reduce that transformation by 1. If both show 👁️, also reflect 1 👁️ back at the opponent.", ai: {transformer: 30, adaptive: 50, aggressive: 30, defensive: 55, v23low: 35} },
+    { id: 60, name: "Mirror Trance", cost: 5, type: "Instant", desc: "Swap your 🌀 and 🔥 levels with your opponent's corresponding levels.", ai: {transformer: 35, adaptive: 45, aggressive: 40, defensive: 45, v23low: 40} },
+    { id: 61, name: "Blank", cost: 7, type: "Instant", desc: "Clear your 🌀, 🔥, and ⚡ to 0, and return the ⛓️ tracker to neutral. Your 👁️ level is unchanged.", ai: {transformer: 25, adaptive: 45, aggressive: 35, defensive: 55, v23low: 40} },
 ];
 
 // Put card IDs here to keep them out of the draw deck and market.
@@ -1336,7 +1336,7 @@ const CPU_VICTORY_TAUNTS = {
             "Look at yourself. Something fierce, something wild—and still thoroughly beaten.",
 			"Look at my new pet wolf… all that feral strength, and it’s on its back for me.",
 			"I gave you the beast, and I decide when it gets to hunt… or get hunted.",
-			"Moon’s high, and my werewolf is already baring its throat. Good.",
+			"Moon’s high, and my werewolf is already baring {HUM_HIS} throat. Good.",
 			"You used to be human. Now you’re a powerful animal that only answers to me.",
 			"My personal werewolf. Claws, fangs, and complete submission under the full moon."
         ],
@@ -1362,7 +1362,7 @@ const CPU_VICTORY_TAUNTS = {
             "There you are. A snout, floppy ears, and a loss you won't be able to blame on bad luck.",
 			"A dirty, ugly, grunting pig. And that was before I transformed you!",
 			"Look at my new pig… soft, heavy, and already rolling over for me. Good.",
-			"I took all that pride and left a fat, needy animal that only oinks for its owner.",
+			"I took all that pride and left a fat, needy animal that only oinks for {HUM_HIS} owner.",
 			"On your back in the mud where you belong. I’m going to enjoy every soft inch.",
 			"You used to be human. Now you’re just warm, hungry livestock."
         ],
@@ -1400,7 +1400,7 @@ const CPU_VICTORY_TAUNTS = {
         Otter: [
             "An otter. Sleek fur and nimble paws. I almost feel bad for how thoroughly I've outplayed you.",
             "Well, now you could probably out swim me. As for this battle? Never.",
-			"Look at my sleek little otter… wet, flexible, and already on its back for me.",
+			"Look at my sleek little otter… wet, flexible, and already on {HUM_HIS} back for me.",
 			"Those whiskers are twitching so nicely. Stay still while I enjoy my new pet.",
 			"You used to swim free. Now you float right where I put you.",
 			"My personal otter. Soft, slippery, and completely mine to play with."
@@ -1566,7 +1566,7 @@ const CPU_DEFEAT_SUBMISSIONS = {
         ],
         Werewolf: [
             "The fight's over. I can feel the change taking hold... You win. Oooooooooooooo.",
-            "The beast is on its back… belly exposed, throat bared. Take what you want from me.",
+            "The beast is on {HUM_HIS} back… belly exposed, throat bared. Take what you want from me.",
 			"I can still feel the moon in my blood, but right now all I feel is you on top of me.",
 			"Claws, fangs, fur… and still I lost. Do what a victor does with a defeated animal.",
 			"I’m growling, but it’s not a threat anymore. It’s a plea.",
@@ -2867,9 +2867,15 @@ function showRegularTaunt(text) {
     box.classList.add("visible");
 
     regularTauntTimer = setTimeout(() => {
-        box.textContent = "";
+        box.textContent = challengeActive ? " " : "";
         box.classList.remove("visible");
-		box.style.display = "none";
+        if (gameState && gameState.phase !== "waiting" && !gameState.gameEnded) {
+            box.style.display = "flex";
+            box.classList.add("challenge-taunt-active");
+        } else {
+            box.style.display = "none";
+            box.classList.remove("challenge-taunt-active");
+        }
     }, 6500);
 }
 
@@ -2887,7 +2893,7 @@ function showChallengeTaunt(eventName, forcedText=null){
     box.style.display="flex";box.classList.add("challenge-taunt-active");box.textContent=`${rival.name}: "${processedText}"`;
     box.classList.remove("visible");void box.offsetWidth;box.classList.add("visible");
     log(`Rival — ${rival.name}: "${processedText}"`);
-    challengeTauntTimer=setTimeout(()=>{box.textContent="";box.classList.remove("visible");},6500);
+    challengeTauntTimer=setTimeout(()=>{box.textContent=" ";box.classList.remove("visible");box.style.display="flex";box.classList.add("challenge-taunt-active");},6500);
 }
 
 function selectCPUVictoryTaunt() {
@@ -3545,6 +3551,26 @@ function playSound(kind) {
         if (kind === "transformBig") {
             tone(78, 210, 0.32, "triangle", 0.05, 0);
             tone(156, 320, 0.28, "sine", 0.028, 0.04);
+            return;
+        }
+        if (kind === "break") {
+            tone(260, 55, 0.22, "sawtooth", 0.045, 0);
+            tone(90, 38, 0.16, "triangle", 0.06, 0.035);
+            tone(880, 180, 0.09, "square", 0.018, 0.025);
+            return;
+        }
+        if (kind === "whoosh") {
+            // Broad, airy descending sweep for clearing the market.
+            tone(720, 95, 0.42, "sawtooth", 0.018, 0);
+            tone(360, 65, 0.36, "triangle", 0.026, 0.025);
+            tone(1150, 180, 0.25, "sine", 0.009, 0.04);
+            return;
+        }
+        if (kind === "suck") {
+            // A short inward-pulling sound: rising whine followed by a deep suction drop.
+            tone(150, 820, 0.19, "sine", 0.028, 0);
+            tone(540, 105, 0.32, "sawtooth", 0.022, 0.12);
+            tone(95, 42, 0.22, "triangle", 0.035, 0.25);
             return;
         }
         const presets = {
@@ -4655,7 +4681,7 @@ function initializeGame() {
         challengeModifierNext = "none";
         const taunt=document.getElementById("challenge-taunt-box"); if(taunt) taunt.style.display="";
         showChallengeTaunt("TransformPlayer");
-    } else { const taunt=document.getElementById("challenge-taunt-box"); if(taunt) {taunt.classList.remove("visible"); taunt.style.display="none";} }
+    } else { const taunt=document.getElementById("challenge-taunt-box"); if(taunt) {taunt.classList.remove("visible"); taunt.classList.remove("challenge-taunt-active"); taunt.style.display="none";} }
     
     refillMarket(); 
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
@@ -4986,7 +5012,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261020.3"; // Update this label for each release.
+const GAME_VERSION = "20261021.3"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by Siobhán Greene.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be content for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -6425,6 +6451,8 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     // 2. Validate target card
     const targetCard = seller.inventory[opponentCardIndex];
     if (!targetCard) return false;
+    const sourceElement = document.querySelector(`#p${buyerNum === 1 ? 2 : 1}-inventory .inv-card[data-card-id="${Number(targetCard.id)}"]`);
+    const sourceRect = sourceElement ? sourceElement.getBoundingClientRect() : null;
 
     const cost = targetCard.cost;
 
@@ -6449,6 +6477,8 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     log(`${buyer.name} used Hypnotic Dominance to buy ${stolenCard.name} from ${seller.name} for ${cost} ⚡!`);
 	syncToFirebase();
     updateUI();
+    playSound("suck");
+    animateCardBetweenInventories(sourceElement, buyerNum === 1 ? 2 : 1, buyerNum, stolenCard.id, sourceRect);
     return true;
 }
 
@@ -6844,10 +6874,13 @@ function updateUI() {
     
     const taunt = document.getElementById("challenge-taunt-box");
 
+    if (!gameState) return;
     if (taunt) {
         if (challengeActive) {
+            // Reserve this area for the entire challenge match, even between taunts.
             taunt.style.display = "flex";
             taunt.classList.add("challenge-taunt-active");
+            if (!taunt.textContent.trim()) taunt.textContent = " ";
         } else if (gameState.phase !== "waiting" && !gameState.gameEnded) {
             taunt.style.display = "flex";
             taunt.classList.add("challenge-taunt-active");
@@ -7165,12 +7198,14 @@ function renderMarket() {
         const affordClass = alreadyOwned ? "already-owned" : (canAfford ? "can-afford" : "cannot-afford");
         let btnDisabled = purchasable ? "" : "disabled";
         const reject = !purchasable && isHumanTurn && gameState.phase === "shop" ? ` onclick="rejectMarketCard(this)"` : "";
+        const dealClass = marketDealAnimating ? " market-card-dealing" : "";
+        const wipeDisabled = marketWipeAnimating ? " disabled" : "";
         mc.innerHTML += `
-            <div class="card ${affordClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}"${reject}>
+            <div class="card ${affordClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}${dealClass}" data-card-id="${Number(card.id)}" style="--deal-index:${index}"${reject}>
                 <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
                 <div class="card-type"><span class="card-type-chip">${card.type}</span></div>
                 <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
-                <button ${btnDisabled} onclick="buyCard(${index})">${alreadyOwned ? "Already owned" : "Purchase"}</button>
+                <button ${btnDisabled}${wipeDisabled} onclick="buyCard(${index})">${alreadyOwned ? "Already owned" : "Purchase"}</button>
             </div>`;
     });
 }
@@ -7265,11 +7300,13 @@ function renderInventory(playerId) {
     p.inventory.forEach((card, idx) => {
         const keepClass = card.type === "Keep" ? " active-keep-card" : "";
         const ownerColor = playerId === 1 ? "var(--player)" : "var(--cpu)";
-        let html = `<div class="inv-card${keepClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};"><div class="card-type-chip">${card.type === "Instant" ? "Instant" : "Keep"}</div><div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
+        const inventoryTypeChip = card.type === "Instant" ? `<div class="card-type-chip">Instant</div>` : "";
+        let html = `<div class="inv-card${keepClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};">${inventoryTypeChip}<div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
         if (isHuman && isTurn) {
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
             if (card.id === 20 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
             if (card.id === 26) html += `<button onclick="sellCard(${idx}, ${playerId})" style="background:#e76f51;">Sell (+2⚡)</button>`;
+            if (card.id === 58 && gameState.phase === "shop") html += `<button onclick="activateSubmissiveBreak(${playerId})" style="background:#9d4edd;">Use Submissive Break</button>`;
             if (card.id === 33 && gameState.phase === 'shop' && p.energy >= 2) html += `<button onclick="useQuietMind(${playerId})" style="background:#2a9d8f;">Quiet Mind (-2⚡)</button>`;
             if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
             if (card.id === 47 && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
@@ -7717,21 +7754,21 @@ function executeInstant(card, playerId) {
     else if (card.id === 8) {
         increaseTrance(opp, 2, playerId);
         pushSubmission(playerId === 1 ? 2 : -2, playerId);
-        log(`Mind Fog! Opponent Trance +2, Sub pushed 2.`);
+        log(`Mind Fog! Opponent 🌀 +2, ⛓️ +2.`);
     }
     else if (card.id === 10 || card.id === 39) {
         pushSubmission(playerId === 1 ? 4 : -4, playerId);
         log(`${p.name} used ${card.name}: ${opp.name}'s submission deepens +4 ⛓️.`);
         showTurnAlert(`${p.name} used ${card.name}: ${opp.name}'s submission deepens +4 ⛓️.`, playerId);
     }
-    else if (card.id === 11) { pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`Sluggish Mind! Sub pushed 2.`); }
+    else if (card.id === 11) { pushSubmission(playerId === 1 ? 2 : -2, playerId); log(`Sluggish Mind! ⛓️ +2.`); }
     else if (card.id === 14) { increaseTrance(opp, 2, playerId); log(`Spiral Descent! Opponent 🌀 +2.`); }
     else if (card.id === 18) {
         pushSubmission(playerId === 1 ? 2 : -2, playerId);
         increaseTrance(opp, 1, playerId);
-        log("Pulsing Light! Sub +2, Trance +1.");
+        log("Pulsing Light! ⛓️ +2, 🌀 +1.");
     }
-    else if (card.id === 19) { p.energy += 9; log("Primal Surge! +9 Energy."); }
+    else if (card.id === 19) { p.energy += 9; log("Primal Surge! +9 ⚡."); }
     else if (card.id === 25) { pushSubmission(playerId === 1 ? -2 : 2, playerId); applyTransform(oppId, 1, playerId); log("Pendulum Swing! Deepen own sub by 2, Transform opponent 1."); }
     else if (card.id === 30) { pushSubmission(playerId === 1 ? -4 : 4, playerId); applyTransform(oppId, 2, playerId); log("Shattered Ego! Deepen own sub by 4, Transform opponent 2."); }
     else if (card.id === 37) {
@@ -7764,7 +7801,8 @@ function executeInstant(card, playerId) {
         else if (gameState.submission === end) log("You Will Obey fizzled (submission is already at the end).");
         else {
             gameState.submission = end;
-            log(`You Will Obey! Submission moved to ${end}.`);
+            //log(`You Will Obey! Submission moved to ${end}.`);
+			log(`{opp.name} Will Obey!`);
         }
     }
     else if (card.id === 53) {
@@ -8456,22 +8494,51 @@ function refillMarket() {
     }
 }
 
+let marketWipeAnimating = false;
+let marketDealAnimating = false;
+let marketWipeTimer = null;
+
 function wipeMarket() {
+    if (marketWipeAnimating) return;
     let p = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
 
-    if (p.energy >= 2) {
-        p.energy -= 2;
+    if (p.energy < 2) {
+        playSound("deny");
+        return;
+    }
 
+    const marketContainer = document.getElementById("market-container");
+    const oldCards = marketContainer ? Array.from(marketContainer.querySelectorAll(":scope > .card")) : [];
+    marketWipeAnimating = true;
+    p.energy -= 2;
+    if (marketContainer) marketContainer.classList.add("market-wipe-running");
+    oldCards.forEach((el, i) => {
+        el.style.setProperty("--sweep-index", i);
+        el.classList.add("market-card-sweeping");
+    });
+    playSound("whoosh");
+
+    // Let the old market physically sweep away before replacing its cards.
+    marketWipeTimer = window.setTimeout(() => {
         // Wiped market cards are discarded and become recyclable.
         discardCards(market);
         market = [];
         refillMarket();
+        marketWipeAnimating = false;
+        marketDealAnimating = true;
+        if (marketContainer) marketContainer.classList.remove("market-wipe-running");
         syncToFirebase();
         updateUI();
         log(`Market Wiped. New cards: ${market.map(card => card && card.name).filter(Boolean).join(", ") || "none"}`);
-    } else {
-        playSound("deny");
-    }
+        window.setTimeout(() => {
+            marketDealAnimating = false;
+            const mc = document.getElementById("market-container");
+            if (mc) mc.querySelectorAll(".market-card-dealing").forEach(el => {
+                el.classList.remove("market-card-dealing");
+                el.style.removeProperty("--deal-index");
+            });
+        }, 700);
+    }, 430);
 }
 
 function getCardPurchaseCost(card, playerId = gameState.activePlayer) {
@@ -8525,56 +8592,148 @@ function chooseDeeperBargainsFace(playerId) {
 }
 
 function activateSubmissiveBreak(playerId) {
+    const actor = playerId === 1 ? gameState.p1 : gameState.p2;
+    const breakIndex = (actor.inventory || []).findIndex(c => c && Number(c.id) === 58);
+    if (breakIndex < 0) return false;
+    if (Number(gameState.activePlayer) !== Number(playerId) || gameState.phase !== "shop") {
+        if (playerId === 1) showPopup("Submissive Break", "You can use Submissive Break during your shop phase.");
+        return false;
+    }
     const candidates = [];
     [1, 2].forEach(ownerId => {
         const owner = ownerId === 1 ? gameState.p1 : gameState.p2;
-        (owner.inventory || []).forEach((card, index) => {
+        (owner.inventory || []).forEach((card) => {
             if (!card || card.type !== "Keep" || Number(card.id) === 58) return;
             if (cardResolvedThisTurn.has(`${ownerId}:${Number(card.id)}`)) return;
-            candidates.push({ ownerId, index, card, owner });
+            candidates.push({ ownerId, card, owner });
         });
     });
     if (!candidates.length) {
-        log("Submissive Break found no eligible Keep card that has not resolved this turn.");
-        return;
+        if (playerId === 1) showPopup("Submissive Break", "There are no eligible Keep cards to destroy right now.");
+        else log("CPU held Submissive Break because there were no eligible Keep cards.");
+        return false;
     }
     const removeCandidate = candidate => {
         const owner = candidate.ownerId === 1 ? gameState.p1 : gameState.p2;
         const index = owner.inventory.findIndex(c => c && Number(c.id) === Number(candidate.card.id));
-        if (index < 0 || cardResolvedThisTurn.has(`${candidate.ownerId}:${Number(candidate.card.id)}`)) {
+        const liveBreakIndex = actor.inventory.findIndex(c => c && Number(c.id) === 58);
+        if (index < 0 || liveBreakIndex < 0 || cardResolvedThisTurn.has(`${candidate.ownerId}:${Number(candidate.card.id)}`)) {
             log("Submissive Break: that card is no longer eligible.");
-            return;
+            return false;
         }
+        const targetElement = document.querySelector(`#p${candidate.ownerId}-inventory .inv-card[data-card-id="${Number(candidate.card.id)}"]`);
+        const targetRect = targetElement ? targetElement.getBoundingClientRect() : null;
         const [removed] = owner.inventory.splice(index, 1);
-        owner.energy += 2;
+        const [usedBreak] = actor.inventory.splice(actor.inventory.findIndex(c => c && Number(c.id) === 58), 1);
         discardCard(removed);
-        log(`Submissive Break discarded ${removed.name} from ${owner.name}; ${owner.name} gains 2 ⚡.`);
+        discardCard(usedBreak);
+        owner.energy += 2;
+        log(`Submissive Break destroyed ${removed.name} from ${owner.name}; ${owner.name} gains 2 ⚡. Submissive Break is discarded.`);
+        animateCardDestruction(targetElement, targetRect);
+        playSound("break");
         syncToFirebase(); updateUI();
+        return true;
     };
     if (playerId === 2 && gameState.gameMode === "solo") {
-        // CPU prioritizes removing the opponent's most expensive eligible Keep card.
         const target = candidates.filter(c => c.ownerId === 1).sort((a,b) => b.card.cost-a.card.cost)[0]
-            || candidates.sort((a,b) => a.card.cost-b.card.cost)[0];
-        removeCandidate(target);
-        return;
+            || candidates.sort((a,b) => b.card.cost-a.card.cost)[0];
+        return target ? removeCandidate(target) : false;
     }
     showChoiceDialog({
         key: `submissive-break-${playerId}`,
         title: "Submissive Break",
-        message: "Choose an active Keep card that has not resolved this turn. Its owner gains 2 ⚡.",
+        message: "Choose an active Keep card to destroy. Its owner gains 2 ⚡; Submissive Break is then discarded.",
         options: candidates.map(c => ({
             label: `${c.owner.name}: ${c.card.name} (owner gains 2 ⚡)`,
             onClick: () => removeCandidate(c)
-        }))
+        })).concat([{ label: "Cancel", secondary: true }])
+    });
+    return true;
+}
+
+function animateCardToInventory(sourceElement, playerId, cardId, capturedStartRect = null) {
+    if (!sourceElement || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const start = capturedStartRect || sourceElement.getBoundingClientRect();
+    const ghost = sourceElement.cloneNode(true);
+    ghost.classList.remove("market-card-dealing", "market-card-sweeping", "can-afford", "cannot-afford", "already-owned");
+    ghost.classList.add("card-flight-ghost");
+    ghost.style.cssText += `;position:fixed;left:${start.left}px;top:${start.top}px;width:${start.width}px;height:${start.height}px;margin:0;z-index:12000;pointer-events:none;transform-origin:top left;`;
+    document.body.appendChild(ghost);
+    // The destination is resolved after updateUI has rebuilt the inventory.
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const inventory = document.getElementById(`p${playerId}-inventory`);
+            const target = inventory?.querySelector(`.inv-card[data-card-id="${Number(cardId)}"]`);
+            const end = target ? target.getBoundingClientRect() : inventory?.getBoundingClientRect();
+            if (!end) { ghost.remove(); return; }
+            const dx = end.left - start.left;
+            const dy = end.top - start.top;
+            const sx = Math.max(.18, Math.min(1, end.width / start.width));
+            ghost.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${Math.max(.18, Math.min(1, end.height / start.height))}) rotate(5deg)`;
+            ghost.style.opacity = ".15";
+            ghost.style.filter = "blur(1px) brightness(1.5)";
+            ghost.style.transition = "transform .58s cubic-bezier(.2,.75,.25,1), opacity .58s ease, filter .58s ease";
+            if (target) target.classList.add("inventory-card-arrived");
+            window.setTimeout(() => { ghost.remove(); if (target) target.classList.remove("inventory-card-arrived"); }, 650);
+        });
     });
 }
 
+
+function animateCardBetweenInventories(sourceElement, fromPlayerId, toPlayerId, cardId, capturedStartRect = null) {
+    if (!sourceElement || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const start = capturedStartRect || sourceElement.getBoundingClientRect();
+    const ghost = sourceElement.cloneNode(true);
+    ghost.classList.add("card-flight-ghost", "card-transfer-ghost");
+    ghost.style.cssText += `;position:fixed;left:${start.left}px;top:${start.top}px;width:${start.width}px;height:${start.height}px;margin:0;z-index:12000;pointer-events:none;transform-origin:top left;`;
+    document.body.appendChild(ghost);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const inventory = document.getElementById(`p${toPlayerId}-inventory`);
+        const target = inventory?.querySelector(`.inv-card[data-card-id="${Number(cardId)}"]`);
+        const end = target ? target.getBoundingClientRect() : inventory?.getBoundingClientRect();
+        if (!end) { ghost.remove(); return; }
+        ghost.style.transition = "transform .62s cubic-bezier(.2,.75,.25,1), opacity .62s ease, filter .62s ease";
+        ghost.style.transform = `translate(${end.left-start.left}px,${end.top-start.top}px) scale(${Math.max(.18,Math.min(1,end.width/start.width))},${Math.max(.18,Math.min(1,end.height/start.height))}) rotate(${toPlayerId === 1 ? -5 : 5}deg)`;
+        ghost.style.opacity = ".12"; ghost.style.filter = "blur(1.2px) brightness(1.45)";
+        if (target) target.classList.add("inventory-card-arrived");
+        window.setTimeout(() => { ghost.remove(); if (target) target.classList.remove("inventory-card-arrived"); }, 700);
+    }));
+}
+
+function animateCardDestruction(sourceElement, capturedRect = null) {
+    if (!sourceElement || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const rect = capturedRect || sourceElement.getBoundingClientRect();
+    const ghost = sourceElement.cloneNode(true);
+    ghost.classList.add("card-destruction-ghost");
+    ghost.style.cssText += `;position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;margin:0;z-index:12001;pointer-events:none;`;
+    document.body.appendChild(ghost);
+    void ghost.offsetWidth;
+    ghost.classList.add("card-destroying");
+    window.setTimeout(() => ghost.remove(), 620);
+}
+
+function showInstantCardPurchase(card, effectMessages) {
+    const esc = value => escapeHistoryHtml(String(value ?? ""));
+    const outcomes = (effectMessages || []).filter(Boolean).slice(-4);
+    const outcomeHtml = outcomes.length
+        ? `<div class="purchase-effect-list"><strong>What happened</strong><ul>${outcomes.map(line => `<li>${esc(line)}</li>`).join("")}</ul></div>`
+        : `<div class="purchase-effect-list"><strong>Effect</strong><p>${esc(card.desc || "The card's effect has resolved.")}</p></div>`;
+    showPopup(`💥 ${esc(card.name)} Played!`, `<div class="instant-purchase-reveal"><div class="instant-reveal-type">INSTANT CARD · Cost ${Number(card.cost) || 0}⚡</div><div class="instant-reveal-name">${esc(card.name)}</div><div class="instant-reveal-desc">${esc(card.desc || "")}</div>${outcomeHtml}<div class="instant-reveal-footnote">The card has resolved and been discarded.</div></div>`);
+    const shell = document.querySelector("#game-popup .modal-content");
+    if (shell) shell.classList.add("card-popup-instant");
+}
+
 function buyCard(index) {
+    if (marketWipeAnimating) return false;
     let card = market[index];
     if (!card) return false;
 
     let playerId = gameState.activePlayer;
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
+    const marketCardElement = document.querySelectorAll("#market-container > .card")[index] || null;
+    const marketCardRect = marketCardElement ? marketCardElement.getBoundingClientRect() : null;
+    const isHumanInstantPurchase = playerId === 1 && isLocalPlayerTurn() && card.type === "Instant";
+    const logStartIndex = Array.isArray(gameState.log) ? gameState.log.length : 0;
 
     if (inventoryHasName(p, card.name)) {
         playSound("deny");
@@ -8607,10 +8766,7 @@ function buyCard(index) {
         log("Bondage triggered! Sub deepened upon buying card.");
     }
 
-    if (Number(card.id) === 58) {
-        // Submissive Break is labelled Keep for the card pool, but resolves on purchase and is discarded.
-        discardCard(card);
-    } else if (card.type === "Keep") {
+    if (card.type === "Keep") {
         p.inventory.push(JSON.parse(JSON.stringify(card)));
     } else {
         executeInstant(card, playerId);
@@ -8621,8 +8777,16 @@ function buyCard(index) {
     refillMarket();
     syncToFirebase();
     updateUI();
+    if (card.type === "Keep") {
+        animateCardToInventory(marketCardElement, playerId, card.id, marketCardRect);
+    }
+    if (isHumanInstantPurchase) {
+        const recentLogs = (Array.isArray(gameState.log) ? gameState.log.slice(logStartIndex) : [])
+            .map(entry => String(entry).replace(/<[^>]*>/g, "").trim())
+            .filter(entry => entry && !/^Bought card:/i.test(entry));
+        showInstantCardPurchase(card, recentLogs);
+    }
     if (Number(card.id) === 56) chooseDeeperBargainsFace(playerId);
-    if (Number(card.id) === 58) activateSubmissiveBreak(playerId);
     return true;
 }
 
@@ -9014,6 +9178,11 @@ function executeCPUTurn() {
                     }
                 }
 				
+                // Submissive Break remains in inventory until the CPU elects to use it.
+                if (gameState.p2.inventory.some(c => Number(c.id) === 58) && cpuBreakTargetWorthIt()) {
+                    activateSubmissiveBreak(2);
+                }
+
 				while (cpuUseQuietMind())
 				{
 					// spend until don't want to spend
