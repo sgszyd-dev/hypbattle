@@ -1005,37 +1005,7 @@ const TRANSFORMATION_TAUNTS = {
         }
     },
 
-    Mannequin: {
-        player: {
-            TransformPlayer: [
-                "Another step toward a plastic body. I wonder how much control you'll have left.",
-                "Your movements are becoming less natural. Soon you'll look like something made to be posed."
-				
-            ],
-            PlayerAt5Transform: [
-                "Halfway to a mannequin. How does it feel when your body starts moving like it was designed by someone else?",
-                "Five stages down. Feeling harder to move, I'm sure. You should get up on that pedestal and pose for me now."
-            ],
-            PlayerAt8Transform: [
-                "Two steps left. Soon every movement -- or in your case, lack of movement -- will remind you what I've turned you into.",
-                "Almost a mannequin. Imagine seeing that unreal, smooth plastic in the mirror and knowing exactly who made you that way."
-            ]
-        },
-        cpu: {
-            AIGetsTransformed: [
-                "My arms and legs feel wrong. Are you turning me into a mannequin? You have no idea what you're risking.",
-                "My movements are getting harder. I refuse to become some toy you can show off."
-            ],
-            AIAt5Transform: [
-                "Halfway to a mannequin. I'm having trouble moving my limbs, and I hate how aware I am of my fake skin.",
-                "Five stages. I can feel my body becoming something crafted rather than born. This is deeply unsettling."
-            ],
-            AIAt9Transform: [
-                "One step left. I know you want me on a pedestal looking down on you.",
-                "Fine. Let my body settle. This mannequin will still have a mind, and mine is already plotting."
-            ]
-        }
-    },
+    
 
     Bunny: {
         player: {
