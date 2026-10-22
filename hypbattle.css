@@ -1310,3 +1310,26 @@
     .signature-power-hint { font-size: 0.7rem; padding: 7px 8px; }
     .signature-power-status { font-size: 0.62rem; }
 }
+
+/* Signature Powers portraits + form color */
+.signature-power-box {
+    position: relative;
+    padding-right: 116px; /* 100px image + a little gap */
+}
+
+.signature-portrait {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 100px;
+    height: 100px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.signature-form {
+    color: #c9a0dc; /* soft hypnotic purple – change if you prefer another accent */
+    font-weight: 600;
+}

@@ -154,11 +154,11 @@
                         <select id="cpu-difficulty">
                             <option value="random">Beginner</option>
                             <option value="smart">Easy</option>
-                            <option value="aggressive">Normal</option>
+                            <option value="aggressive" selected>Normal</option>
                             <option value="v23low">Hard</option>
                             <option value="defensive">Expert</option>
 							<option value="transformer">Virtuoso</option>
-                            <option value="adaptive" id="cpu-diff-master-option" selected>Master</option>
+                            <option value="adaptive" id="cpu-diff-master-option">Master</option>
                         </select>
                     </div>
                 </div>
@@ -592,6 +592,7 @@
     </div>
 
 <script src="taunts.js"></script>
+<script src="help_additions.js"></script>
 <script src="hypbattle.js"></script>
 
 
@@ -608,6 +609,7 @@
             <button class="help-tab" data-tab="dice" onclick="showHelpTab('dice')">Dice</button>
             <button class="help-tab" data-tab="cards" onclick="showHelpTab('cards')">Cards</button>
             <button class="help-tab" data-tab="advanced" onclick="showHelpTab('advanced')">Advanced</button>
+			<button class="help-tab" data-tab="seven" onclick="showHelpTab('seven')">The Seven</button>
         </div>
         <div id="help-content" class="help-scroll"></div>
     </div>
