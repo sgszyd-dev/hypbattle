@@ -1,4 +1,70 @@
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
+// Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
+const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
+const MOBILE_AMBIENCE_QUERY = "(max-width: 700px), (pointer: coarse)";
+let gameSpiralBackgroundEnabled = true;
+
+function isMobileAmbienceDevice() {
+    try { return window.matchMedia(MOBILE_AMBIENCE_QUERY).matches; }
+    catch (e) { return window.innerWidth <= 700; }
+}
+
+function loadGameSpiralPreference() {
+    try {
+        const saved = localStorage.getItem(GAME_SPIRAL_STORAGE_KEY);
+        if (saved !== null) gameSpiralBackgroundEnabled = saved === "true";
+    } catch (e) { /* Storage may be unavailable in private browsing or file:// contexts. */ }
+}
+
+function applyGameSpiralBackground() {
+    const shouldShow = gameSpiralBackgroundEnabled && !isMobileAmbienceDevice();
+    const existing = document.getElementById("game-ethereal-background");
+    if (!shouldShow) {
+        if (existing) existing.remove();
+        document.body.classList.remove("game-ethereal-enabled");
+        return;
+    }
+    if (existing) return;
+
+    const layer = document.createElement("div");
+    layer.id = "game-ethereal-background";
+    layer.setAttribute("aria-hidden", "true");
+    layer.innerHTML = `
+        <div class="game-ethereal-vortex game-ethereal-vortex-a"></div>
+        <div class="game-ethereal-vortex game-ethereal-vortex-b"></div>
+        <div class="game-ethereal-glow"></div>
+        <div class="game-ethereal-symbols">
+            <span>🌀</span><span>✧</span><span>☾</span><span>◈</span><span>✦</span><span>◎</span>
+            <span>🜁</span><span>⋆</span><span>⏳</span><span>✧</span><span>☽</span><span>◇</span>
+        </div>`;
+    document.body.appendChild(layer);
+    document.body.classList.add("game-ethereal-enabled");
+}
+
+function setGameSpiralBackground(enabled) {
+    gameSpiralBackgroundEnabled = !!enabled;
+    safeStorage.set(GAME_SPIRAL_STORAGE_KEY, String(gameSpiralBackgroundEnabled));
+    applyGameSpiralBackground();
+    // The same preference controls ambience in both gameplay and the setup dialog.
+    const setupModal = document.getElementById("settings-modal");
+    if (setupModal) ensureSetupEtherealBackground();
+    const toggle = document.getElementById("game-spiral-background-option");
+    if (toggle) toggle.checked = gameSpiralBackgroundEnabled && !isMobileAmbienceDevice();
+}
+
+function ensureGameEtherealBackground() {
+    loadGameSpiralPreference();
+    applyGameSpiralBackground();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", ensureGameEtherealBackground, { once: true });
+} else {
+    ensureGameEtherealBackground();
+}
+window.addEventListener("resize", applyGameSpiralBackground, { passive: true });
+window.addEventListener("orientationchange", applyGameSpiralBackground, { passive: true });
+
 // Each character has a gender field ("male" / "female"). It is used for things like the Master / Mistress title.
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
@@ -274,6 +340,8 @@ let lucidityResolve = null;
 
 window.onload = () => {
     loadLocalDisplayPreferences();
+    loadGameSpiralPreference();
+    applyGameSpiralBackground();
     if (window.firebaseAuthReady && typeof window.initializeLeaderboardProfile === "function") {
         window.initializeLeaderboardProfile().catch(error => console.warn("Leaderboard profile setup is not available yet:", error));
     }
@@ -1845,7 +1913,13 @@ function generateHostRoom() {
 
 function ensureSetupEtherealBackground() {
     const modal = document.getElementById("settings-modal");
-    if (!modal || modal.querySelector(":scope > .setup-ethereal-layer")) return;
+    if (!modal) return;
+    const existingLayer = modal.querySelector(":scope > .setup-ethereal-layer");
+    if (!gameSpiralBackgroundEnabled || isMobileAmbienceDevice()) {
+        if (existingLayer) existingLayer.remove();
+        return;
+    }
+    if (existingLayer) return;
 
     const layer = document.createElement("div");
     layer.className = "setup-ethereal-layer";
@@ -2817,8 +2891,31 @@ async function showGlobalLeaderboard() {
 }
 window.showGlobalLeaderboard = showGlobalLeaderboard;
 
+function ensureGameSpiralOption() {
+    const modal = document.getElementById("options-modal");
+    if (!modal || document.getElementById("game-spiral-background-option")) return;
+    const sections = modal.querySelectorAll(".options-section");
+    const target = sections[0] || modal.querySelector(".options-modal-content") || modal;
+    if (!target) return;
+    const row = document.createElement("div");
+    row.className = "option-row game-spiral-option-row";
+    row.innerHTML = `<label for="game-spiral-background-option">Animated spiral background</label>
+        <label class="option-toggle"><input type="checkbox" id="game-spiral-background-option"> Enabled</label>
+        <small class="game-spiral-option-note">Desktop only; automatically disabled on mobile devices.</small>`;
+    target.appendChild(row);
+    const toggle = row.querySelector("#game-spiral-background-option");
+    toggle.addEventListener("change", () => setGameSpiralBackground(toggle.checked));
+}
+
 function openOptionsModal(returnTarget = "game") {
     optionsReturnTarget = returnTarget === "setup" ? "setup" : "game";
+    ensureGameSpiralOption();
+    const spiralToggle = document.getElementById("game-spiral-background-option");
+    if (spiralToggle) {
+        spiralToggle.disabled = isMobileAmbienceDevice();
+        spiralToggle.checked = gameSpiralBackgroundEnabled && !spiralToggle.disabled;
+        spiralToggle.title = spiralToggle.disabled ? "Automatically disabled on mobile devices" : "Toggle the animated background";
+    }
     const diceSelect = document.getElementById("dice-text-option");
     if (diceSelect) diceSelect.value = localShowDiceText ? "on" : "off";
     const soundToggle = document.getElementById("sound-effects-option");
@@ -3427,7 +3524,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261022.4"; // Update this label for each release.
+const GAME_VERSION = "20261022.7"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by SG.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);

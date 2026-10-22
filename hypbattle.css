@@ -24,9 +24,9 @@
         #settings-modal { background: rgba(4, 2, 12, .91); backdrop-filter: blur(5px); isolation:isolate; overflow:hidden; position:fixed; }
         .setup-ethereal-layer {
             position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none;
-            opacity:.82; contain:layout paint;
-            background:radial-gradient(ellipse at 50% 48%, rgba(157,78,221,.17), transparent 70%),
-                       radial-gradient(ellipse at 15% 80%, rgba(76,201,240,.08), transparent 45%);
+            opacity:.92; contain:layout paint;
+            background:radial-gradient(ellipse at 50% 48%, rgba(157,78,221,.22), transparent 70%),
+                       radial-gradient(ellipse at 15% 80%, rgba(76,201,240,.12), transparent 45%);
         }
         .setup-ethereal-vortex {
             position:absolute; left:50%; top:48%; width:min(118vw, 1180px); aspect-ratio:1;
@@ -56,17 +56,17 @@
         @keyframes setupVortexSpin { to { transform:rotate(360deg); } }
         .setup-ethereal-symbol {
             position:absolute; display:block; font-size:var(--float-size, 24px); line-height:1;
-            color:rgba(225,202,255,.76); opacity:.45;
+            color:rgba(240,224,255,.92); opacity:.68;
             text-shadow:0 0 10px rgba(157,78,221,.8), 0 0 22px rgba(76,201,240,.34);
             user-select:none; pointer-events:none; will-change:transform, opacity;
             animation:setupEtherealFloat var(--float-duration, 26s) linear var(--float-delay, 0s) infinite;
         }
         @keyframes setupEtherealFloat {
-            0% { transform:translate3d(0,0,0) rotate(0deg) scale(.84); opacity:.19; }
-            22% { opacity:.54; }
-            50% { transform:translate3d(var(--float-drift-x, 55px), var(--float-drift-y, -65px), 0) rotate(var(--float-mid-rotation, 120deg)) scale(1.12); opacity:.46; }
-            78% { opacity:.25; }
-            100% { transform:translate3d(var(--float-end-x, -30px), var(--float-end-y, 35px), 0) rotate(var(--float-rotation, 220deg)) scale(.92); opacity:.4; }
+            0% { transform:translate3d(0,0,0) rotate(0deg) scale(.84); opacity:.34; }
+            22% { opacity:.78; }
+            50% { transform:translate3d(var(--float-drift-x, 55px), var(--float-drift-y, -65px), 0) rotate(var(--float-mid-rotation, 120deg)) scale(1.12); opacity:.72; }
+            78% { opacity:.42; }
+            100% { transform:translate3d(var(--float-end-x, -30px), var(--float-end-y, 35px), 0) rotate(var(--float-rotation, 220deg)) scale(.92); opacity:.62; }
         }
         .setup-modal-content { position:relative; z-index:1;
             width: min(760px, 96vw); padding: 21px 24px 22px;
@@ -90,7 +90,7 @@
         .setup-footer-actions button { flex:1; margin:0; }
         @media (prefers-reduced-motion: reduce) {
             .setup-ethereal-symbol, .setup-ethereal-vortex::before, .setup-ethereal-vortex::after { animation:none !important; }
-            .setup-ethereal-symbol { opacity:.15; }
+            .setup-ethereal-symbol { opacity:.42; }
             .setup-ethereal-vortex { opacity:.28; }
         }
         .themed-secondary-btn { background:#30243f !important; border:1px solid #72518c !important; }
@@ -1333,3 +1333,91 @@
     color: #c9a0dc; /* soft hypnotic purple – change if you prefer another accent */
     font-weight: 600;
 }
+
+/* Optional main-game ethereal spiral background. Enabled by ENABLE_GAME_SPIRAL_BACKGROUND in hypbattle.js. */
+html { background: var(--bg, #1e1e24); }
+body.game-ethereal-enabled { background-color: transparent; }
+#game-ethereal-background {
+    position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    pointer-events: none; isolation: isolate; contain: strict;
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(50, 28, 75, .30), transparent 62%),
+        radial-gradient(ellipse at 12% 88%, rgba(36, 80, 110, .16), transparent 48%),
+        radial-gradient(ellipse at 88% 12%, rgba(114, 48, 144, .15), transparent 45%);
+}
+.game-ethereal-vortex {
+    position: absolute; width: min(115vmax, 1650px); aspect-ratio: 1;
+    left: 50%; top: 48%; border-radius: 50%;
+    transform: translate(-50%, -50%); opacity: .36;
+    will-change: transform; mix-blend-mode: screen;
+}
+.game-ethereal-vortex-a {
+    background: repeating-conic-gradient(from 0deg,
+        transparent 0deg 9deg, rgba(177,105,255,.32) 10deg 11deg,
+        transparent 12deg 23deg, rgba(76,201,240,.23) 24deg 25deg,
+        transparent 26deg 35deg);
+    -webkit-mask-image: radial-gradient(circle, transparent 0 13%, #000 25% 57%, transparent 72%);
+    mask-image: radial-gradient(circle, transparent 0 13%, #000 25% 57%, transparent 72%);
+    animation: gameEtherealSpin 110s linear infinite;
+}
+.game-ethereal-vortex-b {
+    width: min(82vmax, 1180px); opacity: .25;
+    background: repeating-conic-gradient(from 14deg,
+        transparent 0deg 17deg, rgba(192,132,252,.32) 18deg 19deg,
+        transparent 20deg 37deg, rgba(76,201,240,.23) 38deg 39deg,
+        transparent 40deg 55deg);
+    -webkit-mask-image: radial-gradient(circle, transparent 0 7%, #000 18% 50%, transparent 68%);
+    mask-image: radial-gradient(circle, transparent 0 7%, #000 18% 50%, transparent 68%);
+    animation: gameEtherealSpinReverse 145s linear infinite;
+}
+.game-ethereal-glow {
+    position: absolute; width: 56vmax; height: 56vmax; left: 50%; top: 50%;
+    transform: translate(-50%, -50%); border-radius: 50%; opacity: .28;
+    background: radial-gradient(circle, rgba(157,78,221,.32), rgba(76,201,240,.12) 38%, transparent 70%);
+    animation: gameEtherealBreathe 13s ease-in-out infinite alternate;
+}
+.game-ethereal-symbols { position: absolute; inset: 0; }
+.game-ethereal-symbols span {
+    position: absolute; color: rgba(232,211,255,.68); font-size: clamp(19px, 2.5vw, 36px);
+    text-shadow: 0 0 10px rgba(157,78,221,.9), 0 0 24px rgba(76,201,240,.48), 0 0 38px rgba(157,78,221,.36);
+    opacity: .82; filter: drop-shadow(0 0 5px rgba(157,78,221,.4));
+    animation: gameEtherealFloat 26s ease-in-out infinite alternate;
+}
+.game-ethereal-symbols span:nth-child(1) { left: 8%; top: 20%; animation-delay: -7s; }
+.game-ethereal-symbols span:nth-child(2) { left: 23%; top: 75%; animation-delay: -16s; }
+.game-ethereal-symbols span:nth-child(3) { left: 84%; top: 19%; animation-delay: -11s; }
+.game-ethereal-symbols span:nth-child(4) { left: 74%; top: 81%; animation-delay: -20s; }
+.game-ethereal-symbols span:nth-child(5) { left: 48%; top: 12%; animation-delay: -4s; }
+.game-ethereal-symbols span:nth-child(6) { left: 91%; top: 51%; animation-delay: -13s; }
+.game-ethereal-symbols span:nth-child(7) { left: 12%; top: 56%; animation-delay: -22s; }
+.game-ethereal-symbols span:nth-child(8) { left: 37%; top: 88%; animation-delay: -9s; }
+.game-ethereal-symbols span:nth-child(9) { left: 64%; top: 27%; animation-delay: -18s; }
+.game-ethereal-symbols span:nth-child(10) { left: 29%; top: 34%; animation-delay: -12s; }
+.game-ethereal-symbols span:nth-child(11) { left: 89%; top: 70%; animation-delay: -5s; }
+.game-ethereal-symbols span:nth-child(12) { left: 56%; top: 78%; animation-delay: -15s; }
+.game-ethereal-symbols span:nth-child(13) { left: 17%; top: 12%; animation-delay: -8s; }
+.game-ethereal-symbols span:nth-child(14) { left: 32%; top: 57%; animation-delay: -19s; }
+.game-ethereal-symbols span:nth-child(15) { left: 68%; top: 46%; animation-delay: -3s; }
+.game-ethereal-symbols span:nth-child(16) { left: 79%; top: 34%; animation-delay: -23s; }
+.game-ethereal-symbols span:nth-child(17) { left: 43%; top: 91%; animation-delay: -12s; }
+.game-ethereal-symbols span:nth-child(18) { left: 5%; top: 77%; animation-delay: -6s; }
+.game-ethereal-symbols span:nth-child(19) { left: 96%; top: 28%; animation-delay: -17s; }
+.game-ethereal-symbols span:nth-child(20) { left: 52%; top: 35%; animation-delay: -21s; }
+.game-ethereal-symbols span:nth-child(21) { left: 26%; top: 20%; animation-delay: -10s; }
+.game-ethereal-symbols span:nth-child(22) { left: 61%; top: 63%; animation-delay: -14s; }
+.game-ethereal-symbols span:nth-child(23) { left: 39%; top: 9%; animation-delay: -25s; }
+.game-ethereal-symbols span:nth-child(24) { left: 88%; top: 88%; animation-delay: -9s; }
+@keyframes gameEtherealSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes gameEtherealSpinReverse { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+@keyframes gameEtherealBreathe { from { opacity: .10; scale: .92; } to { opacity: .25; scale: 1.08; } }
+@keyframes gameEtherealFloat { from { transform: translate3d(-8px, 10px, 0) rotate(-12deg); } to { transform: translate3d(12px, -16px, 0) rotate(18deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .game-ethereal-vortex-a, .game-ethereal-vortex-b, .game-ethereal-glow, .game-ethereal-symbols span { animation: none !important; }
+}
+/* Mobile/touch devices: keep setup and gameplay backgrounds lightweight and static. */
+@media (max-width: 700px), (pointer: coarse) {
+    .setup-ethereal-layer, #game-ethereal-background { display: none !important; }
+    body.game-ethereal-enabled { background-color: var(--bg, #1e1e24) !important; }
+}
+.game-spiral-option-row { flex-wrap:wrap; }
+.game-spiral-option-note { flex-basis:100%; color:#bda9d3; font-size:.76rem; margin-top:-3px; }
