@@ -20,13 +20,60 @@
             max-width: 95vw; box-sizing: border-box;
             max-height: 90vh; max-height: 90dvh; overflow-y: auto;      /* scrolls instead of being cut off on short screens */
         }
-        /* Compact, occult-themed setup and the shared options/tools dialog. */
-        #settings-modal { background: rgba(4, 2, 12, .88); backdrop-filter: blur(5px); }
-        .setup-modal-content {
+        /* Compact, occult-themed setup and a lightweight CSS-only vortex ambience. */
+        #settings-modal { background: rgba(4, 2, 12, .91); backdrop-filter: blur(5px); isolation:isolate; overflow:hidden; position:fixed; }
+        .setup-ethereal-layer {
+            position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+            opacity:.82; contain:layout paint;
+            background:radial-gradient(ellipse at 50% 48%, rgba(157,78,221,.17), transparent 70%),
+                       radial-gradient(ellipse at 15% 80%, rgba(76,201,240,.08), transparent 45%);
+        }
+        .setup-ethereal-vortex {
+            position:absolute; left:50%; top:48%; width:min(118vw, 1180px); aspect-ratio:1;
+            transform:translate(-50%,-50%); border-radius:50%; opacity:.56;
+            background:radial-gradient(circle, rgba(7,4,18,.94) 0 7%, rgba(157,78,221,.11) 12%, transparent 28%, rgba(76,201,240,.08) 40%, transparent 56%);
+            filter:blur(2px);
+        }
+        .setup-ethereal-vortex::before {
+            content:""; position:absolute; inset:3%; border-radius:50%;
+            background:repeating-conic-gradient(from 8deg,
+                transparent 0deg 9deg,
+                rgba(157,78,221,.22) 12deg 17deg,
+                rgba(76,201,240,.13) 19deg 22deg,
+                transparent 27deg 42deg);
+            -webkit-mask-image:repeating-radial-gradient(circle, transparent 0 13px, #000 19px 34px, transparent 43px 59px);
+            mask-image:repeating-radial-gradient(circle, transparent 0 13px, #000 19px 34px, transparent 43px 59px);
+            filter:blur(5px); animation:setupVortexSpin 82s linear infinite;
+        }
+        .setup-ethereal-vortex::after {
+            content:""; position:absolute; inset:13%; border-radius:50%;
+            background:conic-gradient(from 15deg, transparent 0deg, rgba(157,78,221,.20) 65deg, transparent 112deg,
+                rgba(76,201,240,.16) 165deg, transparent 215deg, rgba(157,78,221,.18) 285deg, transparent 340deg);
+            -webkit-mask-image:radial-gradient(ellipse, transparent 0 14%, #000 24% 60%, transparent 72%);
+            mask-image:radial-gradient(ellipse, transparent 0 14%, #000 24% 60%, transparent 72%);
+            filter:blur(13px); animation:setupVortexSpin 105s linear infinite reverse;
+        }
+        @keyframes setupVortexSpin { to { transform:rotate(360deg); } }
+        .setup-ethereal-symbol {
+            position:absolute; display:block; font-size:var(--float-size, 24px); line-height:1;
+            color:rgba(225,202,255,.76); opacity:.45;
+            text-shadow:0 0 10px rgba(157,78,221,.8), 0 0 22px rgba(76,201,240,.34);
+            user-select:none; pointer-events:none; will-change:transform, opacity;
+            animation:setupEtherealFloat var(--float-duration, 26s) linear var(--float-delay, 0s) infinite;
+        }
+        @keyframes setupEtherealFloat {
+            0% { transform:translate3d(0,0,0) rotate(0deg) scale(.84); opacity:.19; }
+            22% { opacity:.54; }
+            50% { transform:translate3d(var(--float-drift-x, 55px), var(--float-drift-y, -65px), 0) rotate(var(--float-mid-rotation, 120deg)) scale(1.12); opacity:.46; }
+            78% { opacity:.25; }
+            100% { transform:translate3d(var(--float-end-x, -30px), var(--float-end-y, 35px), 0) rotate(var(--float-rotation, 220deg)) scale(.92); opacity:.4; }
+        }
+        .setup-modal-content { position:relative; z-index:1;
             width: min(760px, 96vw); padding: 21px 24px 22px;
             border: 1px solid rgba(192,132,252,.55);
             box-shadow: 0 0 0 1px rgba(76,201,240,.08), 0 18px 70px rgba(0,0,0,.7), 0 0 28px rgba(157,78,221,.18);
-            background: radial-gradient(ellipse at top, #393047 0%, var(--panel) 58%);
+            background:linear-gradient(145deg, rgba(28,20,42,.84), rgba(27,27,38,.80)),
+                       radial-gradient(ellipse at top, rgba(157,78,221,.22) 0%, rgba(43,43,54,.72) 62%);
         }
         .setup-brand { text-align:center; margin-bottom:15px; }
         .setup-brand h2 { margin:0 0 4px; border:0; padding:0; letter-spacing:.13em; font-size:1.55rem; }
@@ -41,6 +88,11 @@
         .setup-mode-section > label:first-child { color:#d8b5ff; text-transform:uppercase; letter-spacing:.08em; font-size:.75rem; }
         .setup-footer-actions { display:flex; gap:9px; margin-top:12px; }
         .setup-footer-actions button { flex:1; margin:0; }
+        @media (prefers-reduced-motion: reduce) {
+            .setup-ethereal-symbol, .setup-ethereal-vortex::before, .setup-ethereal-vortex::after { animation:none !important; }
+            .setup-ethereal-symbol { opacity:.15; }
+            .setup-ethereal-vortex { opacity:.28; }
+        }
         .themed-secondary-btn { background:#30243f !important; border:1px solid #72518c !important; }
         #options-modal { z-index: 180; background:rgba(4,2,12,.82); backdrop-filter:blur(5px); }
         .options-modal-content {
@@ -432,13 +484,17 @@
             box-shadow: 0 0 0 1px rgba(192,132,252,.38), 0 0 12px rgba(157,78,221,.18);
         }
         .market-row .card.cannot-afford,
-        .market-row .card.already-owned { opacity: .58; }
+        .market-row .card.already-owned,
+        .market-row .card.signature-blocked { opacity: .58; }
         .market-row .card.cannot-afford .card-header span:last-child,
-        .market-row .card.already-owned .card-header span:last-child { color: #8d7a86; }
+        .market-row .card.already-owned .card-header span:last-child,
+        .market-row .card.signature-blocked .card-header span:last-child { color: #8d7a86; }
         .market-row .card.cannot-afford,
-        .market-row .card.already-owned { cursor: not-allowed; }
+        .market-row .card.already-owned,
+        .market-row .card.signature-blocked { cursor: not-allowed; }
         .market-row .card.cannot-afford button,
-        .market-row .card.already-owned button { pointer-events: none; }
+        .market-row .card.already-owned button,
+        .market-row .card.signature-blocked button { pointer-events: none; }
         .market-row .card.card-deny { animation: cardDeny .35s ease; }
         @keyframes cardDeny { 0%,100% { transform: translateX(0); } 30% { transform: translateX(-5px); } 70% { transform: translateX(5px); } }
         @media (prefers-reduced-motion: reduce) {
@@ -1223,3 +1279,34 @@
     }
 }
 
+
+/* Signature transformation powers: visible in setup and beneath each player's portrait. */
+.signature-power-hint {
+    margin: 8px auto 10px;
+    padding: 8px 10px;
+    width: min(100%, 360px);
+    box-sizing: border-box;
+    border: 1px solid rgba(157, 78, 221, 0.48);
+    border-radius: 9px;
+    background: rgba(25, 18, 38, 0.88);
+    color: #ddd3ea;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    text-align: center;
+}
+.signature-power-hint strong { color: #e9d5ff; }
+.signature-power-hint .signature-power-title { color: #f0abfc; font-size: 1.08em; text-shadow: 0 0 10px rgba(192,132,252,.28); }
+.setup-signature-power-hint { margin: 5px 0 10px; width: 100%; text-align: left; }
+.signature-power-status {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+}
+.signature-power-status.active { color: #86efac; }
+.signature-power-status.inactive { color: #fbbf24; }
+@media (max-width: 700px) {
+    .signature-power-hint { font-size: 0.7rem; padding: 7px 8px; }
+    .signature-power-status { font-size: 0.62rem; }
+}
