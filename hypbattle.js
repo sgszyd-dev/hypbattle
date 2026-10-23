@@ -255,7 +255,7 @@ const KNOWN_CARDS = [
 	{ id: 51, name: "Transitive Energy", cost: 6, type: "Instant", desc: "Transfer 1 level of Transform from yourself to the opponent.", ai: {transformer: 50, adaptive: 40,  aggressive: 20, defensive: 80, v23low: 50 } },
 	{ id: 52, name: "You Will Obey", cost: 7, type: "Instant", desc: "If the submission tracker is on the opponent's side, deepen their submission all the way to the end.", ai: {transformer: 15, adaptive: 45, aggressive: 60, defensive: 15, v23low: 55} },
 	{ id: 53, name: "I Will Not Obey", cost: 6, type: "Instant", desc: "If the submission tracker is on your side, reduce your submission to neutral.", ai: {transformer: 25, adaptive: 25, aggressive: 15, defensive: 60, v23low: 55} },
-    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
+    { id: 54, name: "Burning Up", cost: 6, type: "Keep", desc: "Once per turn, gain up to 2 extra rerolls. After the first extra reroll, your 🔥 rises by 1; after the second, it rises by 2 more. Can't be used if it would raise your 🔥 above 5.", ai: {transformer: 85, adaptive: 50, aggressive: 40, defensive: 45, v23low: 40} },
     { id: 55, name: "Transformation Ritual", cost: 6, type: "Keep", desc: "At the start of your turn, gain 2 ⚡. After rolling, if you did not keep an 👁️ die, lose 3 ⚡ (to a minimum of 0).", ai: {transformer: 93, adaptive: 90, aggressive: 90, defensive: 85, v23low: 90} },
     { id: 56, name: "Deeper Bargains", cost: 7, type: "Keep", desc: "When purchased, choose a face. One of your dice becomes a special die with three copies of that face and three ⬜ blank faces.", ai: {transformer: 100, adaptive: 65, aggressive: 70, defensive: 80, v23low: 60} },
     { id: 57, name: "Mental Fortitude", cost: 4, type: "Keep", desc: "At the start of your turn, reduce your 🌀 by 1 (to a minimum of 0).", ai: {transformer: 15, adaptive: 55, aggressive: 25, defensive: 60, v23low: 35} },
@@ -4841,7 +4841,7 @@ function cpuChooseSpecialFace() {            // Deeper Bargains: which face the 
 function cpuArousalBand(a) { return a <= 2 ? 0 : (a <= 4 ? 1 : 2); }
 function cpuBurningUpCost() {                // what the 🔥 rise costs in lost rerolls, scaled by how much this level cares
     const p = gameState.p2;
-    const rise = (p.burningUpUses || 0) === 0 ? 1 : 2;
+    const rise = burningUpRise(p);
     const lost = cpuArousalBand(Math.min(5, p.arousal + rise)) - cpuArousalBand(p.arousal);
     let cost = lost * 0.3 + rise * 0.03;
     const d = getCpuDifficulty();
@@ -6271,15 +6271,26 @@ function playerById(pid) { return pid === 1 ? gameState.p1 : gameState.p2; }
 function oppIdOf(pid) { return pid === 1 ? 2 : 1; }
 function isHumanActor(pid) { return pid === 1 || gameState.gameMode !== "solo"; }
 
+// 54 Burning Up: how much 🔥 the next use would add (1 for the first use, 2 for the second)
+function burningUpRise(p) {
+	return (p.burningUpUses || 0) === 0 ? 1 : 2;
+}
+
 // 54 Burning Up: up to 2 extra rerolls per turn; your 🔥 rises by 1 after the first and by 2 after the second
 function canUseBurningUp(pid) {
     const p = playerById(pid);
-    return hasCard(pid, 54) && (p.burningUpUses || 0) < 2 && gameState.phase === "rolling" && gameState.dice.length > 0 && gameState.dice[0].face !== "-";
+    return hasCard(pid, 54)
+		&& (p.burningUpUses || 0) < 2
+		&& p.arousal + burningUpRise(p) <= 5
+		&& gameState.phase === "rolling"
+		&& gameState.dice.length > 0
+		&& gameState.dice[0].face !== "-";
 }
+
 function useBurningUp(pid) {
     if (!canUseBurningUp(pid)) return false;
     const p = playerById(pid);
-    const rise = (p.burningUpUses || 0) === 0 ? 1 : 2;
+    const rise = burningUpRise(p);
     p.burningUpUses = (p.burningUpUses || 0) + 1;
     gameState.rerollsLeft += 1;
     p.arousal = Math.min(5, p.arousal + rise);
