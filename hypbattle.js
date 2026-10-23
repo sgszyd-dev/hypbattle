@@ -2614,8 +2614,8 @@ function closeGameOverToBoard() {
 }
 async function restartGameFromBoard() {
     const confirmed = await showThemedConfirm(
-        "Restart Hypnotic Duel? The current match will be lost.",
-        "Restart Hypnotic Duel"
+        "Restart Transformation? The current match will be lost.",
+        "Restart Transformation"
     );
 
     if (!confirmed) return;
@@ -3007,7 +3007,7 @@ async function confirmResetGame() {
     }
 
     const confirmed2 = await showThemedConfirm(
-        "Reset Hypnotic Duel and return to the setup screen? " +
+        "Reset Transformation and return to the setup screen? " +
         "The current match will be lost.",
         "Submit to Your Opponent"
     )
@@ -3561,8 +3561,8 @@ function log(msg, bold = false) {
 
 const GAME_VERSION = "20261022.8"; // Update this label for each release.
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by SG.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
-    showPopup("About Hypnotic Duel", body);
+    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Transformation - Created 2026 by SG.<br><img src="images/aboutBoxPicture.png" alt="Transformation" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    showPopup("About Transformation", body);
 }
 
 function closePopup(){ const e=document.getElementById("game-popup"); if(e)e.style.display="none"; }

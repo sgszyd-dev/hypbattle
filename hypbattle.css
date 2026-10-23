@@ -1077,7 +1077,7 @@
             #final-transform-cinematic { overflow-y: auto; align-items: flex-start; }
         }
 
-        /* ===== Hypnotic Duel: Themed Dialogs ===== */
+        /* ===== Tranceformation: Themed Dialogs ===== */
 
         #themed-dialog {
             width: min(440px, calc(100% - 32px));

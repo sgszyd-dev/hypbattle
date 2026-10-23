@@ -276,7 +276,7 @@ const HELP_CONTENT = {
 
 const GUIDED_TUTORIAL_STEPS = [
     {
-        title: 'Welcome to Hypnotic Duel',
+        title: 'Welcome to Tranceformation',
         body: '<p>Your goal is simple: <strong>Transform your opponent to 10 or more</strong> before they do the same to you.</p><p>This tutorial is a hands-on tour of the board. This is a practice game. You will make a few actions here so you can see how the controls work... and how the pressure builds.</p>',
         target: null, position: 'bottom', actionGate: 'none'
     },

@@ -1,4 +1,4 @@
-// Hypnotic Duel taunt text and related selection settings.
+// Tranceformation taunt text and related selection settings.
 // Load this classic script BEFORE hypbattle.js in the HTML.
 
 const PLAYER_TRANSFORMATION_TAUNT_CHANCE = 0.25;
