@@ -1422,6 +1422,54 @@ body.game-ethereal-enabled { background-color: transparent; }
 .game-spiral-option-row { flex-wrap:wrap; }
 .game-spiral-option-note { flex-basis:100%; color:#bda9d3; font-size:.76rem; margin-top:-3px; }
 
+/* Mobile toolbar placement: title first, utility buttons directly below it,
+   before the taunt box in the center board. Desktop layout remains unchanged. */
+@media (max-width: 700px) {
+    .main-game-header {
+        flex-wrap: wrap;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 6px 8px;
+        margin-bottom: 8px !important;
+    }
+    .main-game-header > h1 {
+        flex: 0 0 100%;
+        width: 100%;
+        text-align: center;
+        font-size: clamp(1.45rem, 6vw, 2rem);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+    .main-game-header > div {
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 6px !important;
+        min-width: 0;
+    }
+    .main-game-header .main-toolbar-btn {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin: 0 !important;
+        padding: 7px 9px;
+        font-size: .76rem;
+        line-height: 1.15;
+        white-space: nowrap;
+    }
+    .main-game-header .help-btn {
+        padding-left: 8px;
+        padding-right: 8px;
+        font-size: .7rem;
+    }
+}
+@media (max-width: 360px) {
+    .main-game-header .main-toolbar-btn { padding: 6px 7px; font-size: .7rem; }
+    .main-game-header .help-btn { font-size: .64rem; padding-left: 6px; padding-right: 6px; }
+}
+
 /* Tranceformation dual-tone title styling */
 .title-trance {
     font-family: var(--font-display);
