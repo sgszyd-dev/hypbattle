@@ -1421,3 +1421,25 @@ body.game-ethereal-enabled { background-color: transparent; }
 }
 .game-spiral-option-row { flex-wrap:wrap; }
 .game-spiral-option-note { flex-basis:100%; color:#bda9d3; font-size:.76rem; margin-top:-3px; }
+
+/* Tranceformation dual-tone title styling */
+.title-trance {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(105deg, #fff 10%, #e7caff 40%, #b56aff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 14px rgba(181, 106, 255, .45));
+}
+.title-formation {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(105deg, #fff 10%, #9cecff 45%, #65e2ff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 14px rgba(101, 226, 255, .4));
+}
