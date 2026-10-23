@@ -389,7 +389,8 @@ function resetTutorialGameState() {
         p1: { name: '', transformTarget: '', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, signatureSiobhanUsed:false, signatureHyeriUsedFaces:[] },
         p2: { name: '', transformTarget: '', difficulty: 'smart', trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, signatureSiobhanUsed:false, signatureHyeriUsedFaces:[] },
         submission: 0, activePlayer: 1, round: 1, phase: 'waiting',
-        dice: Array(6).fill({ face: '-', kept: false }),
+        //dice: Array(6).fill({ face: '-', kept: false }),
+		dice: Array.from(6, () => ({ face: "-", kept: false })),
         rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
         signatureSiobhanBonusPending:false, signatureSiobhanBonusRoll:false, signatureTexAllocationPending:false, signatureTexAllocationDone:false, signatureFableDecisionPending:false, signatureFableDecisionMade:false, signatureFableSpend:false, signatureHyeriPromptPending:false, signatureRozBonusGranted:false, signatureAlexAbsorbedThisTurn:false,
         log: []

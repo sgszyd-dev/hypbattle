@@ -236,7 +236,7 @@ const KNOWN_CARDS = [
     { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
     { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {transformer: 25, adaptive: 20, aggressive: 10, defensive: 40, v23low: 10} },
     { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {transformer: 18, adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
-    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
+    { id: 35, name: "Mesmerizing Rhythm", cost: 4, type: "Keep", desc: "Blocks the opponent from pushing the submission track by exactly 1 point. <em>Deeper Trance</em> will override this.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 70, v23low: 40} },
     { id: 36, name: "Deeper Trance", cost: 5, type: "Keep", desc: "When you deepen the opponent's submission level, deepen it by one more.", ai: {transformer: 12, adaptive: 50, aggressive: 65, defensive: 20, v23low: 60} },
     { id: 37, name: "Swinging Pendulum", cost: 6, type: "Instant", desc: "Set your trance level to 0. Opponent loses 1 ⚡ for every 2 ⚡ they have.", ai: {transformer: 22, adaptive: 25, aggressive: 25, defensive: 40, v23low: 20} },
     { id: 38, name: "New Identity", cost: 7, type: "Keep", desc: "If completely transformed, shift to stage 5, discard all cards and set arousal to 5.", ai: {transformer: 30, adaptive: 30, aggressive: 10, defensive: 80, v23low: 65} },
@@ -281,7 +281,8 @@ let gameState = {
     p1: { name: "", transformTarget: "", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, signatureSiobhanUsed: false, signatureHyeriUsedFaces: [] },
     p2: { name: "", transformTarget: "", difficulty: "smart", trance: 0, arousal: 0, transform: 0, energy: 0, vulnerability: 0, lastRoll: [], inventory: [], boughtCardThisTurn: false, shieldActive: false, simmeringUsed: false, burningUpUsed: false, signatureSiobhanUsed: false, signatureHyeriUsedFaces: [] },
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
-    dice: Array(6).fill({ face: "-", kept: false }),
+    //dice: Array(6).fill({ face: "-", kept: false }),
+	dice: Array.from(6, () => ({ face: "-", kept: false })),
     rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false, endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
     signatureSiobhanBonusPending: false, signatureSiobhanBonusRoll: false, signatureTexAllocationPending: false, signatureTexAllocationDone: false, signatureFableDecisionPending: false, signatureFableDecisionMade: false, signatureFableSpend: false, signatureHyeriPromptPending: false, signatureRozBonusGranted: false, signatureAlexAbsorbedThisTurn: false,
 	log: [] // Store log messages here
@@ -763,6 +764,11 @@ let challengeLastResult = null;
 let challengeTauntTimer = null;
 let challengeRunStartedAt = null;
 let challengeRunMatchesPlayed = 0;
+// Set false to restore the original backtracking rules for The Seven.
+const USE_THREE_TRIES_CHALLENGE = true;
+const CHALLENGE_MAX_LOSSES_PER_RIVAL = 3;
+let challengeLossesAtCurrentRival = 0;
+let challengeFurthestIndex = 0;
 const safeStorage = {
     get(key) {
         try { return localStorage.getItem(key); }
@@ -786,7 +792,7 @@ const CHALLENGE_SAVE_KEY = "hypnoticDuel.sevenChallengeSave.v1";
 function challengeSavePayload(){
     return {
         version:2, challengeActive, challengeIndex, challengeModifierNext,
-        challengeCompleted:[...challengeCompleted], challengeRunMatchesPlayed,
+        challengeCompleted:[...challengeCompleted], challengeRunMatchesPlayed, challengeLossesAtCurrentRival, challengeFurthestIndex,
         challengeLineupMode, challengeLineupSeed, challengePlayerName,
         challengeRivalNames:CHALLENGE_RIVALS.map(r => r.name),
         savedAt:new Date().toISOString()
@@ -841,6 +847,8 @@ function applyChallengeSave(data){
     challengeModifierNext=["none","bonus","handicap"].includes(data.challengeModifierNext)?data.challengeModifierNext:"none";
     challengeCompleted=Array.isArray(data.challengeCompleted)?data.challengeCompleted.filter(i=>Number.isInteger(i)&&i>=0&&i<CHALLENGE_RIVALS.length):[];
     challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=Math.max(0, Number(data.challengeRunMatchesPlayed)||0);
+    challengeLossesAtCurrentRival=Math.max(0,Math.min(CHALLENGE_MAX_LOSSES_PER_RIVAL-1,Number(data.challengeLossesAtCurrentRival)||0));
+    challengeFurthestIndex=Math.max(challengeIndex,Math.min(CHALLENGE_RIVALS.length-1,Number(data.challengeFurthestIndex)||challengeIndex));
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     closeChallengeScreen();
     showPopup("Challenge Progress Loaded", `Your challenge has been restored at <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong>.<p>To keep the save compact and portable, it restores your gauntlet position and bonuses, not an in-progress match's dice, cards, or stats. Start the current rival's match again.</p><button onclick="closePopup();renderChallengeScreen('roadmap')">Continue</button>`);
@@ -939,7 +947,7 @@ function challengeRoadmapHtml() {
     const playerName = (document.getElementById("p1-name")?.value || gameState.p1.name || "Challenger").split(" ")[0];
     const rivals = CHALLENGE_RIVALS.map((r,i) => `<div class="challenge-rival ${i===challengeIndex?'current':''} ${challengeCompleted.includes(i)?'defeated':''}">${challengePortrait(r.name,r.initials)}<div class="challenge-rival-name">${r.name}</div><div class="challenge-rival-tier">${r.tier}</div></div>`).join("");
     const markerPct = CHALLENGE_RIVALS.length === 1 ? 50 : 7.14 + challengeIndex * (85.72 / 6);
-    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName,playerName.slice(0,2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex+1} of 7 · Wins move you forward · Losses send you back</div>`;
+    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName,playerName.slice(0,2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex+1} of ${CHALLENGE_RIVALS.length} · Wins move you forward · ${USE_THREE_TRIES_CHALLENGE ? `Up to ${CHALLENGE_MAX_LOSSES_PER_RIVAL} tries per rival` : "Losses send you back"}</div>`;
 }
 function renderChallengeScreen(kind, extra={}) {
     const overlay=document.getElementById("challenge-overlay"), title=document.getElementById("challenge-title"), content=document.getElementById("challenge-content"), actions=document.getElementById("challenge-actions");
@@ -947,7 +955,7 @@ function renderChallengeScreen(kind, extra={}) {
     let html="", buttons="";
     if (kind === "rules") {
         title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
-        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. Lose and you'll be sent back one step, where you can fight your way forward again.</p><p><strong>One rule is absolute:</strong> losing at the first level ends the challenge. ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each rival has a signature transformation and a unique power that activates because of that form. In Challenge mode, rivals always use their signature forms, so their powers are active. You cannot choose your transformation; the rival selects it from the forms available for your character.</p><p>The seven opponents are randomly selected and ordered for each new run, excluding your own character. Your progress is shown on the roadmap. ${THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Small Energy bonuses and handicaps may apply between matches." : "Energy bonuses and handicaps are disabled; rival signature powers are the challenge modifiers."}</p>`;
+        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. ${USE_THREE_TRIES_CHALLENGE ? `You have ${CHALLENGE_MAX_LOSSES_PER_RIVAL} attempts against each rival; losses never send you backward.` : "Lose and you'll be sent back one step, where you can fight your way forward again."}</p><p><strong>${USE_THREE_TRIES_CHALLENGE ? "Three losses against the same rival end the challenge." : "One rule is absolute: losing at the first level ends the challenge."}</strong> ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each rival has a signature transformation and a unique power that activates because of that form. In Challenge mode, rivals always use their signature forms, so their powers are active. You cannot choose your transformation; the rival selects it from the forms available for your character.</p><p>The seven opponents are randomly selected and ordered for each new run, excluding your own character. Your progress is shown on the roadmap. ${THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Small Energy bonuses and handicaps may apply between matches." : "Energy bonuses and handicaps are disabled; rival signature powers are the challenge modifiers."}</p>`;
         buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
     } else if (kind === "roadmap") {
         title.textContent="✦ THE ROAD AHEAD ✦";
@@ -976,13 +984,19 @@ function renderChallengeScreen(kind, extra={}) {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}${extra.modText ? `<p style="text-align:center">${extra.modText}</p>` : ""}`;
         buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
+    } else if (kind === "retry") {
+        const r=CHALLENGE_RIVALS[challengeIndex];
+        const remaining=Math.max(0,CHALLENGE_MAX_LOSSES_PER_RIVAL-challengeLossesAtCurrentRival);
+        title.textContent="✦ ONE MORE CHANCE ✦";
+        html=`<p style="text-align:center;font-size:1.12rem">${extra.message || `${r.name} has won this round, but your challenge is not over.`}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd"><strong>${remaining} ${remaining===1?"attempt":"attempts"} remaining</strong> against ${r.name}. You will face this rival again; you will not be sent backward.</p><p style="text-align:center;color:#b9a8ca">Try again now, or quit and return to setup. Your furthest rival reached is recorded.</p>`;
+        buttons=`<button onclick="retryCurrentChallengeRival()">Try ${r.name} Again</button><button class="challenge-cancel" onclick="quitChallengeRun()">Quit Challenge</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>`;
     } else if (kind === "victory") {
         title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
         html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
         buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
     } else if (kind === "failed") {
         title.textContent="✦ CHALLENGE ENDED ✦";
-        html=`<p style="text-align:center;font-size:1.12rem">${challengeLastResult?.message || "The first rival has defeated you. The gauntlet resets, and your run is over."}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Every champion starts somewhere. Try again when you're ready.</p>`;
+        html=`<p style="text-align:center;font-size:1.12rem">${challengeLastResult?.message || "Your challenge run has ended."}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Your furthest rival reached has been saved to your challenge record. Every champion starts somewhere; begin a new run whenever you are ready.</p>`;
         buttons=`<button onclick="finishChallengeRun()">Return to Game Setup</button>`;
     }
     content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
@@ -1013,12 +1027,19 @@ function startChallengeRun(){
         challengeLineupSeed = null;
         CHALLENGE_RIVALS = CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
     }
-    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0;
+    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
     updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
     saveChallengeProgress();
     closeChallengeScreen(); renderChallengeScreen("roadmap");
 }
 function showChallengeIntro(){ renderChallengeScreen("intro"); }
+function retryCurrentChallengeRival(){
+    if(!challengeActive) return;
+    challengeModifierNext = THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "bonus" : "none";
+    challengeLastResult=null;
+    saveChallengeProgress();
+    renderChallengeScreen("intro");
+}
 function randomChallengePlayerForm(playerName){
     const list=CHARACTER_MANIFEST[playerName] || [];
     const choices=list.length?list:TRANSFORMS;
@@ -1049,6 +1070,7 @@ function continueFromChallengeGameOver(){
 function continueChallengeAfterResult(){
     closeChallengeScreen();
     if (challengeLastResult?.final) { playChallengeVictoryCinematic().then(()=>renderChallengeScreen("victory")); return; }
+    if (challengeLastResult?.retry) { renderChallengeScreen("retry",challengeLastResult); return; }
     if (challengeLastResult?.failed) { renderChallengeScreen("failed"); return; }
     renderChallengeScreen("roadmap");
 }
@@ -1135,6 +1157,7 @@ function handleChallengeMatchEnded(winnerId){
     if (!challengeActive || gameState.gameMode!=="solo") return false;
     challengeRunMatchesPlayed++;
     const rivalIndex=challengeIndex, rival=CHALLENGE_RIVALS[rivalIndex], won=winnerId===1;
+    challengeFurthestIndex=Math.max(challengeFurthestIndex,rivalIndex);
     updateChallengeRecord(r=>{
         if(won) r.matchesWon++; else r.matchesLost++;
         r.bestRivalIndex=Math.max(r.bestRivalIndex,rivalIndex+1);
@@ -1142,6 +1165,7 @@ function handleChallengeMatchEnded(winnerId){
     });
     if (won) {
         challengeCompleted=Array.from(new Set([...challengeCompleted,rivalIndex]));
+        challengeLossesAtCurrentRival=0;
         if (rivalIndex===CHALLENGE_RIVALS.length-1) {
             challengeLastResult={won:true,final:true,message:`You defeated ${rival.name}, the final rival, and completed The Seven!`,modText:"All seven rivals defeated."};
             updateChallengeRecord(r=>{r.runsCompleted++;r.lastOutcome="Completed The Seven";});
@@ -1149,8 +1173,19 @@ function handleChallengeMatchEnded(winnerId){
             return true;
         }
         challengeIndex=rivalIndex+1;
+        challengeFurthestIndex=Math.max(challengeFurthestIndex,challengeIndex);
         challengeModifierNext = THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "handicap" : "none";
         challengeLastResult={won:true,message:`${rival.name} has been defeated. The marker slides forward to ${CHALLENGE_RIVALS[challengeIndex].name}.`,modText:THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Next match handicap: the next rival receives +1 starting Energy." : ""};
+    } else if (USE_THREE_TRIES_CHALLENGE) {
+        challengeLossesAtCurrentRival++;
+        if (challengeLossesAtCurrentRival >= CHALLENGE_MAX_LOSSES_PER_RIVAL) {
+            challengeLastResult={won:false,failed:true,message:`After three defeats, ${rival.name} has ended your run. You reached Rival ${rivalIndex+1} of ${CHALLENGE_RIVALS.length}; your furthest progress remains on your record.`,modText:"The challenge is over, but your furthest rival reached has been saved to your record."};
+            updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome=`Challenge ended at ${rival.name}`;});
+            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
+            return true;
+        }
+        challengeModifierNext = THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "bonus" : "none";
+        challengeLastResult={won:false,retry:true,message:`${rival.name} wins this match, but not the challenge. Take a breath, adjust your strategy, and face ${rival.name} again.`,modText:THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? `Attempt ${challengeLossesAtCurrentRival+1} of ${CHALLENGE_MAX_LOSSES_PER_RIVAL} is next. Your next match starts with +2 bonus Energy.` : `Attempt ${challengeLossesAtCurrentRival+1} of ${CHALLENGE_MAX_LOSSES_PER_RIVAL} is next.`};
     } else {
         // Falling back reopens the previously defeated rival: restore their normal portrait.
         if (rivalIndex===0) {
@@ -1180,7 +1215,7 @@ async function quitChallengeRun() {
     finishChallengeRun(); 
  }
 function finishChallengeRun(){
-    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; challengeRunMatchesPlayed=0;
+    challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
     try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
     closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
@@ -3524,7 +3559,7 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261022.7"; // Update this label for each release.
+const GAME_VERSION = "20261022.8"; // Update this label for each release.
 function showAboutBox() {
     const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Hypnotic Duel - Created 2026 by SG.<br><img src="images/aboutBoxPicture.png" alt="Hypnotic Duel" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
     showPopup("About Hypnotic Duel", body);
@@ -4102,8 +4137,28 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     return { keep, hunting: false };
 }
 
+function cpuApplySignatureKeepPlan(keep) {
+    const dice=gameState.dice, p=gameState.p2, opp=gameState.p1;
+    const name=String(p.name||"").normalize("NFC").toLocaleLowerCase();
+    const faces=dice.map(d=>cpuFaceKey(d.face));
+    const counts=cpuCountsFromFaces(dice.map(d=>d.face));
+    const keepFace=key=>faces.forEach((f,i)=>{if(f===key)keep[i]=true;});
+    if(name==="xander") { if(counts.AR>=1) keepFace("AR"); }
+    else if(name==="luci") { if(counts.SU>=2 || (counts.SU>=1 && (opp.transform>=6 || gameState.submission>=2))) keepFace("SU"); }
+    else if(name==="siobhán" || name==="siobhan") { const key=counts.SU>=counts.TR?"SU":"TR"; if((key==="SU"?counts.SU:counts.TR)>=2) keepFace(key); }
+    else if(name==="hyeri") {
+        // Keep one of each distinct face and reroll duplicates to pursue Perfect Harmony without Trigger Word.
+        const seen=new Set();
+        faces.forEach((f,i)=>{if(!seen.has(f)){keep[i]=true;seen.add(f);}});
+    }
+    else if(name==="tex") { if(counts.SU>0) keepFace("SU"); }
+    return keep;
+}
 function cpuAdaptiveChooseKeep() {
     const plan = cpuAdaptiveKeepPlan(gameState.rerollsLeft);
+    plan.keep=cpuApplySignatureKeepPlan(plan.keep);
+    if(hasSignaturePower(2,"hyeri"))
+		plan.hunting=true;
     cpuBrain.hunting = plan.hunting;
     if (hasCard(2, 55) && !plan.keep.some((kp, i) => kp && cpuFaceKey(gameState.dice[i].face) === "TR")) { const i = gameState.dice.findIndex(d => cpuFaceKey(d.face) === "TR"); if (i >= 0) plan.keep[i] = true; }
     recEvent("cpu_keep", { dice: recFaces(gameState.dice), keep: plan.keep.map(k => (k ? 1 : 0)).join(""), hunting: !!plan.hunting, crisis: !!plan.crisis, rerolls: gameState.rerollsLeft });
@@ -4142,7 +4197,10 @@ function cpuExtraRerollGain() {
 function cpuPickSimmeringDie() {
     const dice = gameState.dice;
     const counts = cpuCountsFromFaces(dice.map(d => d.face));
-    if (counts.AR === 0) return -1;       // a lone 🔥 does nothing (Arousal and Stoking Fires both need 2+ dice), so only convert a die when we already have one
+    // a lone 🔥 does nothing (Arousal and Stoking Fires both need 2+ dice), so only convert a die when we already have one
+    // But Xander gets value from a single 🔥.
+    if (counts.AR === 0 && hasSignaturePower(2,"xander")) return -1;
+     
     if (hasCard(2, 3) && Object.keys(counts).every(k => counts[k] > 0)) return -1;   // don't break a Trigger Word
     const w = cpuFaceWeights();
     let bestIdx = -1, bestVal = Infinity;
@@ -4225,9 +4283,11 @@ function cpuAdaptiveCardScore(card) {
         if (v >= 2 && CPU_COUNTERS[k].includes(card.id)) counterBonus += Math.min(18, v * 3);
     });
     score += Math.min(30, counterBonus);
-    const onePushers = CPU_ONE_POINT_PUSHERS.filter(id => hasCard(1, id)).length;
-    if (card.id === 35) score += onePushers * 14;                                   // Mesmerizing Rhythm
-    if (CPU_ONE_POINT_PUSHERS.includes(card.id) && hasCard(1, 35)) score -= 35;     // their Rhythm blocks our 1-pushes
+	// Mesmerizing Rhythm might block our 1-pushes?
+    const onePushers = hasCard(1, 36) ? 0 : CPU_ONE_POINT_PUSHERS.filter(id => hasCard(1, id)).length;
+	if (card.id === 35) score += onePushers * 14;
+	if (CPU_ONE_POINT_PUSHERS.includes(card.id) && hasCard(1, 35) && !hasCard(2, 36)) score -= 35;     
+	
     if (hasCard(1, 21) && [0, 14, 8, 18, 31].includes(card.id)) score -= 10;        // Switch Play bounces Trance
     if (hasCard(1, 50) && [6, 13, 49].includes(card.id)) score -= 10;               // Mutual Heat bounces Arousal
 
@@ -4571,6 +4631,8 @@ function cpuTierKeepPlan(level, r) {
         if (aSyn && counts.AR >= 2) keepFace("AR");
         if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
     }
+    cpuApplySignatureKeepPlan(keep);
+
     // believable mistakes: second-guess a kept die and reroll it anyway (never one that is part of a finished triple)
     const slipKeep = (cfg.slip && cfg.slip.keep) || 0;
     if (slipKeep > 0) {
@@ -4582,7 +4644,7 @@ function cpuTierKeepPlan(level, r) {
             if (Math.random() < slipKeep) keep[i] = false;
         });
     }
-    return cpuReleaseUselessKeeps(keep, r);
+    return cpuApplySignatureKeepPlan(cpuReleaseUselessKeeps(keep, r));
 }
 
 function cpuLegacyHasFreeDice() {              // would a reroll change anything? (all levels except Master)
@@ -4612,13 +4674,13 @@ function cpuTierCardScore(card, level) {
     // the human is close to losing: offensive cards
     const pressureCards = level === "transformer" ? [2, 4, 25, 30, 40, 41, 51] : [2, 4, 10, 17, 24, 30, 39, 41, 52];
     if ((p1.transform >= 6 || gameState.submission <= -3) && pressureCards.includes(card.id)) score += (level === "defensive") ? 15 : 30;
-    if (level === "trans" && CPU_BURST[card.id]) {       // burst cards are for the final push, not for the middle of the game
+    if (level === "transformer" && CPU_BURST[card.id]) {       // burst cards are for the final push, not for the middle of the game
         const bp = cpuBurstPlan();
         if (bp.best.dmg >= bp.remaining && bp.best.ids.includes(card.id)) score += 90;      // this finishes the game
         else if (bp.remaining <= 4) score += 30;                                            // within reach: spend the energy
         else score -= 25;                                                                   // too early: keep the energy, the dice do the work
     }
-    if (level === "trans" && (CPU_STRATEGIES.transform.cards[card.id] || [7, 16, 43, 20].includes(card.id))) score += 10;   // cards that go with the plan
+    if (level === "transformer" && (CPU_STRATEGIES.transform.cards[card.id] || [7, 16, 43, 20].includes(card.id))) score += 10;   // cards that go with the plan
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
     if ((level === "v23low" || level === "transformer") && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
@@ -4682,8 +4744,8 @@ function cpuTierNextAction(level) {
         if (target && p.energy >= getMarketWipeCost(2)) return { type: "wipe", why: `deny ${target.card.name}` };
     }
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
-    const threat = liked.find(i => !canPay(i) && (i.humanCanAfford || (level === "trans" && i.humanNear)) && i.score >= cfg.denyMin);
-    if (threat && !cpuBrain.denyBlind && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < (level === "trans" ? 2 : 1)) && p.energy >= getMarketWipeCost(2) && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
+    const threat = liked.find(i => !canPay(i) && (i.humanCanAfford || (level === "transformer" && i.humanNear)) && i.score >= cfg.denyMin);
+    if (threat && !cpuBrain.denyBlind && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < (level === "transformer" ? 2 : 1)) && p.energy >= getMarketWipeCost(2) && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
     let best = info.filter(i => i.passes && canPay(i) && i.score >= cfg.buy).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
@@ -4692,7 +4754,7 @@ function cpuTierNextAction(level) {
             const sf = cpuBrain.savingFor;
             if (!sf || sf.id !== target.card.id) cpuBrain.savingFor = { id: target.card.id, round: gameState.round, turns: 1 };
             else if (sf.round !== gameState.round) { sf.round = gameState.round; sf.turns++; }
-            if (cpuBrain.savingFor.turns <= cfg.patience) best = null;
+            if (cpuBrain.savingFor.turns <= cfg.patience) return null;   // keep the energy and the target card: end the shop
         }
     }
     if (best) return { type: "buy", idx: best.idx, name: best.card.name };
@@ -4783,7 +4845,7 @@ function cpuBurningUpCost() {                // what the 🔥 rise costs in lost
     const lost = cpuArousalBand(Math.min(5, p.arousal + rise)) - cpuArousalBand(p.arousal);
     let cost = lost * 0.3 + rise * 0.03;
     const d = getCpuDifficulty();
-    if (d === "defensive") cost *= 2.5; else if (d === "aggressive") cost *= 0.7; else if (d === "trans") cost *= 0.8;
+    if (d === "defensive") cost *= 2.5; else if (d === "aggressive") cost *= 0.7; else if (d === "transformer") cost *= 0.8;
     return cost;
 }
 // value of one more reroll for Normal / Hard / Expert / Virtuoso, using their own keep plan
@@ -6205,11 +6267,9 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
 // ============================================================
 // CARDS 54-61 (engine side). The CPU and the tests use these; your own implementation may differ in details.
 // ============================================================
-const BLANK_FACE = "⬜ BLANK";
 function playerById(pid) { return pid === 1 ? gameState.p1 : gameState.p2; }
 function oppIdOf(pid) { return pid === 1 ? 2 : 1; }
 function isHumanActor(pid) { return pid === 1 || gameState.gameMode !== "solo"; }
-function specialDieFace(pObj) { return Math.random() < 0.5 ? pObj.specialFace : BLANK_FACE; }   // 3 faces of the chosen kind, 3 blanks
 
 // 54 Burning Up: up to 2 extra rerolls per turn; your 🔥 rises by 1 after the first and by 2 after the second
 function canUseBurningUp(pid) {
@@ -6228,19 +6288,7 @@ function useBurningUp(pid) {
     syncToFirebase(); updateUI();
     return true;
 }
-// 56 Deeper Bargains: one die becomes 3 x chosen face + 3 blanks
-function applyDeeperBargains(pid, face) {
-    const p = playerById(pid);
-    p.specialFace = face;
-    log(`${p.name}'s Deeper Bargains: one die now shows ${face} on three faces and blank on three.`);
-    queueCardTrigger(pid, 56, `Special die: ${face}`);
-    syncToFirebase(); updateUI();
-}
-function chooseDeeperBargains(pid) {
-    if (!isHumanActor(pid)) { applyDeeperBargains(pid, cpuChooseSpecialFace()); return; }
-    showChoiceDialog({ key: "deeperbargains", title: "Deeper Bargains", message: "Choose the face for your special die (three copies of it, three blanks):",
-        options: FACES.map(f => ({ label: f, onClick: () => applyDeeperBargains(pid, f) })) });
-}
+
 // 58 Submissive Break: discard one Keep card belonging to either player; its owner gains 2 ⚡
 function submissiveBreakTargets() {
     const out = [];
@@ -6458,7 +6506,8 @@ function startTurn() {
     //inventory: activeP.inventory.map(c => c.id)
 //});
     
-    gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
+    //gameState.dice = Array(diceCount).fill({ face: "-", kept: false });
+	gameState.dice = Array.from({length: diceCount}, () => ({ face: "-", kept: false }));
     log(`--- ${activeP.name}'s Turn ---`);
     // Show the CPU's turn as soon as it starts. When the human turn is merely prepared
     // after the CPU finishes, keep the CPU Chronicle card selected until the human rolls.
@@ -6989,15 +7038,9 @@ function pushSubmission(amount, sourcePlayer = null) {
     if (amount === 0) return;
     const validSource = sourcePlayer !== null && [1,2].includes(Number(sourcePlayer));
     const targetId = validSource ? (Number(sourcePlayer) === 1 ? 2 : 1) : null;
-
-    // Alex cannot benefit from defensive Submission cards; his signature power replaces their protection.
-    if (validSource && Math.abs(amount) === 1 && hasCard(targetId, 35) && !hasSignaturePower(targetId, "alex")) {
-        queueCardTrigger(targetId, 35, "Blocked a 1-point Submission push", "reaction");
-        log("Mesmerizing Rhythm blocked exactly 1 point of push!");
-        return;
-    }
-
-    // Card 36 Check: Only push further if pushing TOWARDS opponent.
+	
+	
+    // Card 36 first: Deeper Trance adds its point before anything can block the push.
     if (validSource && hasCard(sourcePlayer, 36)) {
         if ((sourcePlayer === 1 && amount > 0) || (sourcePlayer === 2 && amount < 0)) {
             amount += (sourcePlayer === 1 ? 1 : -1);
@@ -7005,6 +7048,14 @@ function pushSubmission(amount, sourcePlayer = null) {
             queueCardTrigger(sourcePlayer, 36, `Deepened ${affectedPlayer.name}'s submission by 1`);
             log(`Deeper Trance deepened ${affectedPlayer.name}'s submission by 1.`);
         }
+    }
+    
+	// Mesmerizing Rhythm then blocks a push that is still exactly 1 point.
+    // Alex cannot benefit from defensive Submission cards; his signature power replaces their protection.
+    if (validSource && Math.abs(amount) === 1 && hasCard(targetId, 35) && !hasSignaturePower(targetId, "alex")) {
+        queueCardTrigger(targetId, 35, "Blocked a 1-point Submission push", "reaction");
+        log("Mesmerizing Rhythm blocked exactly 1 point of push!");
+        return;
     }
 
     // Alex absorbs one point of the final incoming push per opposing turn.
@@ -7069,6 +7120,11 @@ function drawCardFromDeck() {
 function discardCard(card) {
     if (!card) return;
 
+	if (Number(card.id) === 56) // deeper Bargains
+	{
+		// reset for next draw (if it ever comes)
+		card.chosenFace = null;
+	}
     // Store a copy so later changes to an inventory card cannot
     // accidentally modify the discarded version.
     discardPile.push(JSON.parse(JSON.stringify(card)));
@@ -7111,19 +7167,23 @@ function wipeMarket() {
     const oldCards = marketContainer ? Array.from(marketContainer.querySelectorAll(":scope > .card")) : [];
     marketWipeAnimating = true;
     p.energy -= wipeCost;
-    if (gameState.gameMode === "solo" && Number(gameState.activePlayer) === 2 && hasSignaturePower(2, "zixuan")) {
+    if (gameState.gameMode === "solo" && Number(gameState.activePlayer) === 2) {
         // The CPU's shop planner is synchronous. Resolve Zixuan's repeated one-Energy wipes
         // immediately so it can inspect each fresh market rather than issuing overlapping wipes.
         discardCards(market);
         market = [];
         refillMarket();
         playSound("whoosh");
-        log(`${p.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${market.map(card => card && card.name).filter(Boolean).join(", ") || "none"}`);
-        marketWipeAnimating = false;
-        marketDealAnimating = false;
-        syncToFirebase();
-        updateUI();
-        return;
+		const newCards = market.map(card => card && card.name).filter(Boolean).join(", ") || "none";
+		if (hasSignaturePower(2, "zixuan"))
+			log(`${p.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${newCards}`);
+		else
+			log(`Market Wiped. New cards: ${newCards}`);
+		marketWipeAnimating = false;
+		marketDealAnimating = false;
+		syncToFirebase();
+		updateUI();
+		return;
     }
     if (marketContainer) marketContainer.classList.add("market-wipe-running");
     oldCards.forEach((el, i) => {
@@ -7189,8 +7249,8 @@ function chooseDeeperBargainsFace(playerId) {
         { label: "👁️ Transform", value: "👁️ TRANSFORM" }
     ];
     if (playerId === 2 && gameState.gameMode === "solo") {
-        card.chosenFace = "👁️ TRANSFORM";
-        log("CPU chose 👁️ Transform for Deeper Bargains.");
+        card.chosenFace = cpuChooseSpecialFace();
+        log("CPU chose ${card.chosenFace} for Deeper Bargains.");
         return;
     }
     showChoiceDialog({
@@ -7794,8 +7854,9 @@ function executeCPUTurn() {
                     }
 
                     if (bestIndex !== -1) {
-                        buyCard(bestIndex);
-                        boughtSomething = true;
+						// only mark bought if we actually bought something
+                        if (buyCard(bestIndex))
+							boughtSomething = true;
 					} else if (!gameState.showEnergyActions) {
                         // High Energy Wipe Check
                         let diff = getCpuDifficulty();
