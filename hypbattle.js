@@ -80,8 +80,14 @@ const CHARACTERS = [
 ];
 const NAMES = CHARACTERS.map(c => c.name);
 function getGender(name) {
-    const c = CHARACTERS.find(c => c.name === String(name || "").split(" ")[0]);
-    return c ? c.gender : null;
+	const firstName = String(name || "").trim().split(/\s+/)[0];
+    const normalized = normalizedCharacterName(firstName);
+	
+    const character = CHARACTERS.find(
+        c => normalizedCharacterName(c.name) === normalized
+    );
+
+    return character ? character.gender : null;
 }
 
 // {HIM}	he or she for the human player
@@ -571,6 +577,14 @@ function normalizedCharacterName(name) {
         .split(/\s+/)[0]
         .toLocaleLowerCase();
 }
+// Convert a character name to its unaccented filename form.
+// Preserve the capitalization of ordinary names.
+function characterFilename(name) {
+    return String(name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+}
 function hasSignaturePower(playerId, characterNameOrKey) {
     if (!gameState || ![1,2].includes(Number(playerId))) return false;
     const pObj = Number(playerId) === 1 ? gameState.p1 : gameState.p2;
@@ -936,7 +950,7 @@ async function challengeTestFinish(result){
 
 
 function challengePortrait(name, initials, extraClass="") {
-    const safe = String(name).replace(/[^a-z0-9 _-]/gi, "");
+    const safe = characterFilename(name).replace(/[^a-z0-9 _-]/gi, "");
     const rivalIndex = CHALLENGE_RIVALS.findIndex(r => r.name === name);
     const transformed = rivalIndex >= 0 && challengeCompleted.includes(rivalIndex);
     const suffix = transformed ? "_head_transformed" : "_head";
@@ -991,8 +1005,9 @@ function renderChallengeScreen(kind, extra={}) {
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message || `${r.name} has won this round, but your challenge is not over.`}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd"><strong>${remaining} ${remaining===1?"attempt":"attempts"} remaining</strong> against ${r.name}. You will face this rival again; you will not be sent backward.</p><p style="text-align:center;color:#b9a8ca">Try again now, or quit and return to setup. Your furthest rival reached is recorded.</p>`;
         buttons=`<button onclick="retryCurrentChallengeRival()">Try ${r.name} Again</button><button class="challenge-cancel" onclick="quitChallengeRun()">Quit Challenge</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>`;
     } else if (kind === "victory") {
+		
         title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
-        html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=>`<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${r.name}/${r.name}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
+        html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=> {const safe=characterFilename(r.name); return `<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${safe}/${safe}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`;}).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
         buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
     } else if (kind === "failed") {
         title.textContent="✦ CHALLENGE ENDED ✦";
@@ -1104,8 +1119,9 @@ async function playChallengeVictoryCinematic(){
         for(let i=0;i<CHALLENGE_RIVALS.length;i++){
             if(challengeVictoryCinematicSkip) break;
             const rival=CHALLENGE_RIVALS[i];
-            const base=`images/avatars/${rival.name}/${rival.name}_to_${rival.form}_`;
-            const zero=await preloadCinematicStage(base+"0.jpg") || await preloadCinematicStage(`images/avatars/${rival.name}/${rival.name}_baseline.jpg`);
+			const safeName = characterFilename(rival.name);
+            const base=`images/avatars/${safeName}/${safeName}_to_${rival.form}_`;
+            const zero=await preloadCinematicStage(base+"0.jpg") || await preloadCinematicStage(`images/avatars/${safeName}/${safeName}_baseline.jpg`);
             const ten=await preloadCinematicStage(base+"10.jpg");
             if(challengeVictoryCinematicSkip) break;
             name.classList.remove("cvc-name-flash");
@@ -1883,7 +1899,9 @@ function updateLobbyUI(me, opp, note) {
     set("lobby-note", msg);
     const img = document.getElementById("lobby-opp-image");
     if (img) {
-        if (opp) { const p = `images/avatars/${opp.name}/${opp.name}_baseline.jpg`; img.innerHTML = `<img src="${p}" onclick="openImageModal('${p}')" onerror="this.outerHTML='Image Req:<br>${opp.name}_baseline.jpg'"/>`; }
+        if (opp) {
+			const safeName = characterFilename(opp.name);
+			const p = `images/avatars/${safeName}/${safeName}_baseline.jpg`; img.innerHTML = `<img src="${p}" onclick="openImageModal('${p}')" onerror="this.outerHTML='Image Req:<br>${safeName}_baseline.jpg'"/>`; }
         else img.innerHTML = `<h2>?</h2>`;
     }
     const btn = document.getElementById("lobby-ready-btn");
@@ -2007,16 +2025,17 @@ function updateSetupImages() {
     ensureSetupEtherealBackground();
     let p1Name = document.getElementById("p1-name").value.split(" ")[0];
     let cpuName = document.getElementById("cpu-name").value;
-    
-    let p1ImgPath = `images/avatars/${p1Name}/${p1Name}_baseline.jpg`;
-    document.getElementById("setup-p1-image").innerHTML = `<img src="${p1ImgPath}" onclick="openImageModal('${p1ImgPath}')" onerror="this.outerHTML='Image Req:<br>${p1Name}_baseline.jpg'"/>`;
+    const safeP1Name = characterFilename(p1Name);
+    let p1ImgPath = `images/avatars/${safeP1Name}/${safeP1Name}_baseline.jpg`;
+    document.getElementById("setup-p1-image").innerHTML = `<img src="${p1ImgPath}" onclick="openImageModal('${p1ImgPath}')" onerror="this.outerHTML='Image Req:<br>${safeP1Name}_baseline.jpg'"/>`;
 
     if (cpuName === "Random") {
         document.getElementById("setup-cpu-image").innerHTML = `<h2>?</h2>`;
     } else {
         let cpuTargetName = cpuName.split(" ")[0];
-        let cpuImgPath = `images/avatars/${cpuTargetName}/${cpuTargetName}_baseline.jpg`;
-        document.getElementById("setup-cpu-image").innerHTML = `<img src="${cpuImgPath}" onclick="openImageModal('${cpuImgPath}')" onerror="this.outerHTML='Image Req:<br>${cpuTargetName}_baseline.jpg'"/>`;
+		const safeCpuTargetName = characterFilename(cpuName);
+        let cpuImgPath = `images/avatars/${safeCpuTargetName}/${safeCpuTargetName}_baseline.jpg`;
+        document.getElementById("setup-cpu-image").innerHTML = `<img src="${cpuImgPath}" onclick="openImageModal('${cpuImgPath}')" onerror="this.outerHTML='Image Req:<br>${safeCpuTargetName}_baseline.jpg'"/>`;
     }
 }
 
@@ -5300,7 +5319,8 @@ async function playFinalTransformationCinematic(loserId) {
 	}
     if (counterWrap) counterWrap.style.display = "block";
 
-    const stagePath = stage => `images/avatars/${loser.name}/${loser.name}_to_${loser.transformTarget}_${Math.min(10, Math.max(0, Number(stage) || 0))}.jpg`;
+	const normalLoserName = characterFilename(loser.name);
+    const stagePath = stage => `images/avatars/${normalLoserName}/${normalLoserName}_to_${loser.transformTarget}_${Math.min(10, Math.max(0, Number(stage) || 0))}.jpg`;
     let shownStage = null;
     // Begin at stage 0, then play the complete 1–10 sequence regardless of the actual finishing stage.
     for (let stage = 0; stage <= 10; stage++) {
@@ -5425,7 +5445,8 @@ function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     img.onload = commit;
     img.onerror = () => {
         if (container.dataset.portraitToken !== token) return;
-        container.textContent = `Image Req: ${filename}`;
+		const safe = characterFilename(filename);
+        container.textContent = `Image Req: ${safe}`;
     };
     img.src = imgPath;
     if (img.complete) commit();
@@ -5534,8 +5555,9 @@ function updateUI() {
         const previousTransform = lastDisplayedTransform[p];
         const transformDelta = previousTransform === null ? 0 : Number(pObj.transform) - previousTransform;
         const stageChanged = previousTransform !== null && Math.min(10, Number(pObj.transform)) !== Math.min(10, previousTransform);
-        const filename = `${pObj.name}_to_${pObj.transformTarget}_${Math.min(10, pObj.transform)}.jpg`;
-        const imgPath = `images/avatars/${pObj.name}/${filename}`;
+		const normalPObjName = characterFilename(pObj.name);
+        const filename = `${normalPObjName}_to_${pObj.transformTarget}_${Math.min(10, pObj.transform)}.jpg`;
+        const imgPath = `images/avatars/${normalPObjName}/${filename}`;
         const container = document.getElementById(`${p}-image`);
         updateAvatarPortrait(container, imgPath, filename, stageChanged);
         if (previousTransform !== null && transformDelta !== 0) {
@@ -7925,8 +7947,9 @@ function syncFinalBoardPortrait(playerId) {
     if (label) label.textContent = `${level} / 10`;
     if (track) track.setAttribute('aria-valuenow', String(level));
     const stage = Math.min(10, Math.max(0, Number(player.transform) || 0));
-    const filename = `${player.name}_to_${player.transformTarget}_${stage}.jpg`;
-    const path = `images/avatars/${player.name}/${filename}`;
+	const normalPlayerName = characterFilename(player.name);
+    const filename = `${normalPlayerName}_to_${player.transformTarget}_${stage}.jpg`;
+    const path = `images/avatars/${normalPlayerName}/${filename}`;
         const container = document.getElementById(`${key}-image`);
     if (!container) return;
     const token = String((Number(container.dataset.portraitToken) || 0) + 1);
@@ -7942,7 +7965,8 @@ function syncFinalBoardPortrait(playerId) {
     img.onload = null;
     img.onerror = () => {
         if (container.dataset.portraitToken !== token) return;
-        container.textContent = `Image Req: ${filename}`;
+		const safe = characterFilename(filename);
+        container.textContent = `Image Req: ${safe}`;
     };
     img.src = path;
 }
@@ -8028,9 +8052,10 @@ function presentFinishedGame() {
     document.getElementById("go-p1-status").innerText = p1Wins ? "WINNER" : "TRANSFORMED";
 
     const p1FinalT = Math.min(10, Math.max(0, Number(gameState.p1.transform) || 0));
-    const p1Path = `images/avatars/${gameState.p1.name}/${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
+	const normalP1Name = characterFilename(gameState.p1.name);
+    const p1Path = `images/avatars/${normalP1Name}/${normalP1Name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
     document.getElementById("go-p1-image").innerHTML =
-        `<img src="${p1Path}" onclick="openImageModal('${p1Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p1.name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
+        `<img src="${p1Path}" onclick="openImageModal('${p1Path}')" onerror="this.outerHTML='Image Req:<br>${normalP1Name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
     document.getElementById("go-p1-panel").classList.remove("winner-highlight");
     if (p1Wins) document.getElementById("go-p1-panel").classList.add("winner-highlight");
 
@@ -8038,9 +8063,10 @@ function presentFinishedGame() {
     document.getElementById("go-p2-status").innerText = !p1Wins ? "WINNER" : "TRANSFORMED";
 
     const p2FinalT = Math.min(10, Math.max(0, Number(gameState.p2.transform) || 0));
-    const p2Path = `images/avatars/${gameState.p2.name}/${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
+	const normalP2Name = characterFilename(gameState.p2.name);
+    const p2Path = `images/avatars/${normalP2Name}/${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
     document.getElementById("go-p2-image").innerHTML =
-        `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${gameState.p2.name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
+        `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
     document.getElementById("go-p2-panel").classList.remove("winner-highlight");
     if (!p1Wins) document.getElementById("go-p2-panel").classList.add("winner-highlight");
 
