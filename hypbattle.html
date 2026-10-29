@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranceformation - Beta V20261023.1</title>
+    <title>Tranceformation - Beta V20261028.1</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="apple-icon-72x72.png">
@@ -137,31 +137,26 @@
                     <div class="image-stub setup-preview" id="setup-p1-image" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="p1-name" onchange="onP1NameChange()"></select>
                     <label id="p1-transform-label">Transform Opponent into:</label> <select id="p1-transform-type" onchange="onTransformSelectChange('p1-transform-type')"></select>
-                    <div id="p1-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
-                        <label>Lookup Transform:</label> <select id="p1-lookup" onchange="onLookupChange('p1')"></select>
-                    </div>
                 </div>
                 <div class="modal-col" id="p2-setup-col">
                     <h3 id="p2-header-label" style="color: var(--cpu)">CPU</h3>
                     <div class="image-stub setup-preview" id="setup-cpu-image" style="height: 138px; margin-bottom: 5px;"></div>
                     <label>Name:</label> <select id="cpu-name" onchange="onCpuNameChange()"></select>
                     <label id="cpu-transform-label">Transformation Opponent info:</label> <select id="cpu-transform-type" onchange="onTransformSelectChange('cpu-transform-type')"></select>
-                    <div id="cpu-lookup-wrap" style="display:flex; flex-direction:column; gap:10px;">
-                        <label>Lookup Transform:</label> <select id="cpu-lookup" onchange="onLookupChange('cpu')"></select>
-                    </div>
                     <div id="cpu-diff-wrap" style="display:flex; flex-direction:column; gap:10px;">
                         <label>Difficulty:</label>
                         <select id="cpu-difficulty">
-                            <option value="random">Beginner</option>
-                            <option value="smart">Easy</option>
-                            <option value="aggressive" selected>Normal</option>
-                            <option value="v23low">Hard</option>
-                            <option value="defensive">Expert</option>
-							<option value="transformer">Virtuoso</option>
-                            <option value="adaptive" id="cpu-diff-master-option">Master</option>
+                            <option value="random">🐣 Beginner</option>
+                            <option value="smart">🌱 Easy</option>
+                            <option value="aggressive" selected>🗡️ Normal</option>
+                            <option value="v23low">⚔️ Hard</option>
+                            <option value="defensive">🛡️ Expert</option>
+                            <option value="transformer">🎻 Virtuoso</option>
+                            <option value="adaptive" id="cpu-diff-master-option">👑 Master</option>
                         </select>
                     </div>
                 </div>
+				<div class="setup-begin-row"><button class="start-btn" id="start-game-btn" onclick="onStartClicked()">✧ Begin Duel ✧</button></div>
                 <div class="modal-col setup-mode-section">
                     <label>Game Mode:</label>
                     <select id="game-mode-option" onchange="toggleGameMode()">
@@ -169,7 +164,7 @@
                         <option value="pvp">2 Player Local</option>
                         <option value="online">2 Player Online (Firebase)</option>
                     </select>
-                    <div id="challenge-launch-wrap"><button type="button" id="challenge-launch-btn" onclick="openChallengeRules()">✦ Solo Challenge: The Seven ✦</button></div>
+                    <div id="challenge-launch-wrap"><button type="button" id="challenge-launch-btn" onclick="openChallengeRules()"><span class="cl-main">✦ Solo Challenge: The Seven ✦</span><span class="cl-sub">Seven rivals · One run</span></button></div>
                    <div id="online-room-wrap" style="display:none; flex-direction:column; gap:10px; 		margin-top:10px; background: #222; padding: 12px; border-radius: 6px;">
                         <label style="font-weight: bold; color: var(--accent);">Online Setup:</label>
                         <div style="display: flex; gap: 8px;">
@@ -214,18 +209,25 @@
                 </div>
             </div>
 			<div class="setup-footer-actions">
-				<button type="button" class="themed-secondary-btn" onclick="openOptionsModal('setup')">⚙ Options &amp; Tools</button>
+				<button type="button" class="themed-secondary-btn" onclick="openHelpModal('quick')">? How to Play</button>
+				<button type="button" class="themed-secondary-btn" onclick="prepareGuidedTutorial()">✦ Tutorial</button>
+				<button type="button" class="themed-secondary-btn" onclick="openOptionsModal('setup')">⚙ Options</button>
+				<button type="button" class="themed-secondary-btn" onclick="showGlobalLeaderboard()">🌐 Statistics</button>
 				<button type="button" class="themed-secondary-btn" onclick="showAboutBox()">ⓘ About</button>
-				<button type="button" class="themed-secondary-btn" onclick="prepareGuidedTutorial()">✦ Guided Tutorial</button>
-				<button type="button" class="themed-secondary-btn" onclick="showGlobalLeaderboard()">🌐 Leaderboard</button>
 			</div>
-            <button class="start-btn" id="start-game-btn" onclick="onStartClicked()">✧ Begin Duel ✧</button>
         </div>
     </div>
 
     <!-- SHARED DISPLAY / AUDIO OPTIONS AND GAME TOOLS -->
     <div id="options-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content options-modal-content">
+			<button
+				type="button"
+				class="options-close-x"
+				onclick="closeOptionsModal()"
+				aria-label="Close Options & Tools"
+				title="Return to Game"
+			>✕</button>
             <h2>✧ OPTIONS &amp; TOOLS ✧</h2>
             <p class="options-subtitle">Tune the experience or consult your grimoire.</p>
 
@@ -300,11 +302,11 @@
                 <div class="options-tool-grid">
                     <button type="button" onclick="openHelpModal('quick')">? How to Play</button>
                     <button type="button" onclick="openHelpModal('cards')">▤ Card Library</button>
-                    <button type="button" onclick="showGlobalLeaderboard()">🌐 Global Leaderboard</button>
                     <button type="button" onclick="showChallengeRecord()">✦ The Seven Record</button>
 					<button type="button" onclick="resetChallengeRecord()">↻ Reset Seven Record</button>
                     <button type="button" onclick="exportChallengeSave()">⇧ Export Challenge Save</button>
                     <button type="button" onclick="importChallengeSave()">⇩ Load Challenge Save</button>
+					 <button type="button" onclick="showGlobalLeaderboard()">🌐 Global Leaderboard</button>
                     <button type="button" onclick="recDownload()">⇩ Download Game Logs</button>
                     <button type="button" onclick="showAboutBox()">ⓘ About</button>
                     <button type="button" class="danger-tool" onclick="confirmResetGame()">↻ Reset Game</button>
@@ -410,7 +412,7 @@
         <div class="modal-content" style="width: 400px; text-align: center;">
             <h2 id="popup-title">Title</h2>
             <div id="popup-body" style="margin: 20px 0; font-size: 1.3em; line-height: 1.8;">Body</div>
-            <button class="start-btn" onclick="document.getElementById('game-popup').style.display='none'">Close</button>
+            <button class="start-btn" onclick="closeTransformationSigil()">Close</button>
         </div>
     </div>
 

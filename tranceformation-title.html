@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#100b1b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Tranceformation</title>
+<style>
+:root { color-scheme: dark; --violet:#b56aff; --cyan:#65e2ff; --font-display: 'Cinzel', Georgia, serif; }
+* { box-sizing:border-box; }
+html,body { width:100%; min-height:100%; margin:0; }
+body {
+  min-height:100svh; overflow:hidden; display:grid; place-items:center; isolation:isolate;
+  background:#100b1b; color:#fff; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+#ambience { position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; background:
+  radial-gradient(ellipse at 50% 48%,rgba(81,37,121,.48),transparent 57%),
+  radial-gradient(ellipse at 12% 85%,rgba(28,113,147,.22),transparent 48%),
+  radial-gradient(ellipse at 88% 12%,rgba(135,50,173,.24),transparent 46%),
+  #100b1b; }
+.vortex { position:absolute; width:min(118vmax,1800px); aspect-ratio:1; left:50%; top:50%; border-radius:50%; transform:translate(-50%,-50%); mix-blend-mode:screen; }
+.vortex.one { opacity:.62; background:repeating-conic-gradient(from 0deg,transparent 0deg 7deg,rgba(190,119,255,.48) 8deg 9deg,transparent 10deg 20deg,rgba(87,218,255,.36) 21deg 22deg,transparent 23deg 34deg); -webkit-mask-image:radial-gradient(circle,transparent 0 12%,#000 23% 58%,transparent 73%); mask-image:radial-gradient(circle,transparent 0 12%,#000 23% 58%,transparent 73%); animation:spin 100s linear infinite; }
+.vortex.two { width:min(86vmax,1300px); opacity:.42; background:repeating-conic-gradient(from 17deg,transparent 0deg 15deg,rgba(202,150,255,.46) 16deg 17deg,transparent 18deg 34deg,rgba(93,219,255,.3) 35deg 36deg,transparent 37deg 53deg); -webkit-mask-image:radial-gradient(circle,transparent 0 7%,#000 18% 51%,transparent 69%); mask-image:radial-gradient(circle,transparent 0 7%,#000 18% 51%,transparent 69%); animation:spinBack 138s linear infinite; }
+.glow { position:absolute; width:70vmax; height:70vmax; left:50%; top:50%; border-radius:50%; transform:translate(-50%,-50%); background:radial-gradient(circle,rgba(171,82,255,.35),rgba(58,191,255,.16) 36%,transparent 69%); animation:breathe 10s ease-in-out infinite alternate; }
+.symbols { position:absolute; inset:0; }
+.symbols span { position:absolute; color:rgba(245,231,255,.88); font-size:clamp(21px,3vw,43px); text-shadow:0 0 10px rgba(190,115,255,.95),0 0 24px rgba(73,211,255,.75),0 0 45px rgba(157,78,221,.65); filter:drop-shadow(0 0 7px rgba(157,78,221,.55)); animation:float 24s ease-in-out infinite alternate; }
+.symbols span:nth-child(1){left:8%;top:20%;animation-delay:-7s}.symbols span:nth-child(2){left:23%;top:75%;animation-delay:-16s}.symbols span:nth-child(3){left:84%;top:19%;animation-delay:-11s}.symbols span:nth-child(4){left:74%;top:81%;animation-delay:-20s}.symbols span:nth-child(5){left:48%;top:12%;animation-delay:-4s}.symbols span:nth-child(6){left:91%;top:51%;animation-delay:-13s}.symbols span:nth-child(7){left:12%;top:56%;animation-delay:-22s}.symbols span:nth-child(8){left:37%;top:88%;animation-delay:-9s}.symbols span:nth-child(9){left:64%;top:27%;animation-delay:-18s}.symbols span:nth-child(10){left:29%;top:34%;animation-delay:-12s}.symbols span:nth-child(11){left:89%;top:70%;animation-delay:-5s}.symbols span:nth-child(12){left:56%;top:78%;animation-delay:-15s}.symbols span:nth-child(13){left:17%;top:12%;animation-delay:-8s}.symbols span:nth-child(14){left:32%;top:57%;animation-delay:-19s}.symbols span:nth-child(15){left:68%;top:46%;animation-delay:-3s}.symbols span:nth-child(16){left:79%;top:34%;animation-delay:-23s}.symbols span:nth-child(17){left:43%;top:91%;animation-delay:-12s}.symbols span:nth-child(18){left:5%;top:77%;animation-delay:-6s}.symbols span:nth-child(19){left:96%;top:28%;animation-delay:-17s}.symbols span:nth-child(20){left:52%;top:35%;animation-delay:-21s}.symbols span:nth-child(21){left:26%;top:20%;animation-delay:-10s}.symbols span:nth-child(22){left:61%;top:63%;animation-delay:-14s}.symbols span:nth-child(23){left:39%;top:9%;animation-delay:-25s}.symbols span:nth-child(24){left:88%;top:88%;animation-delay:-9s}
+main { width:100%; padding:2rem; text-align:center; animation:arrive 1.8s cubic-bezier(.2,.8,.2,1) both; }
+h1 { margin:0; font-size:clamp(2.8rem,9.2vw,8rem); line-height:1.02; font-weight:850; letter-spacing:-.065em; text-wrap:balance; color:#fff; background:linear-gradient(105deg,#fff 10%,#e7caff 38%,#9cecff 68%,#fff 90%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 0 18px rgba(177,105,255,.45)) drop-shadow(0 0 48px rgba(76,201,240,.18)); }
+.title-rule { width:clamp(90px,17vw,220px); height:2px; margin:1.6rem auto 0; background:linear-gradient(90deg,transparent,var(--violet),var(--cyan),transparent); box-shadow:0 0 18px rgba(181,106,255,.8); opacity:.85; }
+@keyframes spin { to { transform:translate(-50%,-50%) rotate(360deg) } }
+@keyframes spinBack { to { transform:translate(-50%,-50%) rotate(-360deg) } }
+@keyframes breathe { from { opacity:.35; scale:.88 } to { opacity:.8; scale:1.1 } }
+@keyframes float { from { transform:translate3d(-9px,12px,0) rotate(-14deg) } to { transform:translate3d(13px,-17px,0) rotate(19deg) } }
+@keyframes arrive { from { opacity:0; transform:translateY(12px) scale(.985) } to { opacity:1; transform:translateY(0) scale(1) } }
+@media(max-width:600px) { main {padding:1.2rem} .symbols span {font-size:clamp(18px,5vw,30px)} }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after {animation-duration:.01ms!important; animation-iteration-count:1!important; scroll-behavior:auto!important} }
+</style>
+</head>
+<body>
+<div id="ambience" aria-hidden="true">
+  <div class="vortex one"></div><div class="vortex two"></div><div class="glow"></div>
+  <div class="symbols">
+    <span>🌀</span><span>✧</span><span>☾</span><span>◈</span><span>✦</span><span>◎</span>
+    <span>🜁</span><span>⋆</span><span>⏳</span><span>✧</span><span>☽</span><span>◇</span>
+    <span>✴</span><span>❈</span><span>◉</span><span>✺</span><span>⋇</span><span>☯</span>
+    <span>✧</span><span>⟡</span><span>☼</span><span>✦</span><span>🌀</span><span>◇</span>
+  </div>
+</div>
+<main><h1>Tranceformation</h1><div class="title-rule" aria-hidden="true"></div></main>
+</body>
+</html>

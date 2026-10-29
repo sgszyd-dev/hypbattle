@@ -1,8 +1,21 @@
+const GAME_VERSION = "20261028.2"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
 const MOBILE_AMBIENCE_QUERY = "(max-width: 700px), (pointer: coarse)";
 let gameSpiralBackgroundEnabled = true;
+
+// --- DEBUG CONFIGURATION ---
+const cardDebugOn = false;
+const debugCards = [31, 7, 2];     // card ids dealt into the first market (as before)
+const debugStart = {
+    p1Energy: null,                // number = Player 1 starts with this much ⚡, null = normal start
+    cpuEnergy: null,               // same for the CPU
+    p1Cards: [],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
+    cpuCards: [12],                  // Keep-card ids the CPU starts holding
+    cpuBuyFirst: null              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
+};
+
 
 function isMobileAmbienceDevice() {
     try { return window.matchMedia(MOBILE_AMBIENCE_QUERY).matches; }
@@ -181,7 +194,7 @@ function processGenderTokens(text) {
     return result;
 }
 
-const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Squirrel", "Statue", "Werewolf"];
+const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Snake", "Squirrel", "Statue", "Werewolf"];
 
 
 const CHARACTER_MANIFEST = {
@@ -190,18 +203,13 @@ const CHARACTER_MANIFEST = {
     "Xander": ["Robot","Werewolf","Otter","Bat"], // Bat
     "Siobhán": ["Horse", "Cat", "Bunny","Fox","Otter","Pig","Doll","Gender","Werewolf","Dog","Statue","Puppet"], // Cat
     "Tex": ["Cow", "Cat","Werewolf","Horse"], // Cow/Bull
-    "Luci": ["Robot","Bunny","Horse","Mannequin"], // Robot
+    "Luci": ["Robot","Bunny","Horse","Mannequin","Snake"], // Robot
     "Zixuan": ["Dog","Fox","Pig","Doll"], // Doll
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"], // Squirrel
     "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"] // Otter
 	};
 
-
-
-// --- DEBUG CONFIGURATION ---
-const cardDebugOn = false;
-const debugCards = [24, 7, 2]; // Set the 3 card IDs you want dealt first
 
 // remove virtual dice: 5, 21
 // add "Hypnotic Dominance", Keep, 4, You can purchase cards from the opponent. Pay them the energy cost
@@ -327,6 +335,7 @@ let localShowGameLog = false;
 let localShowBrainComments = false;
 let gameOverSeen = false;
 let gameOverPresentationStarted = false;
+let transformationSigilPending = false;
 let selectedHistoryIndex = -1; // -1 follows the newest available turn
 let optionsReturnTarget = "game";
 let diceAnimating = new Set();
@@ -370,8 +379,9 @@ window.onload = () => {
 
     populate("p1-name", NAMES);
     populate("cpu-name", NAMES, true);
-    populate("p1-lookup", TRANSFORMS);
-    populate("cpu-lookup", TRANSFORMS);
+	// Player 1 starts as a random character instead of always the first one in the list
+    document.getElementById("p1-name").value = NAMES[Math.floor(Math.random() * NAMES.length)];
+
 
     if (typeof generateDeck === 'function') generateDeck();
 	deck = prepareDebugDeck(deck);
@@ -382,119 +392,82 @@ window.onload = () => {
     toggleGameMode();
     bindSignaturePowerHintEvents();
     updateSignaturePowerHints();
+	updateRandomCpuLabel();
 };
 
 // ---------- Lookup Transform ----------
 // Names and transform lists are crossed: Player 1's "Transform [CPU name] into" list comes from the CPU's character, and
-// the CPU's list comes from Player 1's character. Each side's Lookup dropdown mirrors that side's Transform dropdown.
-const SETUP_SIDES = {
-    p1:  { transform: "p1-transform-type",  lookup: "p1-lookup",  otherName: "cpu-name" },
-    cpu: { transform: "cpu-transform-type", lookup: "cpu-lookup", otherName: "p1-name" }
-};
+// the CPU's list comes from Player 1's character.
 let setupWasOnline = false;
 function isOnlineSetup() { const m = document.getElementById("game-mode-option"); return !!m && m.value === "online"; }
-function fillSelect(selectEl, items, selected) {
-    selectEl.innerHTML = "";
-    items.forEach(item => selectEl.innerHTML += `<option value="${item}">${item}</option>`);
-    if (selected != null && items.includes(selected)) selectEl.value = selected;
+
+// One icon per transformation, shown in the setup dropdowns (the option VALUE stays the plain form name).
+const TRANSFORM_ICONS = {
+    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊",
+    Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", Robot: "🤖", Snake: "🐍",
+    Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
+};
+function transformIcon(form) { return TRANSFORM_ICONS[form] || "✨"; }
+function transformOptionLabel(form) { return `${transformIcon(form)} ${form}`; }
+// Picks a real form. "Random" (or empty) becomes a random form from that character's list.
+function resolveRandomForm(form, charName) {
+    if (form && form !== "Random") return form;
+    const mapped = CHARACTER_MANIFEST[charName];
+    const list = (mapped && mapped.length) ? mapped : TRANSFORMS;
+    return list[Math.floor(Math.random() * list.length)];
 }
-function fullNameList(selectId) { return selectId === "cpu-name" ? ["Random"].concat(NAMES) : NAMES.slice(); }
-function restoreNameList(selectId) {          // undo a Lookup filter, keeping the current name selected
-    const sel = document.getElementById(selectId);
-    const cur = sel.value;
-    fillSelect(sel, fullNameList(selectId), cur);
-    delete sel.dataset.filteredBy;
+
+// The CPU name list's "Random" entry shows what it is going to be transformed into:
+//   "Random"  or  "Random (🐱 Cat)"
+function updateRandomCpuLabel() {
+    const opt = document.querySelector('#cpu-name option[value="Random"]');
+    if (!opt) return;
+    const form = document.getElementById("p1-transform-type")?.value;
+    opt.textContent = (form && form !== "Random") ? `🎲 Random (${transformIcon(form)} ${form})` : "🎲 Random";
 }
-function syncLookup(transformSelectId) {      // Lookup dropdown always shows what the Transform dropdown has
-    const side = transformSelectId === "p1-transform-type" ? "p1" : "cpu";
-    const look = document.getElementById(SETUP_SIDES[side].lookup), t = document.getElementById(transformSelectId);
-    if (look && t && t.value) look.value = t.value;
+function describeTransformChoice(form) { return form; }
+function setupEscapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
 function onTransformSelectChange(transformSelectId) {
-    syncLookup(transformSelectId);
+    if (transformSelectId === "p1-transform-type") updateRandomCpuLabel();
     if (transformSelectId === "p1-transform-type" && lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }
 }
+
+// The label names the OTHER player, so the name is coloured with that player's colour.
 function setTransformLabel(side, rawName) {
     const label = document.getElementById(side === "p1" ? "p1-transform-label" : "cpu-transform-label");
     if (!label) return;
+    const nameClass = side === "p1" ? "xf-name-cpu" : "xf-name-p1";
+    const named = n => `<span class="${nameClass}">${setupEscapeHtml(n)}</span>`;
     if (isOnlineSetup()) {   // we don't know the opponent's name until they join the lobby
-        label.textContent = (side === "p1" && lobbyOpponentName) ? `Transform ${lobbyOpponentName} into:` : "Transform Opponent into:";
+        label.innerHTML = `Transform ${named((side === "p1" && lobbyOpponentName) ? lobbyOpponentName : "Opponent")} into:`;
         return;
     }
     const clean = rawName === "Random" ? "Opponent" : String(rawName).split(" ")[0];
-    label.textContent = `Transform ${clean} into:`;
+    label.innerHTML = `Transform ${named(clean)} into:`;
 }
 
 function onP1NameChange() {
     const nameSel = document.getElementById("p1-name");
-    let pre = null;
-    if (nameSel.dataset.filteredBy) { pre = nameSel.dataset.filteredBy; restoreNameList("p1-name"); }   // picked from a Lookup-filtered list: keep that transform
     updateSetupImages();
     setTransformLabel("cpu", nameSel.value);
     // the CPU's transform choices come from Player 1's character; a random one is chosen
-    populateTransformDropdown("cpu-transform-type", nameSel.value, pre);
+    populateTransformDropdown("cpu-transform-type", nameSel.value);
+    updateSignaturePowerHints();
     if (lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }     // online lobby: tell the opponent which character we picked
 }
 
 function onCpuNameChange() {
     const nameSel = document.getElementById("cpu-name");
-    let pre = null;
-    if (nameSel.dataset.filteredBy) { pre = nameSel.dataset.filteredBy; restoreNameList("cpu-name"); }
     updateSetupImages();
     updateMasterOptionLabel();
     setTransformLabel("p1", nameSel.value);
-    populateTransformDropdown("p1-transform-type", nameSel.value, pre);
+    populateTransformDropdown("p1-transform-type", nameSel.value);
+    updateSignaturePowerHints();
 }
 
-// The Lookup dropdown was changed: list only the characters that have that transformation, then fill the Transform dropdown for the chosen character
-function onLookupChange(side) {
-    if (isOnlineSetup()) return;
-    const cfg = SETUP_SIDES[side];
-    const t = document.getElementById(cfg.lookup).value;
-    const nameSel = document.getElementById(cfg.otherName);
-    const matches = NAMES.filter(n => (CHARACTER_MANIFEST[n] || []).includes(t));
-    if (!matches.length) { populateTransformDropdown(cfg.transform, nameSel.value, t); return; }   // nobody has it: leave the names alone
-    const items = (cfg.otherName === "cpu-name" ? ["Random"] : []).concat(matches);
-    const otherNameValue = document.getElementById(cfg.otherName === "cpu-name" ? "p1-name" : "cpu-name").value;
-    let pick = nameSel.value;
-    if (!items.includes(pick) || pick === otherNameValue) {      // keep the current name if it works, otherwise pick a random match (not the other player's)
-        const pool = matches.filter(n => n !== otherNameValue);
-        const src = pool.length ? pool : matches;
-        pick = src[Math.floor(Math.random() * src.length)];
-    }
-    fillSelect(nameSel, items, pick);
-    nameSel.dataset.filteredBy = t;
-    updateSetupImages();
-    if (cfg.otherName === "cpu-name") updateMasterOptionLabel();
-    setTransformLabel(side, nameSel.value);
-    populateTransformDropdown(cfg.transform, nameSel.value, t);
-}
-
-function getCharacterSignatureForm(characterName) {
-    const name = String(characterName || "").trim();
-    const power = SIGNATURE_POWERS[name];
-    return power?.form || CHALLENGE_CHARACTER_FORMS[name] || (CHARACTER_MANIFEST[name] || [])[0] || TRANSFORMS[0];
-}
-function resolveSignatureTransform(target, targetCharacterName) {
-    return String(target || "") === "Signature" ? getCharacterSignatureForm(targetCharacterName) : target;
-}
-function signatureNamesByForm() {
-    const byForm = {};
-    Object.entries(SIGNATURE_POWERS).forEach(([name, power]) => {
-        const form = power && power.form;
-        if (form) (byForm[form] ||= []).push(name);
-    });
-    return byForm;
-}
-function transformOptionLabel(form, online) {
-    if (!online) return form;
-    const names = signatureNamesByForm()[form];
-    return names && names.length ? `${form} (Signature: ${names.join(", ")})` : form;
-}
-function describeTransformChoice(form, characterName) {
-    if (form === "Signature") return `${getCharacterSignatureForm(characterName)} (Signature: ${characterName || "opponent"})`;
-    return form;
-}
 function populateTransformDropdown(selectId, opposingCharName, preselect) {
     const selectEl = document.getElementById(selectId);
     if (!selectEl) return;
@@ -505,27 +478,26 @@ function populateTransformDropdown(selectId, opposingCharName, preselect) {
     const list = ((charName === "Random" || !mapped || !mapped.length) ? TRANSFORMS.slice() : mapped.slice())
         .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     const prev = selectEl.value;
-    let chosen = (preselect && (list.includes(preselect) || (online && preselect === "Signature"))) ? preselect : null;
-    if (!chosen && online && (list.includes(prev) || prev === "Signature")) chosen = prev;
-    if (!chosen) chosen = list[Math.floor(Math.random() * list.length)];
+    let chosen = (preselect && (preselect === "Random" || list.includes(preselect))) ? preselect : null;
+    if (!chosen && online && (prev === "Random" || list.includes(prev))) chosen = prev;
+    if (!chosen) chosen = "Random";
+
     selectEl.innerHTML = "";
-    if (online) {
-        const signatureOption = document.createElement("option");
-        signatureOption.value = "Signature";
-        signatureOption.textContent = "Signature (Signature transform for opponent)";
-        selectEl.appendChild(signatureOption);
-    }
+    const randomOption = document.createElement("option");
+    randomOption.value = "Random";
+    randomOption.textContent = "🎲 Random";
+    selectEl.appendChild(randomOption);
     list.forEach(form => {
         const option = document.createElement("option");
         option.value = form;
-        option.textContent = transformOptionLabel(form, online);
+        option.textContent = transformOptionLabel(form);
         selectEl.appendChild(option);
     });
     selectEl.value = chosen;
-    if (selectEl.value !== chosen) selectEl.value = list[0] || "";
-    syncLookup(selectId);
-    if (typeof updateSignaturePowerHints === "function") updateSignaturePowerHints();
+    if (selectEl.value !== chosen) selectEl.value = "Random";
+    if (selectId === "p1-transform-type") updateRandomCpuLabel();
 }
+
 
 // ============================================================
 // SOLO CHALLENGE: THE SEVEN
@@ -535,7 +507,7 @@ function populateTransformDropdown(selectId, opposingCharName, preselect) {
 // Feature flag: false preserves the original fixed lineup; true selects seven random
 // distinct characters (excluding the player's selected avatar) at the start of each run.
 const THE_SEVEN_USE_RANDOM_OPPONENTS = true;
-// Toggle the legacy starting-Energy bonuses/handicaps in The Seven. Signature powers remain active either way.
+// Toggle the legacy starting-Energy bonuses/handicaps in The Seven. Special abilities are always on in The Seven.
 const THE_SEVEN_ENABLE_ENERGY_MODIFIERS = false;
 const THE_SEVEN_OPPONENT_COUNT = 7;
 const CLASSIC_CHALLENGE_RIVALS = [
@@ -547,8 +519,7 @@ const CLASSIC_CHALLENGE_RIVALS = [
     { name:"Tex", difficulty:"transformer", form:"Cow", initials:"TX", tier:"Virtuoso", color:"#facc15" },
     { name:"Siobhán", difficulty:"adaptive", form:"Cat", initials:"SB", tier:"Mistress", color:"#c084fc" }
 ];
-// Character-specific signature forms. The original seven keep their exact forms;
-// the three characters not in the classic lineup receive a stable form as well.
+// The transformation each character is assigned when they are a rival in The Seven.
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
     Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot"
@@ -557,16 +528,16 @@ const CHALLENGE_CHARACTER_FORMS = {
 // whose primary purpose is defensive Submission protection are unavailable to him.
 const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [35, 53];
 const SIGNATURE_POWERS = {
-    Roz: { key:"roz", form:"Eevee", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
-    Luci: { key:"luci", form:"Robot", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
-    "Siobhán": { key:"siobhan", form:"Cat", title:"Predatory Momentum", description:"A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls." },
-    Fable: { key:"fable", form:"Otter", title:"Lucid Reversal", description:"Spend three Lucidity dice to reduce your own Transform by one." },
-    Hyeri: { key:"hyeri", form:"Squirrel", title:"Perfect Harmony", description:"When all six standard faces appear, change all dice to a face this power has not used before." },
-    Alex: { key:"alex", form:"Bunny", title:"Unyielding Resistance", description:"Absorbs one incoming Submission point per opposing turn; Alex cannot benefit from defensive Submission cards." },
-    Xander: { key:"xander", form:"Bat", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
-    Tex: { key:"tex", form:"Cow", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
-    Zixuan: { key:"zixuan", form:"Doll", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
-    Mark: { key:"mark", form:"Gender", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance." }
+    Roz: { key:"roz", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
+    Luci: { key:"luci", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
+    "Siobhán": { key:"siobhan", title:"Predatory Momentum", description:"A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls." },
+    Fable: { key:"fable", title:"Lucid Reversal", description:"Spend three Lucidity dice to reduce your own Transform by one." },
+    Hyeri: { key:"hyeri", title:"Perfect Harmony", description:"When all six standard faces appear, change all dice to a face this power has not used before." },
+    Alex: { key:"alex", title:"Unyielding Resistance", description:"Absorbs one incoming Submission point per opposing turn; Alex cannot benefit from defensive Submission cards." },
+    Xander: { key:"xander", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
+    Tex: { key:"tex", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
+    Zixuan: { key:"zixuan", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
+    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance." }
 };
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
 function normalizedCharacterName(name) {
@@ -585,14 +556,15 @@ function characterFilename(name) {
         .replace(/[\u0300-\u036f]/g, "")
         .trim();
 }
+// A special ability is active when the character has one and it was left switched on in setup
+// (pObj.specialAbility; anything other than an explicit false counts as on).
 function hasSignaturePower(playerId, characterNameOrKey) {
     if (!gameState || ![1,2].includes(Number(playerId))) return false;
     const pObj = Number(playerId) === 1 ? gameState.p1 : gameState.p2;
     const entry = Object.entries(SIGNATURE_POWERS).find(([name, power]) => name === characterNameOrKey || power.key === characterNameOrKey);
     if (!entry || !pObj) return false;
-    const [name, power] = entry;
-    return normalizedCharacterName(pObj.name) === normalizedCharacterName(name)
-        && normalizedForm(pObj.transformTarget) === normalizedForm(power.form);
+    if (pObj.specialAbility === false) return false;
+    return normalizedCharacterName(pObj.name) === normalizedCharacterName(entry[0]);
 }
 function getSignaturePowerForName(name) {
     const key = String(name || "").trim().split(" ")[0];
@@ -632,6 +604,39 @@ function chooseHyeriSignatureFace(playerId, availableFaces) {
     preferred.push("⚡ ENERGY", "💧 LUCIDITY", "👁️ TRANSFORM", "⛓️ SUBMISSION", "🔥 AROUSAL", "🌀 SPIRAL");
     return preferred.find(face => availableFaces.includes(face)) || availableFaces[0];
 }
+// Reads the "Special ability" checkbox for a setup side ("p1" or "cpu"). On by default.
+function setupAbilityEnabled(side) {
+    const cb = document.getElementById(side + "-special-ability");
+    return !cb || cb.checked;
+}
+function ensureSpecialAbilityBox(side, anchorSelect) {
+    const id = side + "-special-ability-box";
+    let box = document.getElementById(id);
+    if (!box) {
+        box = document.createElement("div");
+        box.id = id; box.className = "special-ability-box";
+        box.innerHTML = `<div class="sab-title"></div><div class="sab-desc"></div>` +
+            `<label class="sab-toggle"><input type="checkbox" id="${side}-special-ability" checked><span>Special Ability</span></label>`;
+        anchorSelect.insertAdjacentElement("afterend", box);
+        box.querySelector("input").addEventListener("change", () => {
+				box.classList.toggle("sab-off", !box.querySelector("input").checked);
+				if (side === "p1" && lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }
+		});
+    }
+    return box;
+}
+function fillSpecialAbilityBox(side, anchorSelect, charName, isRandom) {
+    const box = ensureSpecialAbilityBox(side, anchorSelect);
+    const power = isRandom ? null : getSignaturePowerForName(charName);
+    if (!power && !isRandom) { box.style.display = "none"; return; }
+    box.style.display = "flex";
+    const key = isRandom ? "Random" : String(charName).split(" ")[0];
+    const cb = box.querySelector("input");
+    if (box.dataset.char !== key) { box.dataset.char = key; cb.checked = true; }   // a new character: back to on
+	box.classList.toggle("sab-off", !cb.checked);
+    box.querySelector(".sab-title").textContent = isRandom ? "Random opponent" : power.title;
+    box.querySelector(".sab-desc").textContent = isRandom ? "The randomly chosen opponent's special ability." : power.description;
+}
 function renderSignaturePowerHint(playerId, parent, id) {
     if (!parent) return;
     let hint = document.getElementById(id);
@@ -643,13 +648,12 @@ function renderSignaturePowerHint(playerId, parent, id) {
     if (!pObj?.name) { hint.style.display = "none"; return; }
     const power = getSignaturePowerForName(pObj.name);
     if (!power) { hint.style.display = "none"; return; }
-    const active = normalizedForm(pObj.transformTarget) === normalizedForm(power.form);
-    // Only show a power on the board when its assigned target form activates it.
-    hint.style.display = active ? "block" : "none";
+    // Only show an ability on the board when it is switched on.
+    hint.style.display = pObj.specialAbility === false ? "none" : "block";
     hint.innerHTML = `<strong class="signature-power-title">${power.title}</strong><br>${power.description}`;
 }
 function bindSignaturePowerHintEvents() {
-    ["p1-name", "cpu-name", "p1-transform-type", "cpu-transform-type"].forEach(id => {
+    ["p1-name", "cpu-name"].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.signaturePowerHintBound) {
             el.dataset.signaturePowerHintBound = "true";
@@ -658,38 +662,10 @@ function bindSignaturePowerHintEvents() {
     });
 }
 function updateSignaturePowerHints() {
-    const playerSelect = document.getElementById("p1-name");
-    if (playerSelect) {
-        let playerHint = document.getElementById("player-signature-power-hint");
-        if (!playerHint) {
-            playerHint = document.createElement("div"); playerHint.id = "player-signature-power-hint"; playerHint.className = "signature-power-hint setup-signature-power-hint";
-            playerSelect.insertAdjacentElement("afterend", playerHint);
-        }
-        const playerName = playerSelect.value;
-        const power = getSignaturePowerForName(playerName);
-        if (power) {
-            const selectedForm = document.getElementById("cpu-transform-type")?.value || "";
-            const active = normalizedForm(selectedForm) === normalizedForm(power.form);
-            playerHint.style.display = "block";
-            playerHint.innerHTML = `<strong>${playerName}'s signature form: ${power.form}</strong> · ${power.title}<br>${power.description}<br><span class="signature-power-status ${active ? "active" : "inactive"}">${active ? "ACTIVE for this setup" : `Choose ${power.form} as ${playerName}'s target form to activate`}</span>`;
-        } else playerHint.style.display = "none";
-    }
-    const cpuSelect = document.getElementById("cpu-name");
-    if (cpuSelect) {
-        let setupHint = document.getElementById("cpu-signature-power-hint");
-        if (!setupHint) {
-            setupHint = document.createElement("div"); setupHint.id = "cpu-signature-power-hint"; setupHint.className = "signature-power-hint setup-signature-power-hint";
-            cpuSelect.insertAdjacentElement("afterend", setupHint);
-        }
-        const cpuName = cpuSelect.value === "Random" ? "" : cpuSelect.value;
-        const power = getSignaturePowerForName(cpuName);
-        if (power) {
-            const selectedForm = document.getElementById("p1-transform-type")?.value || "";
-            const active = normalizedForm(selectedForm) === normalizedForm(power.form);
-            setupHint.style.display = "block";
-            setupHint.innerHTML = `<strong>${cpuName}'s signature form: ${power.form}</strong> · ${power.title}<br>${power.description}<br><span class="signature-power-status ${active ? "active" : "inactive"}">${active ? "ACTIVE for this setup" : `Choose ${power.form} as ${cpuName}'s target form to activate`}</span>`;
-        } else setupHint.style.display = "none";
-    }
+    const p1Sel = document.getElementById("p1-name");
+    if (p1Sel) fillSpecialAbilityBox("p1", p1Sel, p1Sel.value, false);
+    const cpuSel = document.getElementById("cpu-name");
+    if (cpuSel) fillSpecialAbilityBox("cpu", cpuSel, cpuSel.value, cpuSel.value === "Random");
     if (gameState?.p1) renderSignaturePowerHint(1, document.getElementById("p1-image"), "p1-signature-power-hint");
     if (gameState?.p2) renderSignaturePowerHint(2, document.getElementById("p2-image"), "p2-signature-power-hint");
 }
@@ -730,19 +706,42 @@ let challengePlayerName = null;
 function challengeInitials(name) {
     return String(name || "?").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase();
 }
-function buildChallengeLineupFromNames(names, mode="randomized", seed=null) {
+
+function buildChallengeLineupFromNames(names, mode = "randomized", seed = null) {
     if (!Array.isArray(names) || names.length !== THE_SEVEN_OPPONENT_COUNT || new Set(names).size !== THE_SEVEN_OPPONENT_COUNT) {
         throw new Error("The Seven lineup must contain exactly seven distinct opponents.");
     }
+
     const knownNames = new Set(CHARACTERS.map(c => c.name));
-    if (names.some(name => !knownNames.has(name))) throw new Error("The Seven lineup contains an unknown character.");
-    if (mode === "classic") return CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
+    if (names.some(name => !knownNames.has(name))) {
+        throw new Error("The Seven lineup contains an unknown character.");
+    }
+
+    if (mode === "classic") {
+        return CLASSIC_CHALLENGE_RIVALS.map(r => ({ ...r }));
+    }
+
     return names.map((name, i) => {
         const stage = CHALLENGE_STAGE_PROFILES[i];
         const form = CHALLENGE_CHARACTER_FORMS[name] || (CHARACTER_MANIFEST[name] || [])[0] || TRANSFORMS[0];
-        return { name, difficulty:stage.difficulty, form, initials:challengeInitials(name), tier:stage.tier, color:stage.color };
+
+        // Female characters use "Mistress" instead of "Master".
+        const difficulty =
+            stage.difficulty === "Master" && getGender(name) === "female"
+                ? "Mistress"
+                : stage.difficulty;
+
+        return {
+            name,
+            difficulty,
+            form,
+            initials: challengeInitials(name),
+            tier: stage.tier,
+            color: stage.color
+        };
     });
 }
+
 function createChallengeSeed() {
     return (Math.floor(Math.random() * 0xFFFFFFFF) + 1) >>> 0;
 }
@@ -821,18 +820,65 @@ function saveChallengeProgress() {
 		console.warn("Challenge progress could not be saved",e); 
 	}
 }
-function saveChallengeFromScreen(){
-    if(!challengeActive) {
-		showPopup("No Active Challenge", "There is no active challenge to save."); return; 
-	}
+
+
+function saveChallengeFromScreen() {
+    const content = document.getElementById("challenge-content");
+    const actions = document.getElementById("challenge-actions");
+
+    if (!challengeActive) {
+        if (content) {
+            content.insertAdjacentHTML(
+                "beforeend",
+                `<p class="challenge-save-feedback" role="alert">
+                    No active challenge to save.
+                </p>`
+            );
+        }
+        return;
+    }
+
     try {
-        safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
-        showPopup("Challenge Saved", "Your challenge position and next-match bonus have been saved on this browser. To transfer progress to another browser, use <strong>Export Challenge Save</strong> in Game Tools.");
-    } catch(e) {
+        safeStorage.set(
+            CHALLENGE_SAVE_KEY,
+            JSON.stringify(challengeSavePayload())
+        );
+
+        // Show feedback inside the current challenge overlay.
+        // Do not open a second modal with showPopup().
+        if (content) {
+            content.querySelector(".challenge-save-feedback")?.remove();
+
+            content.insertAdjacentHTML(
+                "beforeend",
+                `<p class="challenge-save-feedback" role="status"
+                    style="text-align:center;color:#86efac;font-weight:bold;margin:14px 0 0">
+                    ✓ Challenge saved successfully!
+                    <br>
+                    <span style="font-size:.88rem;font-weight:normal;color:#c4b5fd">
+                        Your progress and next-match bonus are saved on this browser.
+                    </span>
+                </p>`
+            );
+        }
+    } catch (e) {
         console.warn("Challenge progress could not be saved", e);
-        showPopup("Save Failed", "Your browser could not save challenge progress. Check that site storage is available, then try again.");
+
+        if (content) {
+            content.querySelector(".challenge-save-feedback")?.remove();
+
+            content.insertAdjacentHTML(
+                "beforeend",
+                `<p class="challenge-save-feedback" role="alert"
+                    style="text-align:center;color:#fca5a5;font-weight:bold;margin:14px 0 0">
+                    ✕ Save failed. Check that browser storage is available.
+                </p>`
+            );
+        }
     }
 }
+
+
 function applyChallengeSave(data){
     if(!data || ![1,2].includes(data.version) || !Number.isInteger(data.challengeIndex) || data.challengeIndex<0 || data.challengeIndex>=THE_SEVEN_OPPONENT_COUNT) throw new Error("This is not a valid The Seven save.");
     // Version 1 saves predate randomized lineups and therefore restore the exact classic lineup.
@@ -957,19 +1003,34 @@ function challengePortrait(name, initials, extraClass="") {
     const path = `images/avatars/${safe}/${safe}${suffix}.jpg`;
     return `<div class="challenge-portrait ${extraClass}"><span>${initials || safe.slice(0,2).toUpperCase()}</span><img src="${path}" alt="${name}${transformed ? ' transformed' : ''}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>`;
 }
+
 function challengeRoadmapHtml() {
     const playerName = (document.getElementById("p1-name")?.value || gameState.p1.name || "Challenger").split(" ")[0];
-    const rivals = CHALLENGE_RIVALS.map((r,i) => `<div class="challenge-rival ${i===challengeIndex?'current':''} ${challengeCompleted.includes(i)?'defeated':''}">${challengePortrait(r.name,r.initials)}<div class="challenge-rival-name">${r.name}</div><div class="challenge-rival-tier">${r.tier}</div></div>`).join("");
-    const markerPct = CHALLENGE_RIVALS.length === 1 ? 50 : 7.14 + challengeIndex * (85.72 / 6);
-    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName,playerName.slice(0,2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex+1} of ${CHALLENGE_RIVALS.length} · Wins move you forward · ${USE_THREE_TRIES_CHALLENGE ? `Up to ${CHALLENGE_MAX_LOSSES_PER_RIVAL} tries per rival` : "Losses send you back"}</div>`;
+
+    const rivals = CHALLENGE_RIVALS.map((r, i) => {
+        const displayTier =
+            r.tier === "Master" && getGender(r.name) === "female"
+                ? "Mistress"
+                : r.tier;
+
+        return `<div class="challenge-rival ${i === challengeIndex ? 'current' : ''} ${challengeCompleted.includes(i) ? 'defeated' : ''}">${challengePortrait(r.name, r.initials)}<div class="challenge-rival-name">${r.name}</div><div class="challenge-rival-tier">${displayTier}</div></div>`;
+    }).join("");
+
+    const markerPct = CHALLENGE_RIVALS.length === 1
+        ? 50
+        : 7.14 + challengeIndex * (85.72 / 6);
+
+    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName, playerName.slice(0, 2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex + 1} of ${CHALLENGE_RIVALS.length} · Wins move you forward · ${USE_THREE_TRIES_CHALLENGE ? `Up to ${CHALLENGE_MAX_LOSSES_PER_RIVAL} tries per rival` : "Losses send you back"}</div>`;
 }
+
 function renderChallengeScreen(kind, extra={}) {
     const overlay=document.getElementById("challenge-overlay"), title=document.getElementById("challenge-title"), content=document.getElementById("challenge-content"), actions=document.getElementById("challenge-actions");
     if (!overlay || !title || !content || !actions) return;
     let html="", buttons="";
     if (kind === "rules") {
         title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
-        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. ${USE_THREE_TRIES_CHALLENGE ? `You have ${CHALLENGE_MAX_LOSSES_PER_RIVAL} attempts against each rival; losses never send you backward.` : "Lose and you'll be sent back one step, where you can fight your way forward again."}</p><p><strong>${USE_THREE_TRIES_CHALLENGE ? "Three losses against the same rival end the challenge." : "One rule is absolute: losing at the first level ends the challenge."}</strong> ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each rival has a signature transformation and a unique power that activates because of that form. In Challenge mode, rivals always use their signature forms, so their powers are active. You cannot choose your transformation; the rival selects it from the forms available for your character.</p><p>The seven opponents are randomly selected and ordered for each new run, excluding your own character. Your progress is shown on the roadmap. ${THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Small Energy bonuses and handicaps may apply between matches." : "Energy bonuses and handicaps are disabled; rival signature powers are the challenge modifiers."}</p>`;
+        const hasSavedChallenge = !!safeStorage.get(CHALLENGE_SAVE_KEY);
+        html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. ${USE_THREE_TRIES_CHALLENGE ? `You have ${CHALLENGE_MAX_LOSSES_PER_RIVAL} attempts against each rival; losses never send you backward.` : "Lose and you'll be sent back one step, where you can fight your way forward again."}</p><p><strong>${USE_THREE_TRIES_CHALLENGE ? "Three losses against the same rival end the challenge." : "One rule is absolute: losing at the first level ends the challenge."}</strong> ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each rival has a unique special ability, and in The Seven every ability is switched on for both you and your rival. You cannot choose your transformation; the rival selects it from the forms available for your character.</p><p>The seven opponents are randomly selected and ordered for each new run, excluding your own character. Your progress is shown on the roadmap. ${THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Small Energy bonuses and handicaps may apply between matches." : "Energy bonuses and handicaps are disabled; rival signature powers are the challenge modifiers."}</p><p id="challenge-save-status" style="padding:9px 12px;border-radius:8px;background:rgba(167,139,250,.12);color:${hasSavedChallenge ? '#c4b5fd' : '#d4c7df'}">${hasSavedChallenge ? 'A saved challenge is available on this browser. Choose Resume Saved Challenge to continue.' : 'There is no saved challenge on this browser yet. Begin a challenge or load a save code from another browser using Options & Tools.'}</p>`;
         buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
     } else if (kind === "roadmap") {
         title.textContent="✦ THE ROAD AHEAD ✦";
@@ -980,7 +1041,7 @@ function renderChallengeScreen(kind, extra={}) {
         const modifier=challengeModifierNext;
         const modText = !THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "" : (modifier==="handicap"?"Handicap: your rival starts with +1 bonus Energy this match.":modifier==="bonus"?"Challenge bonus: you start with +2 bonus Energy this match.":"No bonus or handicap this match.");
         const signaturePower = getSignaturePowerForName(r.name);
-        const signaturePowerLine = signaturePower ? `<p style="margin:4px 0"><strong>Signature power · ${signaturePower.title}:</strong> ${signaturePower.description}</p>` : "";
+        const signaturePowerLine = signaturePower ? `<p style="margin:4px 0"><strong>Special ability · ${signaturePower.title}:</strong> ${signaturePower.description}</p>` : "";
 		let displayForm = r?.form ?? "Gender";
 		if (displayForm === "Gender" || displayForm === "Cow") {
 			const gender = r ? getGender(r.name) : null;
@@ -992,7 +1053,7 @@ function renderChallengeScreen(kind, extra={}) {
 		}
 	
         title.textContent=`RIVAL ${challengeIndex+1}: ${r.name.toUpperCase()}`;
-        html=`${challengeRoadmapHtml()}<div class="challenge-opponent-card">${challengePortrait(r.name,r.initials)}<div><h3 style="border:0;color:${r.color};margin:0 0 6px">${r.name} · ${r.tier}</h3><p style="margin:4px 0">Signature transformation: <strong>${displayForm}</strong></p>${signaturePowerLine}${modText ? `<p style="margin:4px 0">${modText}</p>` : ""}<p style="margin:4px 0;color:#b9a8ca;font-size:.88rem">The rival chooses your transformation from the forms available to your character.</p></div></div>`;
+        html=`${challengeRoadmapHtml()}<div class="challenge-opponent-card">${challengePortrait(r.name,r.initials)}<div><h3 style="border:0;color:${r.color};margin:0 0 6px">${r.name} · ${r.tier}</h3><p style="margin:4px 0">Transformation: <strong>${displayForm}</strong></p>${signaturePowerLine}${modText ? `<p style="margin:4px 0">${modText}</p>` : ""}<p style="margin:4px 0;color:#b9a8ca;font-size:.88rem">The rival chooses your transformation from the forms available to your character.</p></div></div>`;
         buttons=`<button onclick="launchChallengeMatch()">Challenge ${r.name}</button><button class="challenge-cancel" onclick="quitChallengeRun()">Abandon Challenge</button>`;
     } else if (kind === "result") {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
@@ -1018,8 +1079,18 @@ function renderChallengeScreen(kind, extra={}) {
 }
 function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
 function resumeSavedChallenge(){
-    try { const raw=safeStorage.get(CHALLENGE_SAVE_KEY); if(!raw){showPopup("No Saved Challenge","There is no saved challenge on this browser. Use Export Challenge Save on the original browser, then load its code here.");return;} applyChallengeSave(JSON.parse(raw)); }
-    catch(e){showPopup("Could Not Resume","The saved challenge could not be read. You can import a save code from another browser.");}
+    try {
+        const raw=safeStorage.get(CHALLENGE_SAVE_KEY);
+        if(!raw){
+            const status=document.getElementById("challenge-save-status");
+            if(status) status.textContent="There is no saved challenge on this browser. Begin a new challenge, or use Options & Tools to load a save code from another browser.";
+            return;
+        }
+        applyChallengeSave(JSON.parse(raw));
+    } catch(e) {
+        const status=document.getElementById("challenge-save-status");
+        if(status) status.textContent="The saved challenge could not be read. Use Options & Tools to load a valid save code from another browser.";
+    }
 }
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
 function startChallengeRun(){
@@ -1058,12 +1129,6 @@ function retryCurrentChallengeRival(){
 function randomChallengePlayerForm(playerName){
     const list=CHARACTER_MANIFEST[playerName] || [];
     const choices=list.length?list:TRANSFORMS;
-    // On the final rival, assign the challenger their own signature form so their power
-    // is active for the climactic match. Fall back to the normal random form if unavailable.
-    if (challengeActive && challengeIndex === CHALLENGE_RIVALS.length - 1) {
-        const signature = getSignaturePowerForName(playerName);
-        if (signature && choices.some(form => normalizedForm(form) === normalizedForm(signature.form))) return signature.form;
-    }
     return choices[Math.floor(Math.random()*choices.length)];
 }
 function launchChallengeMatch(){
@@ -1219,20 +1284,23 @@ function handleChallengeMatchEnded(winnerId){
     return true;
 }
 async function quitChallengeRun() {
-
     const confirmed = await showThemedConfirm(
         "Abandon The Seven challenge and return to setup?",
         "Abandon Challenge"
     );
-
     if (!confirmed) return;
 
+    const saveProgress = await showThemedConfirm(
+        "Would you like to save your current challenge progress so you can resume it later? Choosing No will discard the current challenge save.",
+        "Save Challenge Progress?", "No"
+    );
+    if (saveProgress) saveChallengeProgress();
     updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";});
-    finishChallengeRun(); 
- }
-function finishChallengeRun(){
+    finishChallengeRun({preserveSave: saveProgress});
+}
+function finishChallengeRun(options={}){
     challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
-    try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
+    if (!options.preserveSave) { try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {} }
     closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.classList.remove("visible","challenge-taunt-active");taunt.textContent="";taunt.style.display="none";}
@@ -1256,7 +1324,7 @@ function getTransformationConv(target) {
 
     if (gender === "male" || gender === "female") {
 		if (form === "Gender")
-			return gender;
+			return gender === "male" ? "Woman" : "Man";
 		else if (form == "Cow")
 			return gender === "male" ? "Bull" : "Cow";
     }
@@ -1493,9 +1561,7 @@ function toggleGameMode() {
         document.getElementById("p2-header-label").innerText = "Player 2";
     }
 
-    // Lookup Transform is hidden online (we don't know the opponent's character until we connect)
     const online = mode === "online";
-    ["p1", "cpu"].forEach(side => { const w = document.getElementById(side + "-lookup-wrap"); if (w) w.style.display = online ? "none" : "flex"; });
     if (online) {
         setTransformLabel("p1", "Opponent");
         populateTransformDropdown("p1-transform-type", "Random");    // every transformation in TRANSFORMS, current pick kept
@@ -1507,26 +1573,68 @@ function toggleGameMode() {
 }
 
 function prepareDebugDeck(deck) {
-    if (!cardDebugOn || !debugCards || debugCards.length === 0) {
-        return deck;
-    }
+	if (!cardDebugOn)
+		return deck;
+	const ids = [...(debugCards || [])];
+	if (debugStart.cpuBuyFirst != null && !ids.includes(debugStart.cpuBuyFirst))
+		ids.push(debugStart.cpuBuyFirst);
+	if (ids.length === 0)
+		return deck;
 
+	// Extract selected cards from the main deck to prevent duplicates
     const forcedCards = [];
-
-    // Extract selected cards from the main deck to prevent duplicates
-    debugCards.forEach(id => {
+    ids.forEach(id => {
         const index = deck.findIndex(card => (typeof card === 'object' ? card.id : card) === id);
-        if (index !== -1) {
-            forcedCards.push(deck.splice(index, 1)[0]);
-        }
+        if (index !== -1) forcedCards.push(deck.splice(index, 1)[0]);
     });
-
+	
     // Place forced cards at the draw position:
     // If your deal logic uses deck.pop() (draws from the end):
     return [...deck, ...forcedCards];
 
     // Note: If your deal logic uses deck.shift() (draws from the top), use:
     // return [...forcedCards, ...deck];
+}
+
+function applyDebugStart() {
+    if (!cardDebugOn) return;
+    if (Number.isFinite(debugStart.p1Energy)) gameState.p1.energy = debugStart.p1Energy;
+    if (Number.isFinite(debugStart.cpuEnergy)) gameState.p2.energy = debugStart.cpuEnergy;
+
+    const give = (player, ids) => (ids || []).forEach(id => {
+        const def = KNOWN_CARDS.find(c => Number(c.id) === Number(id));
+        if (!def) { console.warn("debugStart: unknown card id", id); return; }
+        if (def.type !== "Keep") { console.warn("debugStart: card", id, "is not a Keep card"); return; }
+        // take the real copy out of the deck / market so it cannot appear a second time
+        const di = deck.findIndex(c => Number(c.id) === Number(id));
+        if (di !== -1) deck.splice(di, 1);
+        else { const mi = market.findIndex(c => c && Number(c.id) === Number(id)); if (mi !== -1) market.splice(mi, 1); }
+        const card = JSON.parse(JSON.stringify(def));
+        if (Number(id) === 56) card.chosenFace = FACES[5];          // Deeper Bargains needs a chosen face
+        player.inventory.push(card);
+    });
+    give(gameState.p1, debugStart.p1Cards);
+    give(gameState.p2, debugStart.cpuCards);
+    refillMarket();
+    log("🧪 Debug start applied.");
+}
+
+// Returns true when the CPU's shop turn should stop here (it bought the target, or is saving up for it).
+function cpuDebugBuyFirst() {
+    if (!cardDebugOn || debugStart.cpuBuyFirst == null) return false;
+    const id = Number(debugStart.cpuBuyFirst);
+    if (hasCard(2, id)) return false;                                  // already owns it: play normally from now on
+    const idx = market.findIndex(c => c && Number(c.id) === id);
+    if (idx === -1) return false;                                      // not in the market: shop as usual
+    const card = market[idx];
+    const cost = getCardPurchaseCost(card, 2);
+    if (cost <= gameState.p2.energy || gameState.freeBuyActive) {
+        log(`🧪 CPU buys its debug target: ${card.name}.`);
+        buyCard(idx);
+    } else {
+        log(`🧪 CPU is saving up for ${card.name} (${gameState.p2.energy}/${cost} ⚡).`);
+    }
+    return true;                                                       // no other shopping this turn
 }
 
 function addLog(msg) {
@@ -1798,7 +1906,7 @@ function moveTurnHistory(direction) {
 // opponent's character as soon as they join, so the two players always line up. Lobby data lives at games/<ROOM>/lobby/{host|guest}.
 // ============================================================
 let lobbyActive = false, lobbyReady = false, lobbyStarted = false, lobbyUnsub = null, lobbyRoom = "";
-let lobbyOpponentName = null, lobbyOpponentTarget = null, lobbyNote = "";
+let lobbyOpponentName = null, lobbyOpponentTarget = null, lobbyOpponentAbility = true, lobbyNote = "";
 window.lobbyConfirmed = null;
 
 function lobbyRole() { return parseInt(document.getElementById("online-role-option").value, 10) === 2 ? "guest" : "host"; }
@@ -1806,7 +1914,7 @@ function lobbyOtherRole() { return lobbyRole() === "host" ? "guest" : "host"; }
 function lobbyPath(role) { return "games/" + lobbyRoom + "/lobby/" + role; }
 function lobbyMyName() { return (document.getElementById("p1-name").value || "").trim().split(" ")[0]; }
 function lobbyEntry() {
-    return { name: lobbyMyName(), target: document.getElementById("p1-transform-type").value, ready: lobbyReady, t: Date.now() };
+    return { name: lobbyMyName(), target: document.getElementById("p1-transform-type").value, ability: setupAbilityEnabled("p1"), ready: lobbyReady, t: Date.now() };
 }
 function lobbyPushMyEntry() {
     if (!lobbyActive || lobbyStarted || !window.db) return;
@@ -1862,6 +1970,7 @@ function onLobbyUpdate(room) {
         lobbyPushMyEntry();
     }
     lobbyOpponentTarget = opp ? opp.target : null;
+    lobbyOpponentAbility = opp ? opp.ability !== false : true;
     updateLobbyUI(me, opp, "");
     if (me.ready && opp && opp.ready) startOnlineFromLobby();
 }
@@ -1927,7 +2036,7 @@ function startOnlineFromLobby() {
     if (lobbyStarted) return;
     lobbyStarted = true;
     if (lobbyUnsub) { try { lobbyUnsub(); } catch (e) {} lobbyUnsub = null; }
-    window.lobbyConfirmed = { oppName: lobbyOpponentName, oppTarget: lobbyOpponentTarget };
+    window.lobbyConfirmed = { oppName: lobbyOpponentName, oppTarget: lobbyOpponentTarget, oppAbility: lobbyOpponentAbility };
     lobbyActive = false;
     lobbyControlsLocked(false);
     ["p1-name", "p1-transform-type"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = false; });
@@ -2030,7 +2139,7 @@ function updateSetupImages() {
     document.getElementById("setup-p1-image").innerHTML = `<img src="${p1ImgPath}" onclick="openImageModal('${p1ImgPath}')" onerror="this.outerHTML='Image Req:<br>${safeP1Name}_baseline.jpg'"/>`;
 
     if (cpuName === "Random") {
-        document.getElementById("setup-cpu-image").innerHTML = `<h2>?</h2>`;
+       document.getElementById("setup-cpu-image").innerHTML = `<img src="images/avatars/mystery.jpg" alt="Random opponent" onclick="openImageModal('images/avatars/mystery.jpg')" onerror="this.outerHTML='<h2>?</h2>'"/>`;
     } else {
         let cpuTargetName = cpuName.split(" ")[0];
 		const safeCpuTargetName = characterFilename(cpuName);
@@ -3151,8 +3260,7 @@ function initializeGame() {
         let localName = document.getElementById("p1-name").value.trim().split(" ")[0] || (onlineLocalRole === 1 ? "Host" : "Guest");
         let localTarget = document.getElementById("p1-transform-type").value;
         const lc = window.lobbyConfirmed; window.lobbyConfirmed = null;
-        // Resolve the special Signature choice only after both characters are known in the lobby.
-        localTarget = resolveSignatureTransform(localTarget, lc && lc.oppName ? lc.oppName : lobbyOpponentName);
+		localTarget = resolveRandomForm(localTarget, (lc && lc.oppName) || lobbyOpponentName);   // "Random" becomes a real form for the opponent's character
 
         if (onlineLocalRole === 1) {
             // --- HOST (PLAYER 1) ---
@@ -3161,11 +3269,14 @@ function initializeGame() {
             gameState.showEnergyActions = showEnergyActions;
 
             gameState.p1.name = localName;
+            gameState.p1.specialAbility = setupAbilityEnabled("p1");
+            gameState.p2.specialAbility = lc ? lc.oppAbility !== false : true;
             gameState.p2.transformTarget = localTarget; // Host sets the target transformation for Player 2
 
             // names and choices were already exchanged in the lobby; "Waiting..." only if the host starts without one
             gameState.p2.name = (lc && lc.oppName) ? lc.oppName : "Waiting...";
-            gameState.p1.transformTarget = (lc && lc.oppTarget) ? resolveSignatureTransform(lc.oppTarget, localName) : TRANSFORMS[0];
+            gameState.p1.transformTarget = (lc && lc.oppTarget) ? resolveRandomForm(lc.oppTarget, localName) : TRANSFORMS[0];
+
 
             gameState.activePlayer = Math.random() < 0.5 ? 1 : 2;
             if (gameState.activePlayer === 1) gameState.p2.energy = 1; 
@@ -3182,12 +3293,14 @@ function initializeGame() {
             // --- GUEST (PLAYER 2) ---
             window.pendingGuestName = localName;
             window.pendingGuestTarget = localTarget;
+            window.pendingGuestAbility = setupAbilityEnabled("p1");
 
             listenToFirebase(onlineRoomId);
 
             if (!(lc && lc.oppName) && window.db && window.dbUpdate && window.dbRef) {   // lobby players already told the host
                 let updates = {};
                 updates["games/" + onlineRoomId + "/gameState/p2/name"] = localName;
+                updates["games/" + onlineRoomId + "/gameState/p2/specialAbility"] = setupAbilityEnabled("p1");
                 updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
                 window.dbUpdate(window.dbRef(window.db), updates);
             }
@@ -3201,27 +3314,37 @@ function initializeGame() {
     let cpuNFinal = cpuN;
     if (challengeActive) { cpuNFinal = CHALLENGE_RIVALS[challengeIndex].name; cpuN = cpuNFinal; }
     if (cpuN === "Random") {
-        const wanted = document.getElementById("p1-transform-type").value;      // the transformation chosen for the CPU's character
-        let pool = NAMES.filter(n => n !== p1N && (CHARACTER_MANIFEST[n] || []).includes(wanted));
-        if (!pool.length) pool = NAMES.filter(n => n !== p1N);
+        // Pick the CPU's character FIRST. If a specific form was chosen for it (say Cat), only characters that can be Cat qualify.
+        const wanted = document.getElementById("p1-transform-type").value;
+        let pool = NAMES.filter(n => n !== p1N);
+        if (wanted !== "Random") {
+            const withForm = pool.filter(n => (CHARACTER_MANIFEST[n] || []).includes(wanted));
+            if (withForm.length) pool = withForm;
+        }
         cpuNFinal = pool[Math.floor(Math.random() * pool.length)];
     }
 
     if (p1N === cpuNFinal && !challengeActive) { alert("Players cannot have the same name."); return; }
 
-    let p1T = document.getElementById("p1-transform-type").value;
-    let cpuT = document.getElementById("cpu-transform-type").value;
+    // Then turn any "Random" form into a real one from THAT character's list
+    let p1T = resolveRandomForm(document.getElementById("p1-transform-type").value, cpuNFinal);   // what the CPU becomes
+    let cpuT = resolveRandomForm(document.getElementById("cpu-transform-type").value, p1N);       // what Player 1 becomes
     if (challengeActive) { p1T = randomChallengePlayerForm(p1N); cpuT = CHALLENGE_RIVALS[challengeIndex].form; }
 
-    cpuBrainReset(); choiceQueue = []; choiceActive = null; endTurnAfterChoice = false; document.getElementById("choice-dialog").style.display = "none";
+    cpuBrainReset(); choiceQueue = []; choiceActive = null; endTurnAfterChoice = false;
+	endTurnAfterChoice = false;
+	document.getElementById("choice-dialog").style.display = "none";
     gameState.gameMode = gameMode;
     gameState.showDiceText = showDiceText;
     gameState.showEnergyActions = showEnergyActions;
 
     gameState.p1.name = p1N.split(" ")[0]; 
-    gameState.p1.transformTarget = cpuT === "Random" ? TRANSFORMS[Math.floor(Math.random()*TRANSFORMS.length)] : cpuT;
+    gameState.p1.transformTarget = cpuT;
     gameState.p2.name = cpuNFinal.split(" ")[0]; 
     gameState.p2.transformTarget = p1T;
+    // Special abilities come from the setup checkboxes (always on in The Seven).
+    gameState.p1.specialAbility = challengeActive ? true : setupAbilityEnabled("p1");
+    gameState.p2.specialAbility = challengeActive ? true : setupAbilityEnabled("cpu");
     if (challengeActive) {
         // The rival chooses the form imposed on the human; the human's assigned form is random.
         gameState.p1.transformTarget = randomChallengePlayerForm(gameState.p1.name);
@@ -3245,11 +3368,11 @@ function initializeGame() {
             else if (challengeModifierNext === "handicap") gameState.p2.energy += 1;
         }
         challengeModifierNext = "none";
-        const taunt=document.getElementById("challenge-taunt-box"); if(taunt) taunt.style.display="";
-        showChallengeTaunt("TransformPlayer");
+        const taunt=document.getElementById("challenge-taunt-box"); if(taunt) { taunt.textContent=""; taunt.classList.remove("visible"); taunt.style.display=""; }
     } else { const taunt=document.getElementById("challenge-taunt-box"); if(taunt) {taunt.classList.remove("visible"); taunt.classList.remove("challenge-taunt-active"); taunt.style.display="none";} }
     
     refillMarket(); 
+	applyDebugStart();
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
     startTurn();
     updateUI();
@@ -3340,10 +3463,15 @@ function listenToFirebase(roomId) {
                     gameState.p1.transformTarget = window.pendingGuestTarget;
                     needsUpdate = true;
                 }
+                if (typeof window.pendingGuestAbility === "boolean") {
+                    gameState.p2.specialAbility = window.pendingGuestAbility;
+                    needsUpdate = true;
+                }
                 if (needsUpdate && window.dbUpdate) {
                     let updates = {};
                     updates["games/" + onlineRoomId + "/gameState/p2/name"] = gameState.p2.name;
                     updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = gameState.p1.transformTarget;
+                    if (typeof window.pendingGuestAbility === "boolean") updates["games/" + onlineRoomId + "/gameState/p2/specialAbility"] = gameState.p2.specialAbility;
                     window.dbUpdate(window.dbRef(window.db), updates);
                 }
             }
@@ -3578,13 +3706,22 @@ function log(msg, bold = false) {
 }
 
 
-const GAME_VERSION = "20261022.8"; // Update this label for each release.
+
 function showAboutBox() {
-    const body = `<div style="text-align:left;font-size:.95rem;line-height:1.65;">Tranceformation - Created 2026 by SG.<br><img src="images/aboutBoxPicture.png" alt="Tranceformation" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics from Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
-    showPopup("About Tranceformation", body);
+    const body = `  <div style="text-align:left;font-size:.95rem;line-height:1.65;"><img src="images/tranceformation_logo_transparent.png" alt="Tranceformation" style="display:block;width:100%;height:auto;margin:0 auto 14px;" onerror="this.style.display='none'"><div style="text-align: center;">Created 2026 by SG</div><img src="images/aboutBoxPicture.png" alt="Tranceformation" style="display:block;width:100%;max-width:360px;max-height:190px;object-fit:contain;margin:12px auto 14px;border-radius:8px;" onerror="this.style.display='none'"><br>Much thanks for the inspiration for game mechanics go to Richard Garfield and Edwin S Lowe. Also thanks to friends that helped test, create content, and agree to be transformed for this project.<br><br>For everyone that loves hypnosis and transformations. Hopefully I am not the only one!<div style="text-align:right;margin-top:18px;color:#b9a8cf;font-size:.8rem;">Version ${GAME_VERSION}</div></div>`;
+    showPopup("", body);
 }
 
 function closePopup(){ const e=document.getElementById("game-popup"); if(e)e.style.display="none"; }
+function closeTransformationSigil(){
+    closePopup();
+    if (!transformationSigilPending) return;
+    transformationSigilPending = false;
+    if (gameState && gameState.gameEnded) {
+        gameOverPresentationStarted = false;
+        presentFinishedGame();
+    }
+}
 // showToast was called by the challenge "copy save code" buttons but never defined, so the copy confirmation threw an error
 function showToast(message) {
     const t = document.createElement("div");
@@ -3596,6 +3733,7 @@ function showToast(message) {
 }
 function showPopup(title, body) {
     document.getElementById("popup-title").innerText = title;
+	document.getElementById("popup-title").style.display = title ? "" : "none";
     document.getElementById("popup-body").innerHTML = body;
     const shell = document.querySelector("#game-popup .modal-content");
     if (shell) {
@@ -3664,7 +3802,7 @@ function updateMasterOptionLabel() {
     const sel = document.getElementById("cpu-name");
     if (!opt || !sel) return;
     const title = sel.value === "Random" ? "Master/Mistress" : cpuMasterTitle(sel.value);
-    opt.textContent = `${title}`;
+    opt.textContent = `👑 ${title}`;
 }
 function cpuCountFace(face) { return gameState.dice.filter(d => d.face === face).length; }
 
@@ -4053,31 +4191,92 @@ function cpuBrainRecordRoll() {
 
 // ---------- dice keeping ----------
 // value of one die of each face, in rough "Transform equivalents"
+
 function cpuFaceWeights() {
     const p = gameState.p2, opp = gameState.p1;
     const w = { TR: 1.0, SU: 0.55, AR: 0.3, SP: 0.15, EN: 0.3, LU: 0 };
+
     const strat = CPU_STRATEGIES[cpuBrain.plan];
-    if (strat) Object.keys(strat.faces).forEach(k => { w[k] += strat.faces[k] * 0.6; });
+    if (strat) {
+        Object.keys(strat.faces).forEach(k => {
+            w[k] += strat.faces[k] * 0.6;
+        });
+    }
+
     const has = id => hasCard(2, id);
+	const xander = hasSignaturePower(2, "xander");
+
     if (has(2)) w.TR += 0.3;
     if (has(41)) w.TR += 0.2;
-    if (has(56)) w.TR += 0.3;       // Deeper Bargains: a 👁️-heavy special die
+    if (has(56)) { if (xander) w.AR += 0.3; else w.TR += 0.3; }   // Deeper Bargains (Xander makes it a 🔥 die)
     if (has(36)) w.SU += 0.25;
     if (has(24)) w.SU += 0.2;
-    if (has(13)) w.AR += 0.35;
+    if (xander) w.AR += 0.45;                       // Heated Opening: every 🔥 die counts
+    if (has(13)) w.AR += xander ? 0.5 : 0.35;       // Stoking Fires
+    if (has(48)) w.AR += 0.3;                       // Burning Intensity: their Lucidity costs double
     if (has(49)) w.AR += 0.1;
-    if (has(48)) w.AR += 0.1;
     if (has(0)) w.SP += 0.15;
     if (has(17)) w.SP += 0.3;
-    if (has(31)) { w.EN += 0.2; w.SP += 0.1; }
+    if (has(31)) {
+        w.EN += 0.2;
+        w.SP += 0.1;
+    }
     if (has(45)) w.EN += 0.25;
     if (has(28) || has(29)) w.EN += 0.1;
-    if (p.energy < 4 && p.inventory.length <= 1) w.EN += 0.25;   // opening: we need money to start a strategy
-    if (opp.trance + 2 >= 5) w.SP += 0.35;                       // a setback is within reach
+
+    if (p.energy < 4 && p.inventory.length <= 1) {
+        w.EN += 0.25;
+    }
+
+    if (opp.trance + 2 >= 5) w.SP += 0.35;
+
     const slip = Math.max(0, gameState.submission);
-    if (slip >= 2) w.SU += 0.4 * (slip - 1);                      // sliding toward our end: pushing back matters more and more
+    if (slip >= 2) w.SU += 0.4 * (slip - 1);
+
+    // Stop valuing 🔥 once it can't do anything. The 🔥 lock itself is capped
+	//in cpuKeepArousalUpTo / the Master loop.
+    if (cpuArousalDiceNeeded() <= 0) w.AR = -100;
+
     return w;
 }
+
+
+function cpuArousalNeeded() {
+    const opp = gameState.p1;
+    return Math.max(0, 5 - (opp.arousal || 0));
+}
+
+// How much Arousal k 🔥 dice give. This mirrors "// 4. Arousal" in resolveDice().
+function cpuArousalGain(k, xander, stoking) {
+    let e = xander ? k : (k >= 2 ? k - 1 : 0);
+    if (stoking && e > 0) e += 1;                  // Stoking Fires needs 🔥 to be increased
+    return e;
+}
+
+// The smallest number of 🔥 dice that takes the opponent to 5 (0 = no point locking any).
+function cpuArousalDiceNeeded() {
+    const needed = cpuArousalNeeded();
+    if (needed <= 0) return 0;
+    if (gameState.p1.shieldActive) return 0;        // Rapid Pulse blocks the Arousal step entirely
+    const xander = hasSignaturePower(2, "xander");
+    const stoking = hasCard(2, 13);
+    for (let k = 1; k <= 6; k++) {
+        if (cpuArousalGain(k, xander, stoking) >= needed) return k;
+    }
+    return 6;
+}
+
+// Locks 🔥 dice until the cap is reached, counting ones that are already locked.
+// Extra 🔥 dice are left free to reroll, because they would only be wasted.
+function cpuKeepArousalUpTo(keep, faces) {
+    const limit = cpuArousalDiceNeeded();
+    let kept = faces.reduce((s, f, i) => s + (f === "AR" && keep[i] ? 1 : 0), 0);
+    faces.forEach((f, i) => {
+        if (f === "AR" && !keep[i] && kept < limit) { keep[i] = true; kept++; }
+    });
+    return keep;
+}
+
 
 function cpuAdaptiveKeepPlan(rerollsAvail) {
     const dice = gameState.dice, n = dice.length;
@@ -4142,15 +4341,24 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     const leadKept = counts[lead] + ((counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) ? counts[sec] : 0);
     let minFree = counts[lead] >= 3 ? 0 : (counts[lead] === 2 ? 2 : 3);
     if (cpuBrain.plan === "energy" || cpuBrain.plan === "trance") minFree = Math.max(0, minFree - 1);
-    const arousalWanted = opp.arousal < 5 && counts.AR >= 2 &&       // Arousal needs 2+ dice (Stoking Fires too)
-                          (w.AR >= 0.75 || ([1, 2, 3, 4].includes(opp.arousal) && counts.AR >= 2));
+    const arLimit = cpuArousalDiceNeeded();
+    const xanderOn = hasSignaturePower(2, "xander");
+    const arousalWanted = arLimit > 0 && counts.AR >= (xanderOn ? 1 : 2)
+        && (xanderOn || w.AR >= 0.75 || [1, 2, 3, 4].includes(opp.arousal));
     const linear = [{ k: "EN", w: w.EN }, { k: "SP", w: w.SP }];
     if (arousalWanted) linear.push({ k: "AR", w: Math.max(w.AR, 0.5) });
     linear.sort((a, b) => b.w - a.w).forEach(l => {
-        if (l.w < 0.25) return;                           // not worth more than a fresh reroll
+        if (l.w < 0.25) return;                       // not worth more than a fresh reroll
         faces.forEach((f, i) => {
             if (f !== l.k || keep[i]) return;
-            if (n - keptNow > minFree) { keep[i] = true; keptNow++; }
+            if (l.k === "AR") {                       // never lock more 🔥 than it takes to reach 5
+                const keptAR = keep.filter((kp, j) => kp && faces[j] === "AR").length;
+                if (keptAR >= arLimit) return;
+            }
+            if (n - keptNow > minFree) {
+                keep[i] = true;
+                keptNow++;
+            }
         });
     });
     return { keep, hunting: false };
@@ -4162,7 +4370,7 @@ function cpuApplySignatureKeepPlan(keep) {
     const faces=dice.map(d=>cpuFaceKey(d.face));
     const counts=cpuCountsFromFaces(dice.map(d=>d.face));
     const keepFace=key=>faces.forEach((f,i)=>{if(f===key)keep[i]=true;});
-    if(name==="xander") { if(counts.AR>=1) keepFace("AR"); }
+    if (name === "xander") { if (hasSignaturePower(2, "xander")) cpuKeepArousalUpTo(keep, faces); }
     else if(name==="luci") { if(counts.SU>=2 || (counts.SU>=1 && (opp.transform>=6 || gameState.submission>=2))) keepFace("SU"); }
     else if(name==="siobhán" || name==="siobhan") { const key=counts.SU>=counts.TR?"SU":"TR"; if((key==="SU"?counts.SU:counts.TR)>=2) keepFace(key); }
     else if(name==="hyeri") {
@@ -4213,25 +4421,60 @@ function cpuExtraRerollGain() {
 }
 
 // Simmering Arousal: which die (if any) to turn into 🔥
+
 function cpuPickSimmeringDie() {
     const dice = gameState.dice;
+    const opp = gameState.p1;
     const counts = cpuCountsFromFaces(dice.map(d => d.face));
-    // a lone 🔥 does nothing (Arousal and Stoking Fires both need 2+ dice), so only convert a die when we already have one
-    // But Xander gets value from a single 🔥.
-    if (counts.AR === 0 && hasSignaturePower(2,"xander")) return -1;
-     
-    if (hasCard(2, 3) && Object.keys(counts).every(k => counts[k] > 0)) return -1;   // don't break a Trigger Word
+	if (cpuArousalNeeded() <= 0) return -1;
+
+    // Never convert another die into 🔥 when the opponent is already
+    // at the arousal target. Resume once their arousal drops below 5.
+    const arousalNeeded = Math.max(0, 5 - (Number(opp.arousal) || 0));
+    if (arousalNeeded <= 0) return -1;
+
+    // A lone 🔥 normally does nothing, but Xander benefits from one.
+    if (counts.AR === 0 && hasSignaturePower(2, "xander")) {
+        // If one point is all that's needed, don't create excess 🔥.
+        // A single die is still useful for Xander's signature ability.
+    }
+
+    if (
+        hasCard(2, 3) &&
+        Object.keys(counts).every(k => counts[k] > 0)
+    ) {
+        return -1; // Don't break a Trigger Word combination.
+    }
+
+    // If the dice already show enough 🔥 to reach the target,
+    // don't convert additional dice.
+    if (cpuArousalGain(counts.AR, hasSignaturePower(2, "xander"), hasCard(2, 13)) >= arousalNeeded)
+		return -1;
+
     const w = cpuFaceWeights();
-    let bestIdx = -1, bestVal = Infinity;
+    let bestIdx = -1;
+    let bestVal = Infinity;
+
     dice.forEach((d, i) => {
         const k = cpuFaceKey(d.face);
         if (!k || k === "AR") return;
+
         let v = w[k] || 0;
-        if ((k === "TR" || k === "SU") && counts[k] >= 3) v += 5;      // protect made triples
-        else if ((k === "TR" || k === "SU") && counts[k] === 2) v += 0.6;
+
+        if ((k === "TR" || k === "SU") && counts[k] >= 3) {
+            v += 5; // Protect made triples.
+        } else if ((k === "TR" || k === "SU") && counts[k] === 2) {
+            v += 0.6;
+        }
+
         if (k === "LU") v = 0.05;
-        if (v < bestVal) { bestVal = v; bestIdx = i; }
+
+        if (v < bestVal) {
+            bestVal = v;
+            bestIdx = i;
+        }
     });
+
     return bestVal < 1.0 ? bestIdx : -1;
 }
 
@@ -4267,6 +4510,13 @@ function cpuDenyScore(card) {
 function cpuAdaptiveCardScore(card) {
     const p2 = gameState.p2, p1 = gameState.p1;
     let score = (card.ai && card.ai.adaptive != null) ? card.ai.adaptive : 30;
+	
+	// xander wants these cards
+	if (hasSignaturePower(2, "xander")) {
+        if (card.id === 13) score += 30;              // Stoking Fires
+        if (card.id === 48) score += 25;              // Burning Intensity
+        if (card.id === 56) score += 15;              // Deeper Bargains (his special die becomes 🔥)
+    }
 
     // strategy fit
     Object.keys(CPU_STRATEGIES).forEach(key => {
@@ -4376,6 +4626,67 @@ function cpuAdaptiveMarketInfo() {
     }).filter(Boolean);
 }
 
+const ZIX = {
+    reserve: 3,      // energy he keeps after digging, so he can still afford a typical card (costs are mostly 3 to 6)
+    maxDigs: 4,      // most "look for a better card" wipes per turn
+    maxDenies: 3     // most "deny the human" wipes per turn
+};
+
+// rows: [{ idx, card, cost, passes, score, deny, humanCanAfford }]    o: { buy, like, denyMin }
+// Returns the same action objects the shop phases already understand ({type:"buy"} / {type:"wipe"}) or null.
+function cpuZixuanShopAction(rows, o) {
+    const p = gameState.p2;
+    const wipeCost = getMarketWipeCost(2);
+    const canWipe = deck.length > 0 && market.length > 0 && p.energy >= wipeCost;
+    const canPay = r => r.cost <= p.energy || gameState.freeBuyActive;
+    const digs = cpuBrain.zixDigs || 0;
+    const denies = cpuBrain.zixDenies || 0;
+    const buy = r => ({ type: "buy", idx: r.idx, name: r.card.name });
+
+    // everything we could buy right now, best first (our value plus a share of how much it would help the human)
+    const options = rows
+        .filter(r => r.passes && canPay(r))
+        .map(r => Object.assign({}, r, { total: r.score + r.deny * (r.humanCanAfford ? 0.6 : 0.15) }))
+        .filter(r => r.total >= o.buy)
+        .sort((a, b) => b.total - a.total);
+    const best = options[0] || null;
+
+    // 1) a card we love and can pay for: take it
+    if (best && best.score >= o.like) return buy(best);
+
+    // 2) a card the human can afford and would use: take ours first if we can still pay for a wipe afterwards,
+    //    then clear the market
+    const threat = rows
+        .filter(r => r.humanCanAfford && r.deny >= o.denyMin && !(best && r.idx === best.idx))
+        .sort((a, b) => b.deny - a.deny)[0];
+    if (threat && canWipe && denies < ZIX.maxDenies) {
+        if (best && best.cost + wipeCost <= p.energy) return buy(best);
+        cpuBrain.zixDenies = denies + 1;
+        return { type: "wipe", why: `deny ${threat.card.name}` };
+    }
+
+    // 3) a decent card but not a great one: if we could still pay for something similar after a wipe, look for better
+    if (best) {
+        if (canWipe && digs < ZIX.maxDigs && p.energy - wipeCost >= Math.max(best.cost, ZIX.reserve)) {
+            cpuBrain.zixDigs = digs + 1;
+            return { type: "wipe", why: "looking for a better card" };
+        }
+        return buy(best);
+    }
+
+    // 4) nothing to buy: if a card we like is about a turn away and the human can't take it, bank the energy
+    const nearTarget = rows.some(r => r.passes && !canPay(r) && !r.humanCanAfford && r.cost <= p.energy + 2 && r.score >= o.like);
+    if (nearTarget) return null;
+
+    // 5) dig for something, but always keep enough energy to actually buy what turns up
+    if (canWipe && digs < ZIX.maxDigs && p.energy - wipeCost >= ZIX.reserve) {
+        cpuBrain.zixDigs = digs + 1;
+        return { type: "wipe", why: "digging for a card to buy" };
+    }
+    return null;
+}
+
+
 // returns the next thing the CPU wants to do in the shop, or null
 function cpuAdaptiveNextShopAction() {
     const p = gameState.p2, human = gameState.p1;
@@ -4401,6 +4712,14 @@ function cpuAdaptiveNextShopAction() {
             if (c && !inventoryHasName(p, c.name) && p.energy >= c.cost && cpuAdaptiveCardScore(c) >= 55)
                 return { type: "snipe", idx: i, name: c.name };
         }
+    }
+	
+	if (hasSignaturePower(2, "zixuan")) {
+        return cpuZixuanShopAction(info.map(i => ({
+            idx: i.idx, card: i.card, cost: i.cost,
+            passes: i.passes || (!i.dup && i.card.type === "Keep"),     // same rule as the normal buy list
+            score: i.score, deny: i.deny, humanCanAfford: i.humanCanAfford
+        })), { buy: thr, like: thr + 12, denyMin: 45 });
     }
 
     // best purchase (own value + a share of how much it would help the human)
@@ -4467,8 +4786,9 @@ function cpuAdaptiveSetbackChoice(victim) {
     return "submission";
 }
 
-function cpuAdaptiveShopPhase() {
+async function cpuAdaptiveShopPhase() {
     cpuReplan();
+	cpuBrain.zixDigs = 0; cpuBrain.zixDenies = 0;
     const p = gameState.p2;
     const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
@@ -4481,11 +4801,14 @@ function cpuAdaptiveShopPhase() {
             const energyBefore = p.energy;
             cpuSay(`Wipes the market (${act.why}).`);
             cpuBrain.wipes++;
-            wipeMarket();
-            if (p.energy >= energyBefore) {
-                // Never spin if a wipe was rejected or could not make progress.
+
+            const wiped = await wipeMarket();
+
+            if (!wiped || p.energy >= energyBefore) {
+                // Stop if the wipe was rejected or did not spend Energy.
                 break;
             }
+
         } else if (act.type === "mirror") {
             const i42 = p.inventory.findIndex(c => c.id === 42);
             if (i42 === -1) break;
@@ -4623,7 +4946,8 @@ function cpuTierKeepPlan(level, r) {
         if (counts.SU >= 2 && opp.transform >= 5) keepFace("SU");
         keepFace("EN");
         if (opp.trance >= 3) keepFace("SP");
-        if (opp.arousal >= 3) keepFace("AR");
+        if (opp.arousal >= 3) cpuKeepArousalUpTo(keep, faces);
+
     } else if (level === "transformer") {
         // 👁️ is the plan: keep every 👁️. Then decide how many ⚡ to keep by comparing what a die is worth as a kept ⚡
         // against what the dice we would free up could become (another 👁️ for the triple).
@@ -4647,7 +4971,7 @@ function cpuTierKeepPlan(level, r) {
         const aSyn = has(13) || has(49) || has(48), pSyn = has(0) || has(17) || has(31);
         if (counts.TR >= 3 || (tSyn && counts.TR >= 2)) keepFace("TR");
         if (counts.SU >= 3 || (sSyn && counts.SU >= 2)) keepFace("SU");
-        if (aSyn && counts.AR >= 2) keepFace("AR");
+        if (aSyn && counts.AR >= 2) cpuKeepArousalUpTo(keep, faces);
         if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
     }
     cpuApplySignatureKeepPlan(keep);
@@ -4680,6 +5004,14 @@ function cpuTierCardScore(card, level) {
     const p2 = gameState.p2, p1 = gameState.p1;
     let score = (card.ai && card.ai[level] != null) ? card.ai[level] : 30;
     const pr = cpuTierProblems(level);
+	
+	// xander wants these cards
+	if (hasSignaturePower(2, "xander")) {
+        if (card.id === 13) score += 30;              // Stoking Fires
+        if (card.id === 48) score += 25;              // Burning Intensity
+        if (card.id === 56) score += 15;              // Deeper Bargains (his special die becomes 🔥)
+    }
+	
     // trouble on the tracks, scaled by how worried this level is
     if (pr.sub > 0 && SUBMISSION_RECOVERY_CARDS.includes(card.id)) score += Math.min(70, 25 + 15 * pr.sub);
     if (pr.arousal > 0) {
@@ -4752,6 +5084,17 @@ function cpuTierNextAction(level) {
             if (c && !inventoryHasName(p, c.name) && p.energy >= c.cost && cpuTierCardScore(c, level) >= cfg.like + 10) return { type: "snipe", idx: i, name: c.name };
         }
     }
+	
+	if (hasSignaturePower(2, "zixuan")) {
+        return cpuZixuanShopAction(info.map(i => {
+            let deny = cpuDenyScore(i.card);
+            if (level === "transformer") { if (CPU_STRATEGIES.transform.cards[i.card.id]) deny = 0; }   // Virtuoso never denies Transform cards
+            else deny = Math.max(deny, i.passes ? i.score * 0.9 : 0);    // lower levels: a card I like is a card they would like
+            return { idx: i.idx, card: i.card, cost: i.cost, passes: i.passes, score: i.score, deny, humanCanAfford: i.humanCanAfford };
+        }), { buy: cfg.buy + 10, like: cfg.like, denyMin: cfg.denyMin });
+    }
+	
+	
     // 1) a liked card we can afford: take the best one
     const likedBuy = liked.find(canPay);
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
@@ -4783,8 +5126,9 @@ function cpuTierNextAction(level) {
     if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 1) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : cfg.idleWipe) && !anyUseful) return { type: "wipe", why: "nothing useful" };
     return null;
 }
-function cpuTierShopPhase(level) {
+async function cpuTierShopPhase(level) {
     cpuBrain.wipes = 0;
+	cpuBrain.zixDigs = 0; cpuBrain.zixDenies = 0;
     const p = gameState.p2;
     if (level === "transformer") cpuReplan();      // read the human's strategy (their cards, rolls and what they did to us)
     const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
@@ -4793,11 +5137,20 @@ function cpuTierShopPhase(level) {
         if (!act) break;
         if (act.type === "buy") {
             if (!buyCard(act.idx)) break;
+        
         } else if (act.type === "wipe") {
             const before = p.energy;
             cpuBrain.wipes++;
-            wipeMarket();
+
+            const wiped = await wipeMarket();
+
+            if (!wiped || p.energy >= before) {
+                // Do not keep trying if the wipe was rejected.
+                break;
+            }
+
             log(`CPU used Wipe (${act.why}): refreshed market (${before} → ${p.energy}).`);
+
         } else if (act.type === "mirror") {
             const i42 = p.inventory.findIndex(c => c.id === 42);
             if (i42 === -1) break;
@@ -4850,6 +5203,9 @@ function cpuChooseBreakTarget(targets, pid) {
     return best;
 }
 function cpuChooseSpecialFace() {            // Deeper Bargains: which face the special die should show
+	// xander always chooses 🔥
+	if (hasSignaturePower(2, "xander")) return FACES[4];   // 🔥: with Heated Opening every 🔥 die counts
+	
     const d = getCpuDifficulty();
     if (d === "adaptive") {
         const byPlan = { transform: 5, submission: 3, arousal: 4, trance: 0, energy: 2 };
@@ -5006,7 +5362,7 @@ function cpuShouldBuyCard(card, effectiveCost) {
     const p = gameState.p2;
 	const difficulty = getCpuDifficulty();
     if (effectiveCost > p.energy && !gameState.freeBuyActive) return false;
-    if (difficulty === "random") return Math.random() > 0.5;
+    if (difficulty === "random") return Math.random() > 0.25;	// Beginner buys most of the time, not always
 	
 	// Emergency Override: Always buy submission recovery cards when pinned if affordable
     if (isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) {
@@ -5055,7 +5411,7 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     if (hasSignaturePower(buyerNum, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(targetCard.id))) {
         playSound("deny");
         log(`${buyer.name}'s Unyielding Resistance cannot use defensive Submission card ${targetCard.name}.`);
-        if (buyerNum === 1 && isLocalPlayerTurn()) showPopup("Unyielding Resistance", "Alex cannot use defensive Submission cards while his signature power is active.");
+        if (buyerNum === 1 && isLocalPlayerTurn()) showPopup("Unyielding Resistance", "Alex cannot use defensive Submission cards while his special ability is on.");
         return false;
     }
     const sourceElement = document.querySelector(`#p${buyerNum === 1 ? 2 : 1}-inventory .inv-card[data-card-id="${Number(targetCard.id)}"]`);
@@ -5108,6 +5464,11 @@ function cpuShouldUseMirrorImage(maxCost) {
     }
 }
 
+function cpuIsBeginnerOrEasy() {
+    const d = getCpuDifficulty();
+    return d === "random" || d === "smart";
+}
+
 function cpuShouldUseWipe() {
     const p = gameState.p2;
     const difficulty = getCpuDifficulty();
@@ -5125,10 +5486,12 @@ function cpuShouldUseWipe() {
     });
 
     if (hasAffordableCard) return false;
+	
+	const zixPower = hasSignaturePower(2, "zixuan")
 
     switch (difficulty) {
-        case "random": return Math.random() > 0.65;
-        case "smart": return true;
+		case "random": return p.energy >= 6 && Math.random() < 0.15;
+        case "smart": return p.energy >= 6 && Math.random() < 0.35;
         case "aggressive": return p.energy >= 4;
         case "v23low": return p.energy >= 5;
         case "defensive": return p.energy >= 6;
@@ -5539,8 +5902,12 @@ function updateUI() {
         const tranceColor = tranceColors[Math.max(0, Math.min(5, Number(pObj.trance) || 0))];
         [`${p}-trance`, `${p}-trance-label`].forEach(id => { const el = document.getElementById(id); if (el) { el.style.color = tranceColor; el.style.textShadow = Number(pObj.trance) >= 4 ? `0 0 8px ${tranceColor}66` : "none"; } });
         const arousal = Math.max(0, Math.min(5, Number(pObj.arousal) || 0));
-        const arousalColor = arousal >= 5 ? "#ff3434" : arousal >= 3 ? "#ff9f1c" : "#ffffff";
+        const arousalColor = arousal >= 5 ? "#ff3434" : arousal >= 3 ? "#ff9f1c" : "#ffffff";		
         [`${p}-arousal`, `${p}-arousal-label`].forEach(id => { const el = document.getElementById(id); if (el) { el.style.color = arousalColor; el.style.textShadow = arousal >= 3 ? `0 0 7px ${arousalColor}55` : "none"; } });
+		const shielded = !!pObj.shieldActive;          // Rapid Pulse is up for this player
+        document.getElementById(`${p}-trance`)?.closest(".panel")?.classList.toggle("shield-active", shielded);
+        [`${p}-trance`, `${p}-arousal`].forEach(id => document.getElementById(id)?.parentElement?.classList.toggle("stat-shielded", shielded));
+
         document.getElementById(`${p}-vuln`).innerText = pObj.vulnerability;
         document.getElementById(`${p}-vuln-container`).style.display = pObj.vulnerability > 0 ? "flex" : "none";
 
@@ -5691,7 +6058,8 @@ function updateUI() {
         }
     }
     
-    document.getElementById("btn-wipe-market").disabled = !isHumanTurn || activeP.energy < 2 || gameState.phase !== "shop";
+    document.getElementById("btn-wipe-market").disabled =
+    !isHumanTurn || activeP.energy < getMarketWipeCost(gameState.activePlayer) || gameState.phase !== "shop";
     
     // UI Button Toggles P1
     document.getElementById("btn-buy-arousal-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 3 || gameState.phase !== "shop";
@@ -5968,6 +6336,8 @@ function useAbsoluteFocus(idx, pId) {
 // ---- INLINE CHOICE DIALOG (shows below the market) ----
 let choiceQueue = [];
 let endTurnAfterChoice = false;   // the CPU tried to end its turn while a dialog was still open
+let finishEndTurnAfterChoice = false;   // an end-of-turn effect (Falling Sensation)
+										// opened a dialog: finish the turn after it
 let choiceActive = null;
 function isChoicePending() { return choiceActive !== null || choiceQueue.length > 0; }
 function showChoiceDialog(cfg) {
@@ -5983,7 +6353,8 @@ function showNextChoice() {
         el.style.display = "none"; el.innerHTML = "";
         if (typeof updateUI === "function") updateUI();
         if (endTurnAfterChoice) { endTurnAfterChoice = false; endTurn(); }   // finish the CPU turn that was waiting on this choice
-        return;
+		if (finishEndTurnAfterChoice) { finishEndTurnAfterChoice = false; finishEndTurn(); }
+		return;
     }
     el.innerHTML = "";
     const h = document.createElement("h4"); h.textContent = choiceActive.title; el.appendChild(h);
@@ -6054,7 +6425,21 @@ function discardForFreeBuy(invIndex, pId) {
     gameState.freeBuyActive = true;
     log(`${p.name} discarded Mirror Image! Next buy is free.`); syncToFirebase(); updateUI();
 }
-function useRapidPulse(pId) { let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { queueCardTrigger(pId, 12, "Activated shield for this turn", "manual"); p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } }
+function useRapidPulse(pId) {
+	let p = pId === 1 ? gameState.p1 : gameState.p2; if (p.energy >= 2) { queueCardTrigger(pId, 12, "Activated shield for this turn", "manual"); p.energy -= 2; p.shieldActive = true; log(`${p.name} used Rapid Pulse to shield incoming Trance and Arousal!`); syncToFirebase(); updateUI(); } 
+}
+
+// A little shield pops over the Trance / Arousal line of the protected player when it blocks something.
+function showShieldBlock(playerId, stat) {                  // stat: "trance" | "arousal"
+    const row = document.getElementById(`p${playerId}-${stat}`)?.parentElement;
+    if (!row) return;
+    const pop = document.createElement("div");
+    pop.className = "shield-pop";
+    pop.innerHTML = `🛡️<small>BLOCKED</small>`;
+    row.appendChild(pop);
+    setTimeout(() => pop.remove(), 1500);
+}
+
 
 function useFadingReality(pId) {
     let changed = 0;
@@ -6087,6 +6472,7 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
 
     if (targetObj.shieldActive) {
         log(`Rapid Pulse shielded Trance against ${targetObj.name}.`);
+		showShieldBlock(targetId, "trance");
         return false;
     }
 
@@ -6105,6 +6491,7 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
         const src = gameState["p" + sourcePlayerId];
         if (src.shieldActive) {
             log(`Switch Play: ${src.name}'s Rapid Pulse stopped the reflected 🌀.`);
+			showShieldBlock(sourcePlayerId, "trance");
         } else {
             log(`Switch Play: ${targetObj.name} reflects 1 🌀 to ${src.name}.`);
             src.trance += 1;
@@ -6170,6 +6557,7 @@ function checkTranceSetback(oppP, activePlayerId) {
 function increaseArousal(target, amount, recipientId, sourceId) {
     const pObj = typeof target === "object" ? target : gameState["p" + target];
     if (!pObj || !(amount > 0)) return;
+	if (pObj.arousal >= 5) return 0;     // already maxed: nothing happens and nothing can bounce
     if (recipientId == null) recipientId = pObj === gameState.p1 ? 1 : 2;
 
     const before = pObj.arousal;
@@ -6186,20 +6574,24 @@ function increaseArousal(target, amount, recipientId, sourceId) {
     increaseArousal.reflecting = true;
     const src = gameState["p" + sourceId];
     if (src.shieldActive) {
-        log(`Mutual Heat: ${src.name}'s Rapid Pulse stopped the reflected 🔥.`);
-    } else {
-        const srcBefore = src.arousal;
-        src.arousal = Math.min(5, src.arousal + 1);
-        queueCardTrigger(recipientId, 50, `Reflected 1 🔥 to ${src.name}`);
-        log(`Mutual Heat: ${pObj.name} reflects 1 🔥 to ${src.name}.`);
-        if (src.arousal > srcBefore && hasCard(sourceId, 32)) {
-            src.energy += 1;
-            queueCardTrigger(sourceId, 32, "+1 Energy when reflected Arousal increased");
-            log(`Guided Heat triggered: +1 Energy from arousal increase.`);
-        }
-    }
-    increaseArousal.reflecting = false;
-}
+			log(`Mutual Heat: ${src.name}'s Rapid Pulse stopped the reflected 🔥.`);
+			showShieldBlock(sourcePlayerId, "arousal");
+		} else if (src.arousal >= 5) {
+			log(`Mutual Heat: ${src.name} is already at 5 🔥, so nothing reflects.`);
+		} else {
+			const srcBefore = src.arousal;
+			src.arousal = Math.min(5, src.arousal + 1);
+			queueCardTrigger(recipientId, 50, `Reflected 1 🔥 to ${src.name}`);
+			log(`Mutual Heat: ${pObj.name} reflects 1 🔥 to ${src.name}.`);
+			if (src.arousal > srcBefore && hasCard(sourceId, 32)) {
+				src.energy += 1;
+				queueCardTrigger(sourceId, 32, "+1 Energy when reflected Arousal increased");
+				log(`Guided Heat triggered: +1 Energy from arousal increase.`);
+			}
+		}
+		increaseArousal.reflecting = false;
+	}
+	return pObj.arousal - before;        // how much it really rose
 }
 
 function applyTransform(targetPlayerId, amount, sourcePlayerId) {
@@ -6211,7 +6603,8 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
         const transformCount = rolls.filter(face => face === "👁️ TRANSFORM").length;
         const rollLabels = rolls.map(face => face.split(" ")[0]);
         log(`Transformation Sigil rolls: ${rollLabels.join(" and ")}.`);
-        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p>`);
+        transformationSigilPending = true;
+        showPopup("✦ Transformation Sigil ✦", `<p>The Sigil rolls two dice to ward off transformation.</p><div style="display:flex;justify-content:center;gap:16px;margin:18px 0"><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[0]}</div><div style="font-size:2.8rem;background:#272033;border:2px solid #a78bfa;border-radius:12px;padding:14px;min-width:62px;text-align:center">${rollLabels[1]}</div></div><p>${transformCount===2?"Double Transform! Reduce the incoming transformation by 1 and reflect 1 transformation back.":transformCount===1?"One Transform! Reduce the incoming transformation by 1.":"No Transform faces. The incoming transformation is unchanged."}</p><button onclick="closeTransformationSigil()">Continue</button>`);
         if (transformCount >= 1) {
             finalAmount = Math.max(0, finalAmount - 1);
             queueCardTrigger(targetPlayerId, 59, "Reduced incoming transformation by 1");
@@ -6354,8 +6747,9 @@ function executeInstant(card, playerId) {
     if (card.id === 1) { gameState.extraTurn = true; log(`${p.name} plays Sudden Flash! Taking an extra turn!`); }
     else if (card.id === 4) { applyTransform(oppId, 1, playerId); p.trance = 0; log(`Whispered Command! Opponent Transform +1, Trance reduced to 0.`); }
     else if (card.id === 6) {
-        if (opp.shieldActive) log(`Velvet Voice blocked by ${opp.name}'s Rapid Pulse.`);
-        else {
+        if (opp.shieldActive) {
+			log(`Velvet Voice blocked by ${opp.name}'s Rapid Pulse.`); showShieldBlock(oppId, "arousal"); 
+		} else {
             increaseArousal(opp, 2, oppId, playerId);
             log(`Velvet Voice! Opponent Arousal +2.`);
         }
@@ -6985,11 +7379,15 @@ async function resolveDice() {
 	let arousalEffect = hasSignaturePower(activePlayerNum, "xander")
         ? counts.AROUSAL
         : (counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0);
-    if (hasCard(activePlayerNum, 13) && counts.AROUSAL >= 2) { arousalEffect += 1; queueCardTrigger(activePlayerNum, 13, "Boosted Arousal effect by 1"); log(`Stoking Fires boosted Arousal!`); }
+    if (hasCard(activePlayerNum, 13) && arousalEffect > 0)
+	{ 
+		arousalEffect += 1; queueCardTrigger(activePlayerNum, 13, "Boosted Arousal effect by 1"); log(`Stoking 	Fires boosted Arousal!`); 
+	}
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
             if (typeof increaseArousal === "function") {
-                increaseArousal(oppP, arousalEffect, oppId, activePlayerNum);
+                const gained = increaseArousal(oppP, arousalEffect, oppId, activePlayerNum);
+				log(gained > 0 ? `${oppP.name}'s arousal increases +${gained} 🔥.` : `${oppP.name} is already at 5 🔥.`);
             } else {
                 oppP.arousal = (oppP.arousal || 0) + arousalEffect;
             }
@@ -7186,7 +7584,119 @@ let marketWipeAnimating = false;
 let marketDealAnimating = false;
 let marketWipeTimer = null;
 
+
+
 function wipeMarket() {
+    // A second wipe must not overlap an animation already in progress.
+    if (marketWipeAnimating) return Promise.resolve(false);
+
+    const player = Number(gameState.activePlayer) === 1
+        ? gameState.p1
+        : gameState.p2;
+
+    const wipeCost = getMarketWipeCost(gameState.activePlayer);
+
+    if (player.energy < wipeCost) {
+        playSound("deny");
+        return Promise.resolve(false);
+    }
+
+    const marketContainer = document.getElementById("market-container");
+    const oldCards = marketContainer
+        ? Array.from(marketContainer.querySelectorAll(":scope > .card"))
+        : [];
+
+    marketWipeAnimating = true;
+    player.energy -= wipeCost;
+
+    if (marketContainer) {
+        marketContainer.classList.add("market-wipe-running");
+    }
+
+    oldCards.forEach((el, index) => {
+        el.style.setProperty("--sweep-index", index);
+        el.classList.add("market-card-sweeping");
+    });
+
+    playSound("whoosh");
+
+    if (wipeCost === 1) {
+        log(`${player.name}'s Market Manipulator reduces the wipe cost to 1 ⚡.`);
+    }
+
+    // Match the CSS sweep duration (420ms) and 32ms per-card stagger.
+    const sweepDelay = oldCards.length
+        ? 420 + (oldCards.length - 1) * 32
+        : 0;
+
+    return new Promise(resolve => {
+        marketWipeTimer = window.setTimeout(() => {
+            // Discard the old market only after it has swept away.
+            discardCards(market);
+            market = [];
+            refillMarket();
+
+            // Render replacement cards with their deal animation.
+            marketDealAnimating = true;
+
+            if (marketContainer) {
+                marketContainer.classList.remove("market-wipe-running");
+            }
+
+            syncToFirebase();
+            updateUI();
+
+            const newCards = market.map(card => card && card.name)
+                .filter(Boolean)
+                .join(", ") || "none";
+
+            if (
+                gameState.gameMode === "solo" &&
+                Number(gameState.activePlayer) === 2 &&
+                hasSignaturePower(2, "zixuan")
+            ) {
+                log(`${player.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${newCards}`);
+            } else {
+                log(`Market Wiped. New cards: ${newCards}`);
+            }
+
+            // Match the CSS deal duration (520ms) and 85ms per-card stagger.
+            const newCardElements = marketContainer
+                ? Array.from(marketContainer.querySelectorAll(".market-card-dealing"))
+                : [];
+
+            const dealDelay = newCardElements.length
+                ? 520 + (newCardElements.length - 1) * 85
+                : 0;
+
+            // Wait until the last replacement card finishes dealing.
+            window.setTimeout(() => {
+                if (marketContainer) {
+                    marketContainer.querySelectorAll(".market-card-dealing")
+                        .forEach(el => {
+                            el.classList.remove("market-card-dealing");
+                            el.style.removeProperty("--deal-index");
+                        });
+                }
+
+                // Clear both flags before rebuilding the purchase controls.
+                marketDealAnimating = false;
+                marketWipeAnimating = false;
+                marketWipeTimer = null;
+
+                // Refresh buttons and affordability after the animation ends.
+                updateUI();
+
+                resolve(true);
+            }, dealDelay);
+        }, sweepDelay);
+    });
+}
+
+
+
+// deprecated
+function wipeMarketOld() {
     if (marketWipeAnimating) return;
     let p = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
 
@@ -7200,24 +7710,83 @@ function wipeMarket() {
     const oldCards = marketContainer ? Array.from(marketContainer.querySelectorAll(":scope > .card")) : [];
     marketWipeAnimating = true;
     p.energy -= wipeCost;
-    if (gameState.gameMode === "solo" && Number(gameState.activePlayer) === 2) {
-        // The CPU's shop planner is synchronous. Resolve Zixuan's repeated one-Energy wipes
-        // immediately so it can inspect each fresh market rather than issuing overlapping wipes.
-        discardCards(market);
-        market = [];
-        refillMarket();
-        playSound("whoosh");
-		const newCards = market.map(card => card && card.name).filter(Boolean).join(", ") || "none";
-		if (hasSignaturePower(2, "zixuan"))
+    
+	if (gameState.gameMode === "solo" && Number(gameState.activePlayer) === 2) {
+		// Preserve synchronous CPU market decisions, but animate visual copies
+		// of the old cards so they can sweep away after the market refreshes.
+		const reduceMotion =
+			window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+		const ghosts = [];
+
+		if (!reduceMotion) {
+			oldCards.forEach((el, i) => {
+				const rect = el.getBoundingClientRect();
+				const ghost = el.cloneNode(true);
+
+				ghost.classList.remove(
+					"market-card-dealing",
+					"can-afford",
+					"cannot-afford",
+					"already-owned"
+				);
+				ghost.classList.add("market-card-sweeping");
+				ghost.style.setProperty("--sweep-index", i);
+				ghost.style.cssText +=
+					`;position:fixed;left:${rect.left}px;top:${rect.top}px;` +
+					`width:${rect.width}px;height:${rect.height}px;` +
+					`margin:0;z-index:12000;pointer-events:none;`;
+
+				document.body.appendChild(ghost);
+				ghosts.push(ghost);
+			});
+		}
+
+		// Refresh immediately so the CPU can evaluate the new cards right away.
+		discardCards(market);
+		market = [];
+		refillMarket();
+
+		playSound("whoosh");
+
+		const newCards = market
+			.map(card => card && card.name)
+			.filter(Boolean)
+			.join(", ") || "none";
+
+		if (hasSignaturePower(2, "zixuan")) {
 			log(`${p.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${newCards}`);
-		else
+		} else {
 			log(`Market Wiped. New cards: ${newCards}`);
+		}
+
 		marketWipeAnimating = false;
-		marketDealAnimating = false;
+		marketDealAnimating = true;
+
 		syncToFirebase();
 		updateUI();
+
+		// Remove the visual copies when their sweep animation has finished.
+		window.setTimeout(() => {
+			ghosts.forEach(ghost => ghost.remove());
+		}, reduceMotion ? 0 : 600);
+
+		// The replacement cards use the existing deal-in animation.
+		window.setTimeout(() => {
+			marketDealAnimating = false;
+
+			const mc = document.getElementById("market-container");
+			if (mc) {
+				mc.querySelectorAll(".market-card-dealing").forEach(el => {
+					el.classList.remove("market-card-dealing");
+					el.style.removeProperty("--deal-index");
+				});
+			}
+		}, reduceMotion ? 0 : 900);
+
 		return;
-    }
+	}
+
     if (marketContainer) marketContainer.classList.add("market-wipe-running");
     oldCards.forEach((el, i) => {
         el.style.setProperty("--sweep-index", i);
@@ -7446,7 +8015,7 @@ function buyCard(index) {
     if (hasSignaturePower(playerId, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) {
         playSound("deny");
         log(`${p.name}'s Unyielding Resistance cannot use defensive Submission card ${card.name}.`);
-        if (isLocalPlayerTurn()) showPopup("Unyielding Resistance", `${p.name} cannot use defensive Submission cards while assigned to ${getSignaturePowerForName(p.name).form}.`);
+        if (isLocalPlayerTurn()) showPopup("Unyielding Resistance", `${p.name} cannot use defensive Submission cards while Unyielding Resistance is on.`);
         return false;
     }
 
@@ -7550,10 +8119,24 @@ function endTurn() {
 		let tPush = Math.floor(activeP.energy / 6) * 2;
 		if (tPush > 0) {
 			log(`Falling Sensation: ${oppP.name}'s trance deepens +${tPush} 🌀.`);
+			queueCardTrigger(gameState.activePlayer, 31,
+				oppP.shieldActive ? `Rapid Pulse blocked +${tPush} 🌀 on ${oppP.name}`
+								  : `Deepened ${oppP.name}'s Trance by ${tPush} 🌀`);
 			increaseTrance(oppP, tPush, gameState.activePlayer);
 		}
 	}
+	
+	// A Falling Sensation Setback opens a choice dialog. Wait for it before the turn passes.
+    if (isChoicePending()) {
+        finishEndTurnAfterChoice = true;
+        syncToFirebase();
+        updateUI();
+        return;
+    }
+    finishEndTurn();
+}
 
+function finishEndTurn() {
     // ------------------------------------------------------------
     // COGNITIVE OVERRIDE
     //
@@ -7647,6 +8230,8 @@ function executeCPUTurn() {
         gameState.p2.energy -= 2;
         gameState.p2.shieldActive = true;
         log("CPU used Rapid Pulse! Shielded incoming Trance and Arousal!");
+		queueCardTrigger(2, 12, "Activated shield for this turn", "manual");
+        updateUI();
     }
 
     let cpuBusy = false; // prevents overlapping telegraph/reroll steps inside the interval
@@ -7707,7 +8292,7 @@ function executeCPUTurn() {
 
             clearInterval(rInterval);
 
-            setTimeout(() => {
+            setTimeout(async () => {
 
                 // --------------------------------------------------------
                 // SIMMERING AROUSAL
@@ -7732,8 +8317,21 @@ function executeCPUTurn() {
                 cpuEnsureRitualKeep();
                 if (cpuIsAdaptive()) cpuBrainRecordRoll();
                 resolveDice();
-                if (cpuIsAdaptive()) { cpuAdaptiveShopPhase(); endTurn(); return; }
-                if (cpuIsTier()) { cpuTierShopPhase(getCpuDifficulty()); endTurn(); return; }
+				if (cpuDebugBuyFirst()) {
+					endTurn();
+					return;
+				}
+                if (cpuIsAdaptive()) {
+					await cpuAdaptiveShopPhase();
+					endTurn();
+					return;
+				}
+
+				if (cpuIsTier()) {
+					await cpuTierShopPhase(getCpuDifficulty());
+					endTurn();
+					return;
+				}
 				
 				// --------------------------------------------------------
                 // TACTICAL MARKET PRIORITIZATION (CARDS RATED 70+)
@@ -7755,7 +8353,7 @@ function executeCPUTurn() {
                     }
                 }
 
-                if (highValueTarget) {
+                if (highValueTarget && !cpuIsBeginnerOrEasy()) { // Beginner/Easy don't deny/wipe
                     let targetCost = getCardPurchaseCost(highValueTarget, 2);
 
                     // 1. If CPU cannot afford high-value card, try generating energy/free buy
@@ -7788,7 +8386,7 @@ function executeCPUTurn() {
 
                     if (!canCpuAfford && canPlayerAfford && deck.length > 0) {
                         let energyBefore = gameState.p2.energy;
-                        wipeMarket();
+                        await wipeMarket();
                         log(`CPU wiped market to deny Player 1 high-value card (${highValueTarget.name})! (${energyBefore} → ${gameState.p2.energy})`);
                     }
                 }
@@ -7831,7 +8429,7 @@ function executeCPUTurn() {
                 // --------------------------------------------------------
                 if (cpuShouldUseWipe()) {
                     let energyBefore = gameState.p2.energy;
-                    wipeMarket();
+                    await wipeMarket();
                     log(`CPU used Wipe: refreshed market (${energyBefore} → ${gameState.p2.energy}).`);
                 }
 
@@ -7876,8 +8474,9 @@ function executeCPUTurn() {
 
                         if (effectiveCost <= gameState.p2.energy || gameState.freeBuyActive) {
                             if (cpuShouldBuyCard(card, effectiveCost)) {
-                                let score = cpuCardPurchaseScore(card);
-                                if (effectiveCost <= gameState.p2.energy) score += 5;
+                                let score = cpuIsBeginnerOrEasy() ? Math.random() * 100 : cpuCardPurchaseScore(card);   // Beginner/Easy: random pick
+                                if (!cpuIsBeginnerOrEasy() && effectiveCost <= gameState.p2.energy)
+									score += 5;
                                 if (score > bestScore) {
                                     bestScore = score;
                                     bestIndex = i;
@@ -7901,7 +8500,7 @@ function executeCPUTurn() {
                         
                         if (gameState.p2.energy >= (hasSignaturePower(2, "zixuan") ? 1 : wipeThreshold) && deck.length > 0 && market.length > 0) {
                             let energyBefore = gameState.p2.energy;
-                            wipeMarket();
+                            await wipeMarket();
                             log(`CPU used Wipe (Excess Energy): refreshed market (${energyBefore} → ${gameState.p2.energy}).`);
                             boughtSomething = true; // Iterate loop again to evaluate the newly wiped market
                         }
@@ -7995,7 +8594,7 @@ function winnerIdFromState() {
 }
 
 function presentFinishedGame() {
-    if (gameOverPresentationStarted || !gameState || !gameState.gameEnded) return;
+    if (transformationSigilPending || gameOverPresentationStarted || !gameState || !gameState.gameEnded) return;
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
@@ -8283,14 +8882,15 @@ function openThemedDialog({
 // Returns true for Confirm, false for Cancel or Escape.
 function showThemedConfirm(
     message,
-    title = "Confirm Your Decision"
+    title = "Confirm Your Decision",
+	cancelText = "Cancel"
 ) {
     return openThemedDialog({
         mode: "confirm",
         title,
         message,
         acceptText: "Confirm",
-        cancelText: "Cancel"
+        cancelText
     });
 }
 

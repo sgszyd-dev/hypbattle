@@ -1108,7 +1108,7 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I can still feel the universe… and right now it’s telling me to submit and be {HUMGEN|filled by you.|controlled by you.}"
         ],
         Tex: [
-            "Well, partner, you got the better of me. I reckon it's time to tip my hat and admit defeat. You win.",
+            "Well, {HUMGEN|partner|darlin'}, you got the better of me. I reckon it's time to tip my hat and admit defeat. You win.",
             "All right, you win this round. I'm not too proud to surrender when the trail runs out. Just don't expect me to stop giving you grief about it.",
 			"Well I’ll be… looks like this cowboy’s been thrown, hog-tied, and claimed. Do with me as you please, {HUMAN}.",
 			"I came in swinging and ended up on my back with my legs open. Guess the saddle’s on the other horse now…",
@@ -1548,7 +1548,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
     },
     Tex: {
         TransformPlayer: [
-            "Well, partner, that's another step. I'd tell you to stand your ground, but I reckon the ground's got other plans for you.",
+            "Well, {HUMGEN|partner|darlin'}, that's another step. I'd tell you to stand your ground, but I reckon the ground's got other plans for you.",
             "There you go, changin' again. Ain't it a shame you can't talk your way outta this one?",
             "Another step closer to somethin' you ain't gonna recognize in the mirror. Don't worry, I'll try not to laugh too hard.",
             "Now, don't give me that look. You knew there'd be consequences when you climbed into the saddle. You just figured they'd happen to somebody else.",
@@ -1562,7 +1562,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Well, hell. My shoulders are gettin' broader, my skin's thickening, and I got a mighty unpleasant suspicion about where this is headed.",
             "You're tellin' me I'm growin' horns? I've spent my whole life avoidin' bulls, and now I'm fixin' to be the biggest one in the pasture.",
             "My boots don't fit, my legs feel like fence posts, and somethin' tells me a tailor ain't gonna be much help with this particular problem.",
-            "I can feel my face changin'. If a set of horns shows up between my eyes, partner, we're gonna have words.",
+            "I can feel my face changin'. If a set of horns shows up between my eyes, {HUMGEN|partner|darlin'}, we're gonna have words.",
             "Well, ain't this a fine mess. I'm turnin' into a bull, and I got a feeling the ladies in the pasture are about to become a whole lot more interestin' than I'd care to admit.",
 			"Interesting. The changes settle in deep. I can feel every one of them.",
             "My form is shifting. I will remember the hands that pushed it."
@@ -1583,7 +1583,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Now, hold on. I know what that looked like, and I don't care to hear your version of it.",
             "Well, I'll be damned. Followed your lead without so much as a second thought. You keep that to yourself, hear?",
             "I reckon I was a mite too agreeable just then. Must be the dust. Gets into a man's head.",
-            "Don't go smilin' like that, partner. I know what I did. I just ain't decided what I'm gonna call it yet.",
+            "Don't go smilin' like that, {HUMGEN|partner|darlin'}. I know what I did. I just ain't decided what I'm gonna call it yet.",
             "A gentleman can recognize a good suggestion without surrenderin' his pride. That's my story, and I'm stickin' to it."
         ],
 
@@ -1592,19 +1592,19 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Well, ain't that a beautiful thing. I'd say I planned it, but I don't want to insult either of us.",
             "That's a mighty fine roll. Makes a man feel like buyin' a drink, even if the company ain't worth the price.",
             "Would you look at that. Sometimes a man gets lucky. Sometimes he makes the other fella wish he hadn't shown up.",
-            "Now that's a hand worth playin'. You might wanna sit down, partner. This next bit could be hard on your pride."
+            "Now that's a hand worth playin'. You might wanna sit down, {HUMGEN|partner|darlin'}. This next bit could be hard on your pride."
         ],
 
         PlayerAt5Transform: [
-            "Halfway there, partner. You're in a tight spot, and I ain't seein' a whole lotta daylight through it.",
+            "Halfway there, {HUMGEN|partner|darlin'}. You're in a tight spot, and I ain't seein' a whole lotta daylight through it.",
             "Five stages down. You still got some fight in you, I'll give you that. Shame fightin' ain't the same as winnin'.",
             "Well, look at you. Halfway to a whole new life, and you ain't even had the courtesy of a say in the matter.",
-            "You're halfway gone, partner. I'd offer you some encouragement, but I ain't in the habit of lyin' to a person who's already got enough trouble.",
+            "You're halfway gone, {HUMGEN|partner|darlin'}. I'd offer you some encouragement, but I ain't in the habit of lyin' to a person who's already got enough trouble.",
             "Five steps along. If you had a plan, now'd be a fine time to quit keepin' it a secret from yourself."
         ],
 
         PlayerAt8Transform: [
-            "Eight stages. You're runnin' outta trail, partner, and I ain't the sort to lend you a horse.",
+            "Eight stages. You're runnin' outta trail, {HUMGEN|partner|darlin'}, and I ain't the sort to lend you a horse.",
             "Two steps left. I'd say it's time to get serious, but I reckon that ship sailed a while back.",
             "Well, this is gettin' near the end of the line. You can glare at me all you want; it ain't gonna change the arithmetic.",
             "Eight down. I admire a stubborn soul, but there's a point where stubborn just becomes expensive.",
@@ -1615,7 +1615,7 @@ const CHALLENGE_RIVAL_TAUNTS = {
             "Halfway to bein' a bull. My shoulders are built like a barn door, my skin's gettin' thick, and I ain't pleased with the direction of this conversation.",
             "Five stages. My boots are a lost cause, my hands are lookin' less like hands, and I swear I'm startin' to understand why bulls get so ornery.",
             "I got horns comin' in, muscle where I didn't ask for it, and a growing suspicion that the cows in the next pasture are lookin' mighty fine. Now that last part is downright unacceptable.",
-            "Halfway changed, and already I'm feelin' the urge to paw at the dirt whenever somebody irritates me. You tell a soul about that, partner, and I'll deny every word.",
+            "Halfway changed, and already I'm feelin' the urge to paw at the dirt whenever somebody irritates me. You tell a soul about that, {HUMGEN|partner|darlin'}, and I'll deny every word.",
             "I came into this match a respectable man. Now I'm built like a prize bull and findin' myself distracted by the livestock. There's a joke in there somewhere, but I ain't laughin' yet."
         ],
 
