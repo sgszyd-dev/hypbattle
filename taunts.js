@@ -901,6 +901,14 @@ const CPU_VICTORY_TAUNTS = {
 			"So since I won I get to decide things? Don’t move. I’m still being nice… mostly.",
 			"This is new. You’re all mine right now and I’m trying very hard not to get carried away.",
 			"I keep thinking I should apologize but… you lost. So maybe I don’t have to be sorry for what happens next."
+		],
+		Ivy: [
+			"Look at that. Another win for someone who actually knows how to put a complete sentence together. You might not be able to do that anymore yourself.",
+			"You’re done. And before you start whining, it’s ‘you’re,’ not ‘your.’ Now be a good loser and present properly.",
+			"I win. Again. Try not to look so surprised—I’ve been juggling twelve projects and still had time to dismantle you.",
+			"That’s the sound of you losing to someone who knows what she is doing. Admire the efficiency.",
+			"Victory is mine. You’re going to stay as a {HUMTRANS} while I decide which of my prototypes to test on you first.",
+			"I told you competition was my love language. Consider yourself thoroughly spoken to… and thoroughly transformed."
 		]
     }
 };
@@ -1145,6 +1153,14 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"This is so embarrassing. I was trying to be nice and now I’m a {CPUTRANS}.",
 			"Okay… you win. Just… be a little gentle? Or don’t. I think I’m past caring.",
 			"I have no idea what you did to me. Please don’t make fun of me too much while you… finish this."
+		],
+		Ivy: [
+			"Congratulations. You actually managed to turn me into a {CPUTRANS}. I’ll be filing this under ‘statistical anomaly’ and never speaking of it again.",
+			"Ugh. Fine. You win. Try not to gloat too loudly—some of us still have standards about sportsmanship… and grammar.",
+			"I lost. To you. I’m going to need a very long shower and possibly a memory wipe. Do try to look less smug about it.",
+			"Well played. I’ll admit defeat this once. Just don’t expect me to start calling you ‘{HUMGEN|master|mistress}’ without the proper apostrophe.",
+			"You beat me. I’m impressed. And slightly nauseated. Mostly nauseated. Hand me my dignity back when you’re done stepping on it.",
+			"Alright, you win. I’ll be over here recalibrating my expectations of the universe. {AAN} {CPUTRANS} of all things. Ugh."
 		]
     }
 };
@@ -1901,6 +1917,80 @@ const CHALLENGE_RIVAL_TAUNTS = {
       "So close to whatever this is becoming. I want one more clean win before it finishes.",
       "Final stage incoming. I’m going to use whatever’s left to make sure you feel this too.",
       "I can feel it taking over. Just… let me have one last moment of being the guy who almost had it together."
+    ]
+  },
+  Ivy: {
+	  TransformPlayer: [
+      "Another stage. Your body is rewriting itself and you’re still using the wrong form of ‘its.’ Focus, {HUMAN}.",
+      "Feel that change settling in? Good. I’m inventing a better version of you whether you asked for it or not.",
+      "Keep transforming. I’ll be over here taking notes and judging your inability to stay human.",
+      "Your old shape is losing the argument. Accept the upgrade—I’ve put a lot of thought into this design.",
+      "Another step toward something more interesting than the original. Try not to mess up the process with poor posture.",
+      "I’m changing you piece by piece and you’re still thinking in incomplete sentences. Priorities, darling."
+    ],
+     AIGetsTransformed: [
+      "My body is shifting and I hate every second of it. Do not comment on the symmetry—I’ll correct you later.",
+      "You’re altering me. How original. I’ll be filing a formal complaint once I finish recalibrating.",
+      "These changes are undignified. When this is over I’m inventing something that turns you into a thesaurus.",
+      "I can feel the transformation taking hold. Try not to look so pleased—your smug face needs work.",
+      "You’re rewriting my design. I hope you’re proud of yourself. I’m already planning the counter-invention.",
+      "This is temporary. My body may be changing, but my ability to roast you remains fully operational."
+    ],
+    PlayerIsObedient: [
+      "Look at that. Actual obedience. I’m almost impressed. Almost. Stay exactly like that.",
+      "You’re following instructions correctly for once. Don’t ruin it by speaking in fragments.",
+      "Good. You’re finally behaving. I might even let you earn a reward—after I finish this schematic.",
+      "Perfect posture, perfect silence. If only your grammar had been this cooperative earlier.",
+      "You’re obeying. Remarkable. Hold that position while I decide what to do with such rare compliance.",
+      "That’s the kind of submission I can work with. Keep it up and I might stop correcting you mid-sentence."
+    ],
+	AIIsObedient: [
+      "I’ll follow the order. For now. Don’t get used to it—I’m already drafting the revenge blueprint.",
+      "Temporary compliance noted. The second this wears off, you’re going back to being my test subject.",
+      "Fine. I’ll obey. Just know I’m mentally cataloguing every way this is going to cost you later.",
+      "You’ve got me cooperating. Enjoy the moment. It has an expiration date and terrible customer reviews.",
+      "I’m doing what you said. Reluctantly. And with perfect enunciation, unlike some people.",
+      "Obedience accepted. Under protest. And with a long list of grammatical grievances waiting for you."
+    ],
+    BigRollAI: [
+      "Beautiful number. That means I get to push the experiment further while you sit there looking confused.",
+      "Luck is on my side and so is superior planning. Hold still while I capitalize on both.",
+      "A roll like that deserves a thorough demonstration. Try not to stutter when you thank me.",
+      "Perfect result. I’m going to translate it directly into how completely I own this round.",
+      "The dice agree with me. You’re about to learn what happens when the inventor gets a free hand.",
+      "Big success. Big advantage. Big opportunity for me to correct more than just your grammar."
+    ],
+    PlayerAt5Transform: [
+      "Halfway rewritten and you’re still resisting like it matters. Adorable. Keep changing.",
+      "Five stages in. Your old body is losing the debate and I’m winning the design competition.",
+      "Half transformed. Look at you—halfway to something I actually find interesting.",
+      "You’re past the point of easy reversal. Accept the upgrade with better posture this time.",
+      "Midway through my improvements and you’re still using the wrong pronouns for the situation.",
+      "Halfway there. I can already see the finished product and it’s so much better than the original."
+    ],
+    PlayerAt8Transform: [
+      "Two steps from finished. You’re almost my preferred version. Try not to ruin the last stages.",
+      "Nearly complete. That old identity is hanging by a thread and I’m holding the scissors.",
+      "So close to the final form. I hope you’re ready to live with my design choices permanently.",
+      "Almost done. One more push and you’ll be exactly what I intended—compliant and corrected.",
+      "Eight stages deep. Your resistance is statistically insignificant at this point.",
+      "Nearly finished. I’m already planning the victory speech. It will be grammatically flawless."
+    ],
+	AIAt5Transform: [
+      "Halfway altered and I still hate every new detail. Don’t you dare look satisfied.",
+      "Five stages of this nonsense and I’m still more competent than you’ll ever be.",
+      "My body is changing and I despise it. Keep pushing—I’ll invent something worse for you later.",
+      "Halfway there and I’m cataloguing every discomfort for the formal complaint.",
+      "This form is temporary. My irritation, however, is permanent and highly motivated.",
+      "Five stages in. I refuse to find any of this convenient. Or attractive. Stop smiling."
+    ],
+    AIAt9Transform: [
+      "One step left. Fine. Let it finish. I’ll still out-think you in whatever shape I end up.",
+      "Almost complete. If I’m going to be changed, I’ll at least be the most efficient version possible.",
+      "So close to finished. I’ll accept the body. I will not accept losing the argument.",
+      "One stage remaining. Watch me turn even this into a competitive advantage.",
+      "Nearly done. You’ve altered the chassis. The driver is still me—and still better at this than you.",
+      "Final stage incoming. I’ll wear whatever you’ve made me into and still correct your grammar while I win."
     ]
   }
 };

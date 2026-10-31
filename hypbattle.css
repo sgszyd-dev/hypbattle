@@ -102,6 +102,7 @@
             border:1px solid rgba(192,132,252,.58);
             background:radial-gradient(ellipse at top, #393047 0%, var(--panel) 62%);
             box-shadow:0 18px 70px rgba(0,0,0,.72), 0 0 32px rgba(157,78,221,.2);
+			position: relative;
         }
         .options-modal-content h2 { margin-bottom:5px; border:0; padding:0; letter-spacing:.08em; }
         .options-subtitle { text-align:center; color:#bda9d3; font-size:.84rem; margin:0 0 17px; }
@@ -160,7 +161,7 @@
         }
         .start-btn { width: 100%; background: var(--accent) !important; font-size: 1.2em; cursor: pointer; margin-top: 15px;}
         .start-btn:hover { background: var(--accent-hover) !important; }
-        .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .start-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.7); box-shadow:none; }
         .start-btn:disabled:hover { background: var(--accent) !important; }
 		#start-game-btn {
 			font-family: var(--font-display);   /* Cinzel, same as the Solo Challenge button */
@@ -186,7 +187,7 @@
         }
         h1 { letter-spacing: .035em; }
         h2, h3 { margin: 0 0 10px 0; border-bottom: 2px solid var(--accent); padding-bottom: 5px; transition: text-shadow 0.3s; }
-        .setup-brand h2 { letter-spacing: .10em; }
+        .setup-brand h2 { letter-spacing: .10em; } 
         .options-modal-content h2 { letter-spacing: .06em; }
         .setup-brand .setup-tagline, .options-section h3 { font-family: var(--font-ui); }
         
@@ -514,7 +515,15 @@
         .inventory::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 10px; }
         .inv-card { background: #222; border: 1px solid #555; padding: 8px; border-radius: 5px; font-size: 0.85em; }
         .inv-card button { margin-top: 5px; font-size: 0.9em; padding: 4px; }
-
+		.inventory-energy-cost {
+			display: inline-block;
+			margin-left: 5px;
+			color: #ffd166;
+			font-size: 0.85em;
+			font-weight: 800;
+			white-space: nowrap;
+			text-shadow: 0 0 5px rgba(255, 209, 102, 0.3);
+		}
         .dice-container { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: center; margin: 15px 0; }
         .die {
             background: #333; border: 2px solid #555; padding: 5px; border-radius: 5px;
@@ -1371,6 +1380,19 @@
         gap: 10px;
     }
 }
+/* Brainwash Hall of Fame: a full-width, highlighted section at the top of the global leaderboard */
+.leaderboard-brainwash {
+    grid-column: 1 / -1;
+    border: 1px solid #e879f9;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(120, 40, 160, .28), rgba(25, 18, 38, .85));
+    box-shadow: 0 0 18px rgba(232, 121, 249, .35);
+}
+.leaderboard-brainwash h3 { color: #f0abfc; text-shadow: 0 0 10px rgba(232, 121, 249, .5); margin-top: 0; }
+.leaderboard-brainwash table { width: 100%; }
+.leaderboard-brainwash td:last-child { text-align: right; white-space: nowrap; }
+.lb-sub { color: #b9a8ca; font-size: .8em; }
 
 
 /* Signature transformation powers: visible in setup and beneath each player's portrait. */
@@ -1612,11 +1634,198 @@ body.game-ethereal-enabled { background-color: transparent; }
 }
 
 
-/* Small, right-aligned Options & Tools close button */
-.options-modal-content {
+/* =========================================
+   TRANCEFORMATION: MAGICAL TITLE EFFECTS
+   ========================================= */
+
+.setup-brand {
     position: relative;
+    isolation: isolate;
 }
 
+/* Keep the title above the decorative effects. */
+.setup-brand h2 {
+    position: relative;
+    isolation: isolate;
+}
+
+/* Occasional shimmer across the lettering. */
+/* Each word gets its own shimmer, clipped to its letter shapes. */
+.setup-brand h2::after {
+    content: none;
+}
+
+.setup-brand .title-trance,
+.setup-brand .title-formation {
+    position: relative;
+    display: inline-block;
+}
+
+/* Overlay a moving highlight, masked by the text glyphs. */
+.setup-brand .title-trance::after,
+.setup-brand .title-formation::after {
+    content: attr(data-shimmer-text);
+    position: absolute;
+    inset: 0;
+    white-space: nowrap;
+    pointer-events: none;
+
+    font: inherit;
+    letter-spacing: inherit;
+
+    background: linear-gradient(
+        105deg,
+        transparent 38%,
+        rgba(255, 255, 255, 0.95) 48%,
+        rgba(215, 250, 255, 1) 50%,
+        rgba(255, 255, 255, 0.8) 52%,
+        transparent 62%
+    );
+
+    background-size: 250% 100%;
+    background-position: 130% 0;
+    background-repeat: no-repeat;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+
+    opacity: 0;
+    animation: word-shimmer 11s ease-in-out infinite;
+}
+
+.setup-brand .title-formation::after {
+    animation-delay: 0.25s;
+}
+
+/* Small floating stars around the title. */
+.brand-sparkle {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    user-select: none;
+
+    font-family: Georgia, serif;
+    line-height: 1;
+    opacity: 0;
+
+    color: #f4dcff;
+    text-shadow:
+        0 0 4px #fff,
+        0 0 9px #c78aff,
+        0 0 18px rgba(181, 106, 255, 0.9);
+
+    animation: title-magic-sparkle 7s ease-in-out infinite;
+}
+
+/* Positions are relative to the title block. */
+.sparkle-1 {
+    left: 7%;
+    top: 5%;
+    font-size: 17px;
+    --sparkle-size: 1.15;
+    animation-delay: 0.7s;
+}
+
+.sparkle-2 {
+    left: 30%;
+    top: 0;
+    font-size: 12px;
+    color: #c9f8ff;
+    text-shadow:
+        0 0 4px #fff,
+        0 0 10px #65e2ff,
+        0 0 17px rgba(101, 226, 255, 0.9);
+    --sparkle-size: 0.85;
+    animation-delay: 3.4s;
+}
+
+.sparkle-3 {
+    right: 17%;
+    top: 8%;
+    font-size: 15px;
+    --sparkle-size: 1.1;
+    animation-delay: 5.1s;
+}
+
+.sparkle-4 {
+    right: 5%;
+    top: 65%;
+    font-size: 11px;
+    color: #b9f4ff;
+    text-shadow:
+        0 0 4px #fff,
+        0 0 10px #65e2ff,
+        0 0 16px rgba(101, 226, 255, 0.85);
+    --sparkle-size: 0.9;
+    animation-delay: 1.9s;
+}
+
+/* Sparkles appear, twinkle, drift slightly, then vanish. */
+@keyframes title-magic-sparkle {
+    0%, 8%, 100% {
+        opacity: 0;
+        transform: translateY(4px) scale(0.3) rotate(-25deg);
+    }
+
+    12% {
+        opacity: 0.9;
+        transform: translateY(0) scale(var(--sparkle-size, 1)) rotate(0deg);
+    }
+
+    17% {
+        opacity: 0.35;
+        transform: translateY(-2px) scale(0.65) rotate(15deg);
+    }
+
+    22% {
+        opacity: 1;
+        transform: translateY(-3px) scale(1.1) rotate(35deg);
+    }
+
+    29% {
+        opacity: 0;
+        transform: translateY(-7px) scale(0.35) rotate(55deg);
+    }
+}
+
+@keyframes word-shimmer {
+    0%, 65%, 100% {
+        opacity: 0;
+        background-position: 130% 0;
+    }
+
+    68% {
+        opacity: 1;
+        background-position: 130% 0;
+    }
+
+    82% {
+        opacity: 1;
+        background-position: -130% 0;
+    }
+
+    86% {
+        opacity: 0;
+        background-position: -130% 0;
+    }
+}
+
+/* Accessibility: no animated sparkles or shimmer if motion is reduced. */
+@media (prefers-reduced-motion: reduce) {
+    .brand-sparkle,
+    .setup-brand h2::after,
+	.setup-brand .title-trance::after,
+    .setup-brand .title-formation::after	{
+        animation: none !important;
+        opacity: 0 !important;
+    }
+}
+
+
+
+/* Small, right-aligned Options & Tools close button */
 .options-close-x {
     position: absolute;
     top: 10px;
@@ -1658,3 +1867,278 @@ body.game-ethereal-enabled { background-color: transparent; }
 .options-modal-content > h2 {
     padding-right: 30px;
 }
+
+.ivy-exchange-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.ivy-exchange-option {
+    padding: 10px;
+    border: 1px solid rgba(157, 78, 221, 0.45);
+    border-radius: 9px;
+    background: rgba(80, 50, 100, 0.2);
+}
+
+.ivy-exchange-option span {
+    float: right;
+    color: #c4a5e8;
+    font-weight: bold;
+}
+
+.ivy-exchange-option p {
+    margin: 7px 0;
+    color: #ccc;
+    font-size: 0.85em;
+}
+
+
+/* ============================================================
+   IVY — SUGGESTED TRANSFERENCE ANIMATION
+   ============================================================ */
+
+#ivy-exchange-animation {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(8, 4, 18, 0.88);
+    backdrop-filter: blur(7px);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+#ivy-exchange-animation.ivy-animation-active {
+    opacity: 1;
+}
+
+#ivy-exchange-animation.ivy-animation-closing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ivy-animation-panel {
+    width: min(760px, 100%);
+    padding: 26px;
+    border: 1px solid rgba(190, 130, 255, 0.7);
+    border-radius: 18px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(130, 55, 190, 0.25), transparent 65%),
+        #171020;
+    box-shadow: 0 0 45px rgba(157, 78, 221, 0.3);
+    color: #fff;
+    text-align: center;
+    transform: translateY(14px) scale(0.97);
+    transition: transform 0.4s ease;
+}
+
+.ivy-animation-active .ivy-animation-panel {
+    transform: translateY(0) scale(1);
+}
+
+.ivy-animation-heading {
+    color: #d9a8ff;
+    font-size: clamp(1.15rem, 4vw, 1.65rem);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 15px rgba(180, 100, 255, 0.65);
+}
+
+.ivy-animation-subheading {
+    margin-top: 7px;
+    color: #c5b4d5;
+    font-size: 0.92rem;
+}
+
+.ivy-animation-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 4vw, 34px);
+    margin: 28px auto;
+}
+
+.ivy-animation-card {
+    width: min(230px, 38%);
+    min-height: 190px;
+    padding: 9px;
+    border: 1px solid rgba(190, 140, 255, 0.65);
+    border-radius: 12px;
+    background: linear-gradient(145deg, #352344, #1b1426);
+    box-shadow: 0 0 16px rgba(157, 78, 221, 0.22);
+    transition:
+        transform 1.25s cubic-bezier(.2,.8,.2,1),
+        opacity 1.25s ease,
+        filter 0.5s ease,
+        box-shadow 0.5s ease;
+}
+
+.ivy-animation-card:first-child {
+    transform: translateX(0) scale(1);
+}
+
+.ivy-animation-card:last-child {
+    transform: translateX(0) scale(0.78);
+    filter: brightness(0.75);
+}
+
+.ivy-animation-active .ivy-animation-card:first-child {
+    transform: translateX(110%) scale(0.78);
+    opacity: 0.65;
+}
+
+.ivy-animation-active .ivy-animation-card:last-child {
+    transform: translateX(-110%) scale(1);
+    filter: brightness(1.2);
+    box-shadow: 0 0 28px rgba(190, 120, 255, 0.65);
+}
+
+.ivy-animation-label {
+    min-height: 28px;
+    padding: 4px 2px 8px;
+    color: #d8b8f5;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.07em;
+}
+
+.ivy-animation-card-inner {
+    min-height: 145px;
+    padding: 12px;
+    border-radius: 7px;
+    background: rgba(8, 6, 13, 0.72);
+    text-align: left;
+}
+
+.ivy-animation-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    color: #e4c8ff;
+    font-size: 0.95rem;
+}
+
+.ivy-animation-card-type {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(157, 78, 221, 0.25);
+    color: #d9b8ff;
+    font-size: 0.72rem;
+}
+
+.ivy-animation-card-desc {
+    margin-top: 12px;
+    color: #d0c8d8;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.ivy-animation-spark {
+    flex: 0 0 auto;
+    color: #d9a8ff;
+    font-size: 2rem;
+    text-shadow: 0 0 18px #b56cff;
+    animation: ivy-spark-pulse 1.1s ease-in-out infinite alternate;
+}
+
+.ivy-animation-message {
+    margin: 18px auto;
+    max-width: 580px;
+    color: #e4d7ef;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.ivy-animation-message strong {
+    color: #e0b6ff;
+}
+
+.ivy-animation-continue {
+    min-width: 130px;
+    margin-top: 5px;
+    padding: 10px 24px;
+    border: 1px solid #c18aff;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #7135a5, #49216c);
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ivy-animation-continue:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 16px rgba(190, 120, 255, 0.45);
+}
+
+@keyframes ivy-spark-pulse {
+    from { transform: scale(0.85); opacity: 0.65; }
+    to   { transform: scale(1.2); opacity: 1; }
+}
+
+@media (max-width: 520px) {
+    .ivy-animation-panel {
+        padding: 18px 12px;
+    }
+
+    .ivy-animation-stage {
+        gap: 8px;
+        margin: 20px auto;
+    }
+
+    .ivy-animation-card {
+        width: 42%;
+        min-height: 170px;
+        padding: 6px;
+    }
+
+    .ivy-animation-card-inner {
+        min-height: 135px;
+        padding: 8px;
+    }
+
+    .ivy-animation-card-header {
+        font-size: 0.8rem;
+    }
+
+    .ivy-animation-card-desc {
+        font-size: 0.7rem;
+    }
+
+    .ivy-animation-label {
+        font-size: 0.55rem;
+    }
+
+    .ivy-animation-spark {
+        font-size: 1.35rem;
+    }
+
+    .ivy-animation-active .ivy-animation-card:first-child {
+        transform: translateX(55%) scale(0.78);
+    }
+
+    .ivy-animation-active .ivy-animation-card:last-child {
+        transform: translateX(-55%) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #ivy-exchange-animation,
+    .ivy-animation-card,
+    .ivy-animation-panel {
+        transition-duration: 0.01ms !important;
+    }
+
+    .ivy-animation-spark {
+        animation: none;
+    }
+}
+

@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261028.2"; // Update this label for each release.
+const GAME_VERSION = "20261030.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -7,12 +7,12 @@ let gameSpiralBackgroundEnabled = true;
 
 // --- DEBUG CONFIGURATION ---
 const cardDebugOn = false;
-const debugCards = [31, 7, 2];     // card ids dealt into the first market (as before)
+const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: null,                // number = Player 1 starts with this much ⚡, null = normal start
     cpuEnergy: null,               // same for the CPU
-    p1Cards: [],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
-    cpuCards: [12],                  // Keep-card ids the CPU starts holding
+    p1Cards: [45],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
+    cpuCards: [33],                  // Keep-card ids the CPU starts holding
     cpuBuyFirst: null              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
 };
 
@@ -89,7 +89,8 @@ const CHARACTERS = [
     { name: "Zixuan",    gender: "male" },
     { name: "Hyeri", 	 gender: "female" },
     { name: "Mark",       gender: "male" },
-    { name: "Fable",     gender: "female" }
+    { name: "Fable",     gender: "female"},
+	{ name: "Ivy",		 gender: "female"}
 ];
 const NAMES = CHARACTERS.map(c => c.name);
 function getGender(name) {
@@ -194,7 +195,7 @@ function processGenderTokens(text) {
     return result;
 }
 
-const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Snake", "Squirrel", "Statue", "Werewolf"];
+const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Snake", "Squirrel", "Statue", "Werewolf"];
 
 
 const CHARACTER_MANIFEST = {
@@ -207,7 +208,8 @@ const CHARACTER_MANIFEST = {
     "Zixuan": ["Dog","Fox","Pig","Doll"], // Doll
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"], // Squirrel
     "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
-    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"] // Otter
+    "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
+	"Ivy": ["Demon"] // Demon
 	};
 
 
@@ -246,7 +248,7 @@ const KNOWN_CARDS = [
 	{ id: 28, name: "Hypnotic Focus", cost: 5, type: "Keep", desc: "The first card you buy each turn costs 2 less energy.", ai: {transformer: 55, adaptive: 45, aggressive: 50, defensive: 50, v23low: 60} },
     { id: 29, name: "Compliant Mind", cost: 3, type: "Keep", desc: "Buying cards costs you 1 less ⚡.", ai: {transformer: 55, adaptive: 45, aggressive: 30, defensive: 30, v23low: 40} },
     { id: 30, name: "Shattered Ego", cost: 5, type: "Instant", desc: "Deepen your submission by 4 and transform the opponent 2.", ai: {transformer: 55, adaptive: 55, aggressive: 60, defensive: 20, v23low: 35} },
-    { id: 31, name: "Falling Sensation", cost: 3, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {transformer: 12, adaptive: 35, aggressive: 30, defensive: 5, v23low: 20} },
+    { id: 31, name: "Falling Sensation", cost: 5, type: "Keep", desc: "Deepen the opponent's trance by 2 for every 6 ⚡ you have at the end of your turn.", ai: {transformer: 12, adaptive: 45, aggressive: 40, defensive: 5, v23low: 20} },
     { id: 32, name: "Guided Heat", cost: 3, type: "Keep", desc: "When your arousal level increases, gain 1 ⚡.", ai: {transformer: 12, adaptive: 20, aggressive: 10, defensive: 40, v23low: 15} },
     { id: 33, name: "Quiet Mind", cost: 3, type: "Keep", desc: "Spend 2 ⚡ during the shop phase to decrease your trance or arousal level by 1.", ai: {transformer: 25, adaptive: 20, aggressive: 10, defensive: 40, v23low: 10} },
     { id: 34, name: "Cognitive Override", cost: 3, type: "Keep", desc: "At the end of your turn, if the submission level is on your side, deepen the opponent's submission level by 1.", ai: {transformer: 18, adaptive: 30, aggressive: 15, defensive: 80, v23low: 60} },
@@ -457,6 +459,7 @@ function onP1NameChange() {
     populateTransformDropdown("cpu-transform-type", nameSel.value);
     updateSignaturePowerHints();
     if (lobbyActive) { lobbyNote = ""; lobbyPushMyEntry(); }     // online lobby: tell the opponent which character we picked
+	updateStartButtonState();
 }
 
 function onCpuNameChange() {
@@ -466,6 +469,7 @@ function onCpuNameChange() {
     setTransformLabel("p1", nameSel.value);
     populateTransformDropdown("p1-transform-type", nameSel.value);
     updateSignaturePowerHints();
+	updateStartButtonState();
 }
 
 function populateTransformDropdown(selectId, opposingCharName, preselect) {
@@ -522,7 +526,7 @@ const CLASSIC_CHALLENGE_RIVALS = [
 // The transformation each character is assigned when they are a rival in The Seven.
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
-    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot"
+    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
@@ -537,7 +541,8 @@ const SIGNATURE_POWERS = {
     Xander: { key:"xander", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
     Tex: { key:"tex", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
     Zixuan: { key:"zixuan", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
-    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance." }
+    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance."},
+	Ivy: {key:"ivy", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."}
 };
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
 function normalizedCharacterName(name) {
@@ -782,6 +787,9 @@ const USE_THREE_TRIES_CHALLENGE = true;
 const CHALLENGE_MAX_LOSSES_PER_RIVAL = 3;
 let challengeLossesAtCurrentRival = 0;
 let challengeFurthestIndex = 0;
+let challengeBrainwash = false;      // true during a Brainwash run: one loss ends it and nothing is ever saved
+let challengeRunComplete = false;    // true once the seventh rival is beaten: this run can no longer be saved
+
 const safeStorage = {
     get(key) {
         try { return localStorage.getItem(key); }
@@ -796,8 +804,14 @@ const safeStorage = {
         catch {}
     }
 };
+// Removes the saved Seven challenge. Does nothing during a Brainwash run, so it can never wipe a standard save.
+function clearChallengeSave() {
+    if (challengeBrainwash) return;
+    try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch (e) {}
+}
 const CHALLENGE_RECORD_KEY = "hypnoticDuel.sevenChallengeRecord.v1";
-function emptyChallengeRecord(){ return { runsStarted:0, runsCompleted:0, runsFailed:0, matchesWon:0, matchesLost:0, bestRivalIndex:0, lastOutcome:"Never played", lastPlayed:null }; }
+function emptyChallengeRecord(){ return { runsStarted:0, runsCompleted:0, runsFailed:0, matchesWon:0, matchesLost:0, bestRivalIndex:0, lastOutcome:"Never played", lastPlayed:null,
+    brainwashStarted:0, brainwashCompleted:0, brainwashFailed:0, brainwashBestRival:0, brainwashLastCompleted:null }; }
 function loadChallengeRecord(){ try { const raw=safeStorage.get(CHALLENGE_RECORD_KEY); return raw ? {...emptyChallengeRecord(),...JSON.parse(raw)} : emptyChallengeRecord(); } catch(e){ return emptyChallengeRecord(); } }
 function saveChallengeRecord(record){ try { safeStorage.set(CHALLENGE_RECORD_KEY,JSON.stringify(record)); } catch(e){ console.warn("Challenge record could not be saved",e); } }
 function updateChallengeRecord(mutator){ const record=loadChallengeRecord(); mutator(record); record.lastPlayed=new Date().toISOString(); saveChallengeRecord(record); return record; }
@@ -812,7 +826,7 @@ function challengeSavePayload(){
     };
 }
 function saveChallengeProgress() {
-    if(!challengeActive) return;
+    if (!challengeActive || challengeBrainwash || challengeRunComplete) return;
 	
     try {
 		safeStorage.set(CHALLENGE_SAVE_KEY, JSON.stringify(challengeSavePayload()));
@@ -823,6 +837,8 @@ function saveChallengeProgress() {
 
 
 function saveChallengeFromScreen() {
+	if (challengeBrainwash || challengeRunComplete) return;
+
     const content = document.getElementById("challenge-content");
     const actions = document.getElementById("challenge-actions");
 
@@ -896,7 +912,9 @@ function applyChallengeSave(data){
         challengePlayerName = typeof data.challengePlayerName === "string" && CHARACTERS.some(c => c.name === data.challengePlayerName) ? data.challengePlayerName : null;
     }
     if (data.challengeIndex >= CHALLENGE_RIVALS.length) throw new Error("This is not a valid The Seven save.");
-    challengeActive=true; challengeIndex=data.challengeIndex;
+    challengeActive=true;
+	challengeBrainwash = false; challengeRunComplete = false;
+	challengeIndex=data.challengeIndex;
     const modeSelect=document.getElementById("game-mode-option"); if(modeSelect){modeSelect.value="solo";toggleGameMode();}
     // A randomized save must resume with the avatar that was excluded when its lineup was generated.
     const savedPlayerSelect=document.getElementById("p1-name");
@@ -935,6 +953,8 @@ function fallbackCopy(textarea) {
     }
 }
 function exportChallengeSave(){
+	if (challengeBrainwash) { showPopup("Brainwash Can't Be Saved", "Brainwash runs have no saves and cannot be exported."); return; }
+	
     let data;
     try { data=safeStorage.get(CHALLENGE_SAVE_KEY); } catch(e) {}
     if(!data && challengeActive) data=JSON.stringify(challengeSavePayload());
@@ -966,7 +986,7 @@ function showChallengeRecord(){
     const r=loadChallengeRecord();
     const best=r.bestRivalIndex ? `${r.bestRivalIndex} / 7 — ${CHALLENGE_RIVALS[r.bestRivalIndex-1]?.name || "The Seven"}` : "Not yet reached";
     const last=r.lastPlayed ? new Date(r.lastPlayed).toLocaleString() : "Never";
-    showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at the first rival:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}</div>`);
+    showPopup("The Seven — Challenge Record", `<div style="text-align:left;line-height:1.8"><strong>Runs started:</strong> ${r.runsStarted}<br><strong>Runs completed:</strong> ${r.runsCompleted}<br><strong>Runs ended at the first rival:</strong> ${r.runsFailed}<br><strong>Matches won:</strong> ${r.matchesWon}<br><strong>Matches lost:</strong> ${r.matchesLost}<br><strong>Furthest rival reached:</strong> ${best}<br><strong>Last outcome:</strong> ${r.lastOutcome}<br><strong>Last played:</strong> ${last}<hr style="border:0;border-top:1px solid #4b3a63;margin:10px 0"><strong>🧠 Brainwash runs started:</strong> ${r.brainwashStarted}<br><strong>Brainwash completed:</strong> ${r.brainwashCompleted}${r.brainwashLastCompleted ? ` (last: ${new Date(r.brainwashLastCompleted).toLocaleDateString()})` : ""}<br><strong>Brainwash furthest rival:</strong> ${r.brainwashBestRival ? r.brainwashBestRival + " / 7" : "Not yet reached"}</div>`);
 }
 async function resetChallengeRecord(){ 
         const confirmed = await showThemedConfirm(
@@ -1020,7 +1040,7 @@ function challengeRoadmapHtml() {
         ? 50
         : 7.14 + challengeIndex * (85.72 / 6);
 
-    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName, playerName.slice(0, 2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex + 1} of ${CHALLENGE_RIVALS.length} · Wins move you forward · ${USE_THREE_TRIES_CHALLENGE ? `Up to ${CHALLENGE_MAX_LOSSES_PER_RIVAL} tries per rival` : "Losses send you back"}</div>`;
+    return `<div class="challenge-roadmap"><div class="challenge-player-portrait">${challengePortrait(playerName, playerName.slice(0, 2).toUpperCase())}<div class="challenge-portrait-label">YOU · CHALLENGER</div></div><div><div class="challenge-route"><div class="challenge-road-marker" style="left:${markerPct}%"></div>${rivals}</div></div></div><div class="challenge-status">Rival ${challengeIndex + 1} of ${CHALLENGE_RIVALS.length} · ${challengeBrainwash ? "🧠 BRAINWASH · One loss ends the run · No saves" : `Wins move you forward · ${USE_THREE_TRIES_CHALLENGE ? `Up to ${CHALLENGE_MAX_LOSSES_PER_RIVAL} tries per rival` : "Losses send you back"}`}</div>`;
 }
 
 function renderChallengeScreen(kind, extra={}) {
@@ -1031,7 +1051,7 @@ function renderChallengeScreen(kind, extra={}) {
         title.textContent="✦ THE SEVEN: SOLO CHALLENGE ✦";
         const hasSavedChallenge = !!safeStorage.get(CHALLENGE_SAVE_KEY);
         html=`<p>Face seven rivals in an increasingly difficult gauntlet. Win to climb to the next rival. ${USE_THREE_TRIES_CHALLENGE ? `You have ${CHALLENGE_MAX_LOSSES_PER_RIVAL} attempts against each rival; losses never send you backward.` : "Lose and you'll be sent back one step, where you can fight your way forward again."}</p><p><strong>${USE_THREE_TRIES_CHALLENGE ? "Three losses against the same rival end the challenge." : "One rule is absolute: losing at the first level ends the challenge."}</strong> ${THE_SEVEN_USE_RANDOM_OPPONENTS ? "Defeat the final rival to complete it." : "Defeat the Mistress to complete it."}</p><p>Each rival has a unique special ability, and in The Seven every ability is switched on for both you and your rival. You cannot choose your transformation; the rival selects it from the forms available for your character.</p><p>The seven opponents are randomly selected and ordered for each new run, excluding your own character. Your progress is shown on the roadmap. ${THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "Small Energy bonuses and handicaps may apply between matches." : "Energy bonuses and handicaps are disabled; rival signature powers are the challenge modifiers."}</p><p id="challenge-save-status" style="padding:9px 12px;border-radius:8px;background:rgba(167,139,250,.12);color:${hasSavedChallenge ? '#c4b5fd' : '#d4c7df'}">${hasSavedChallenge ? 'A saved challenge is available on this browser. Choose Resume Saved Challenge to continue.' : 'There is no saved challenge on this browser yet. Begin a challenge or load a save code from another browser using Options & Tools.'}</p>`;
-        buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
+        buttons=`<button onclick="startChallengeRun()">Begin Challenge</button><button onclick="renderChallengeScreen('brainwash')">🧠 Brainwash Mode</button><button onclick="resumeSavedChallenge()">Resume Saved Challenge</button><button class="challenge-cancel" onclick="closeChallengeScreen()">Cancel</button>`;
     } else if (kind === "roadmap") {
         title.textContent="✦ THE ROAD AHEAD ✦";
         html=`<p>Study the route, challenger. The marker shows your next opponent.</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd">Next up: <strong>${CHALLENGE_RIVALS[challengeIndex].name}</strong> · ${CHALLENGE_RIVALS[challengeIndex].tier}</p>`;
@@ -1058,7 +1078,8 @@ function renderChallengeScreen(kind, extra={}) {
     } else if (kind === "result") {
         title.textContent=extra.won?"✦ RIVAL DEFEATED ✦":"✦ THE GAUNTLET STRIKES BACK ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message}</p>${challengeRoadmapHtml()}${extra.modText ? `<p style="text-align:center">${extra.modText}</p>` : ""}`;
-        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge": "Continue"}</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
+        const canSave = !challengeBrainwash && !extra.final;
+        buttons=`<button onclick="continueChallengeAfterResult()">${extra.final?"Finish Challenge":"Continue"}</button>${canSave?`<button onclick="saveChallengeFromScreen()">Save Challenge</button>`:""}${extra.final?"":`<button class="challenge-cancel" onclick="quitChallengeRun()">End Challenge</button>`}`;
     } else if (kind === "retry") {
         const r=CHALLENGE_RIVALS[challengeIndex];
         const remaining=Math.max(0,CHALLENGE_MAX_LOSSES_PER_RIVAL-challengeLossesAtCurrentRival);
@@ -1066,15 +1087,26 @@ function renderChallengeScreen(kind, extra={}) {
         html=`<p style="text-align:center;font-size:1.12rem">${extra.message || `${r.name} has won this round, but your challenge is not over.`}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#c4b5fd"><strong>${remaining} ${remaining===1?"attempt":"attempts"} remaining</strong> against ${r.name}. You will face this rival again; you will not be sent backward.</p><p style="text-align:center;color:#b9a8ca">Try again now, or quit and return to setup. Your furthest rival reached is recorded.</p>`;
         buttons=`<button onclick="retryCurrentChallengeRival()">Try ${r.name} Again</button><button class="challenge-cancel" onclick="quitChallengeRun()">Quit Challenge</button><button onclick="saveChallengeFromScreen()">Save Challenge</button>`;
     } else if (kind === "victory") {
-		
-        title.textContent="✦ THE SEVEN ARE DEFEATED ✦";
-        html=`<p style="text-align:center;font-size:1.12rem">You have overcome all seven rivals. The gauntlet recognizes you as its champion!</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=> {const safe=characterFilename(r.name); return `<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${safe}/${safe}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`;}).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
+		clearChallengeSave();
+        title.textContent = challengeBrainwash ? "🧠 BRAINWASH COMPLETE 🧠" : "✦ THE SEVEN ARE DEFEATED ✦";
+        html=`<p style="text-align:center;font-size:1.12rem">${challengeBrainwash ? "Seven rivals and not a single defeat. Your victory has been entered in the Brainwash Hall of Fame." : "You have overcome all seven rivals. The gauntlet recognizes you as its champion!"}</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=> {const safe=characterFilename(r.name); return `<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${safe}/${safe}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`;}).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
         buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
     } else if (kind === "failed") {
         title.textContent="✦ CHALLENGE ENDED ✦";
         html=`<p style="text-align:center;font-size:1.12rem">${challengeLastResult?.message || "Your challenge run has ended."}</p>${challengeRoadmapHtml()}<p style="text-align:center;color:#b9a8ca">Your furthest rival reached has been saved to your challenge record. Every champion starts somewhere; begin a new run whenever you are ready.</p>`;
         buttons=`<button onclick="finishChallengeRun()">Return to Game Setup</button>`;
-    }
+    } else if (kind === "brainwash") {
+        title.textContent = "🧠 BRAINWASH MODE 🧠";
+        html = `<p style="text-align:center;font-size:1.1rem">The ultimate test: defeat <strong>all seven rivals in a row without losing a single match</strong>.</p>
+            <ul style="text-align:left;line-height:1.7;max-width:520px;margin:10px auto">
+                <li><strong>One loss ends the run.</strong> There are no second chances.</li>
+                <li><strong>No saves.</strong> A Brainwash run cannot be saved, resumed or exported. Closing or refreshing the page ends it.</li>
+                <li>Everything else works like The Seven: seven random rivals, rising difficulty, every special ability switched on.</li>
+                <li><strong>Succeed</strong> and your name enters the Brainwash Hall of Fame on the global leaderboard, with the date.</li>
+            </ul>
+            <p style="text-align:center;color:#c4b5fd">Your saved The Seven challenge, if you have one, is not touched.</p>`;
+        buttons = `<button onclick="startChallengeRun(true)">🧠 Begin Brainwash</button><button class="challenge-cancel" onclick="renderChallengeScreen('rules')">Back</button>`;
+	}
     content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
 }
 function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
@@ -1093,7 +1125,7 @@ function resumeSavedChallenge(){
     }
 }
 function closeChallengeScreen(){ const e=document.getElementById("challenge-overlay"); if(e)e.style.display="none"; }
-function startChallengeRun(){
+function startChallengeRun(brainwash = false){
     // Select the lineup once, at run start. It is then saved with the challenge and
     // never rerolled during stage changes, refreshes, resumes, or save-code imports.
     challengePlayerName = (document.getElementById("p1-name")?.value || "").trim().split(" ")[0] || null;
@@ -1113,8 +1145,11 @@ function startChallengeRun(){
         challengeLineupSeed = null;
         CHALLENGE_RIVALS = CLASSIC_CHALLENGE_RIVALS.map(r => ({...r}));
     }
-    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
-    updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
+    challengeActive=true; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[];
+	challengeBrainwash = !!brainwash; challengeRunComplete = false;
+	challengeLastResult=null; challengeRunStartedAt=Date.now(); challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
+    if (challengeBrainwash) updateChallengeRecord(r=>{r.brainwashStarted=(r.brainwashStarted||0)+1;r.lastOutcome="Brainwash run in progress";});
+    else updateChallengeRecord(r=>{r.runsStarted++;r.lastOutcome="Run in progress";});
     saveChallengeProgress();
     closeChallengeScreen(); renderChallengeScreen("roadmap");
 }
@@ -1238,6 +1273,7 @@ function handleChallengeMatchEnded(winnerId){
     if (!challengeActive || gameState.gameMode!=="solo") return false;
     challengeRunMatchesPlayed++;
     const rivalIndex=challengeIndex, rival=CHALLENGE_RIVALS[rivalIndex], won=winnerId===1;
+	if (challengeBrainwash) return handleBrainwashMatchEnded(won, rivalIndex, rival);
     challengeFurthestIndex=Math.max(challengeFurthestIndex,rivalIndex);
     updateChallengeRecord(r=>{
         if(won) r.matchesWon++; else r.matchesLost++;
@@ -1250,7 +1286,8 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===CHALLENGE_RIVALS.length-1) {
             challengeLastResult={won:true,final:true,message:`You defeated ${rival.name}, the final rival, and completed The Seven!`,modText:"All seven rivals defeated."};
             updateChallengeRecord(r=>{r.runsCompleted++;r.lastOutcome="Completed The Seven";});
-            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
+            challengeRunComplete = true;
+            clearChallengeSave();
             return true;
         }
         challengeIndex=rivalIndex+1;
@@ -1262,7 +1299,7 @@ function handleChallengeMatchEnded(winnerId){
         if (challengeLossesAtCurrentRival >= CHALLENGE_MAX_LOSSES_PER_RIVAL) {
             challengeLastResult={won:false,failed:true,message:`After three defeats, ${rival.name} has ended your run. You reached Rival ${rivalIndex+1} of ${CHALLENGE_RIVALS.length}; your furthest progress remains on your record.`,modText:"The challenge is over, but your furthest rival reached has been saved to your record."};
             updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome=`Challenge ended at ${rival.name}`;});
-            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
+            clearChallengeSave();
             return true;
         }
         challengeModifierNext = THE_SEVEN_ENABLE_ENERGY_MODIFIERS ? "bonus" : "none";
@@ -1272,7 +1309,7 @@ function handleChallengeMatchEnded(winnerId){
         if (rivalIndex===0) {
             challengeLastResult={won:false,failed:true,message:`${rival.name} has won. This run of The Seven is over.`,modText:"The first rival is the gatekeeper. Losing here ends the run."};
             updateChallengeRecord(r=>{r.runsFailed++;r.lastOutcome=`Run ended at ${rival.name}`;});
-            try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {}
+            clearChallengeSave();
             return true;
         }
         challengeCompleted=challengeCompleted.filter(i=>i!==rivalIndex-1);
@@ -1283,24 +1320,61 @@ function handleChallengeMatchEnded(winnerId){
     saveChallengeProgress();
     return true;
 }
+function handleBrainwashMatchEnded(won, rivalIndex, rival) {
+    challengeFurthestIndex = Math.max(challengeFurthestIndex, rivalIndex);
+    updateChallengeRecord(r => { r.brainwashBestRival = Math.max(r.brainwashBestRival || 0, rivalIndex + 1); });
+    if (!won) {                                    // one loss ends the run
+        challengeLastResult = { won: false, failed: true,
+            message: `${rival.name} has broken you. Brainwash ends at Rival ${rivalIndex + 1} of ${CHALLENGE_RIVALS.length}.`,
+            modText: "One loss ends a Brainwash run. There are no saves and no second chances." };
+        updateChallengeRecord(r => { r.brainwashFailed = (r.brainwashFailed || 0) + 1; r.lastOutcome = `Brainwash ended at ${rival.name}`; });
+        return true;
+    }
+    challengeCompleted = Array.from(new Set([...challengeCompleted, rivalIndex]));
+    if (rivalIndex === CHALLENGE_RIVALS.length - 1) {
+        challengeRunComplete = true;
+        challengeLastResult = { won: true, final: true,
+            message: `You defeated ${rival.name} and completed Brainwash without a single loss!`,
+            modText: "All seven rivals defeated. Flawless." };
+        updateChallengeRecord(r => { r.brainwashCompleted = (r.brainwashCompleted || 0) + 1; r.brainwashLastCompleted = new Date().toISOString(); r.lastOutcome = "Completed Brainwash"; });
+        return true;
+    }
+    challengeIndex = rivalIndex + 1;
+    challengeFurthestIndex = Math.max(challengeFurthestIndex, challengeIndex);
+    challengeModifierNext = "none";
+    challengeLastResult = { won: true,
+        message: `${rival.name} has fallen. The marker slides forward to ${CHALLENGE_RIVALS[challengeIndex].name}.`, modText: "" };
+    return true;                                   // note: nothing is saved
+}
+
 async function quitChallengeRun() {
     const confirmed = await showThemedConfirm(
-        "Abandon The Seven challenge and return to setup?",
-        "Abandon Challenge"
+        challengeBrainwash ? "Abandon Brainwash? This run cannot be resumed." : "Abandon The Seven challenge and return to setup?",
+        challengeBrainwash ? "Abandon Brainwash" : "Abandon Challenge"
     );
     if (!confirmed) return;
-
-    const saveProgress = await showThemedConfirm(
-        "Would you like to save your current challenge progress so you can resume it later? Choosing No will discard the current challenge save.",
-        "Save Challenge Progress?", "No"
-    );
-    if (saveProgress) saveChallengeProgress();
-    updateChallengeRecord(r=>{r.lastOutcome="Challenge abandoned";});
-    finishChallengeRun({preserveSave: saveProgress});
+	
+	if (!challengeBrainwash) {
+		const saveProgress = await showThemedConfirm(
+			"Would you like to save your current challenge progress so you can resume it later? Choosing No will discard the current challenge save.",
+			"Save Challenge Progress?", "No"
+		);
+		if (saveProgress) saveChallengeProgress();
+	}
+	
+    updateChallengeRecord(r => {
+        r.lastOutcome = challengeBrainwash ? "Brainwash abandoned" : "Challenge abandoned";
+        if (challengeBrainwash) r.brainwashFailed = (r.brainwashFailed || 0) + 1;
+    });
+    finishChallengeRun();
 }
+
+
+
 function finishChallengeRun(options={}){
+    clearChallengeSave();                           // does nothing for Brainwash, so a standard save is never wiped by it
+    challengeBrainwash = false; challengeRunComplete = false;
     challengeActive=false; challengeIndex=0; challengeModifierNext="none"; challengeCompleted=[]; challengeLastResult=null; challengeRunStartedAt=null; challengeRunMatchesPlayed=0; challengeLossesAtCurrentRival=0; challengeFurthestIndex=0;
-    if (!options.preserveSave) { try { safeStorage.remove(CHALLENGE_SAVE_KEY); } catch(e) {} }
     closeChallengeScreen();
     resetTutorialGameState(); gameOverSeen=false; gameOverPresentationStarted=false;
     const taunt=document.getElementById("challenge-taunt-box"); if(taunt){taunt.classList.remove("visible","challenge-taunt-active");taunt.textContent="";taunt.style.display="none";}
@@ -1570,6 +1644,7 @@ function toggleGameMode() {
         onCpuNameChange();
     }
     setupWasOnline = online;
+	updateStartButtonState();
 }
 
 function prepareDebugDeck(deck) {
@@ -1922,6 +1997,34 @@ function lobbyPushMyEntry() {
 }
 function onStartClicked() {
     if (document.getElementById("game-mode-option").value === "online") joinLobby(); else initializeGame();
+}
+function updateStartButtonState() {
+    const btn = document.getElementById("start-game-btn");
+    if (!btn) return;
+
+    const mode = document.getElementById("game-mode-option").value;
+    const p1Name = document.getElementById("p1-name").value;
+    const cpuName = document.getElementById("cpu-name").value;
+
+    // Online mode has a separate lobby and does not use the CPU selection.
+    // Challenge mode chooses its own opponents.
+    const sameCharacter =
+        mode !== "online" &&
+        !challengeActive &&
+        cpuName !== "Random" &&
+        p1Name === cpuName;
+
+    btn.disabled = sameCharacter;
+
+    btn.textContent = sameCharacter
+        ? "Please select two different participants"
+        : "✧ Begin Duel ✧";
+
+    btn.title = sameCharacter
+        ? "Player 1 and Player 2 must have different characters."
+        : "";
+
+    btn.setAttribute("aria-disabled", String(sameCharacter));
 }
 function lobbyControlsLocked(locked) {         // while in the lobby the room, role and mode can't change
     ["game-mode-option", "online-room-code", "btn-role-host", "btn-role-guest"].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = locked; });
@@ -2953,9 +3056,20 @@ async function recordGlobalMatchResult(winnerId, challengeContext=null) {
         else stats.challenge.matchesLost++;
         stats.challenge.bestRivalIndex = Math.max(Number(stats.challenge.bestRivalIndex)||0, challengeContext.rivalIndex + 1);
         if (challengeContext.completed) {
-            stats.challenge.runsCompleted++;
-            const games = Math.max(1, Number(challengeContext.gamesInRun)||1);
-            if (!stats.challenge.bestGames || games < stats.challenge.bestGames) stats.challenge.bestGames = games;
+            if (challengeContext.brainwash) {
+                const now = new Date().toISOString();
+                const b = Object.assign({ completions: 0, firstCompletedAt: null, lastCompletedAt: null, avatar: "" },
+                    (stats.challenge.brainwash && typeof stats.challenge.brainwash === "object") ? stats.challenge.brainwash : {});
+                b.completions = (Number(b.completions) || 0) + 1;
+                b.firstCompletedAt = b.firstCompletedAt || now;
+                b.lastCompletedAt = now;
+                b.avatar = String(gameState.p1.name || "").slice(0, 40);
+                stats.challenge.brainwash = b;
+            } else {
+                stats.challenge.runsCompleted++;
+                const games = Math.max(1, Number(challengeContext.gamesInRun)||1);
+                if (!stats.challenge.bestGames || games < stats.challenge.bestGames) stats.challenge.bestGames = games;
+            }
         }
     } else {
         const difficulty = String(gameState.p2.difficulty || "random").toLowerCase();
@@ -3008,6 +3122,20 @@ function aggregateGlobalMapRows(players, mapName, valueLabel) {
     return Object.entries(totals).map(([name,value])=>({name,value})).filter(r=>r.value>0)
         .sort((a,b)=>b.value-a.value || a.name.localeCompare(b.name)).slice(0,10);
 }
+function leaderboardBrainwashSection(players) {
+    const rows = players
+        .map(p => ({ name: p.name, b: p.stats.challenge && p.stats.challenge.brainwash }))
+        .filter(r => r.b && Number(r.b.completions) > 0 && r.b.firstCompletedAt)
+        .map(r => ({ name: r.name, avatar: r.b.avatar || "", count: Number(r.b.completions) || 1, first: String(r.b.firstCompletedAt) }))
+        .sort((a, b) => a.first.localeCompare(b.first) || a.name.localeCompare(b.name))     // earliest first
+        .slice(0, 25);
+    const fmt = iso => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); };
+    const body = rows.length
+        ? `<table><thead><tr><th>#</th><th>Player</th><th>Date</th></tr></thead><tbody>${rows.map((r, i) =>
+            `<tr><td>${i + 1}</td><td>${escapeLeaderboardText(r.name)}${r.avatar ? ` <span class="lb-sub">as ${escapeLeaderboardText(r.avatar)}</span>` : ""}${r.count > 1 ? ` <span class="lb-sub">×${r.count}</span>` : ""}</td><td>${fmt(r.first)}</td></tr>`).join("")}</tbody></table>`
+        : `<p class="leaderboard-empty">No one has completed Brainwash yet. Be the first!</p>`;
+    return `<section class="leaderboard-section leaderboard-brainwash"><h3>🧠 Brainwash Hall of Fame</h3><p class="lb-sub">Seven rivals, no losses, no saves. Ranked by who did it first.</p>${body}</section>`;
+}
 async function showGlobalLeaderboard() {
     if (!window.firebaseAuthReady || !window.db || !window.dbRef || !window.dbGet) {
         showPopup("Global Leaderboard", "Firebase sign-in is still starting. Please wait a moment and try again."); return;
@@ -3037,7 +3165,7 @@ async function showGlobalLeaderboard() {
                 : `<p class="leaderboard-empty">No completed runs recorded yet.</p>`;
             return `<section class="leaderboard-section"><h3>The Seven — Fewest Games to Complete</h3>${body}</section>`;
         })();
-        const html = `<p class="leaderboard-notice">Community-reported records; stats are not independently verified.</p><div class="leaderboard-grid">` +
+        const html = `<p class="leaderboard-notice">Community-reported records; stats are not independently verified.</p><div class="leaderboard-grid">` + leaderboardBrainwashSection(players) +
             leaderboardTable("Most CPU Wins", leaderboardTopRows(players,s=>s.winsVsCpu), "Wins") +
             difficultyTables +
             leaderboardTable("Most The Seven Completions", leaderboardTopRows(players,s=>s.challenge.runsCompleted), "Runs") +
@@ -3217,6 +3345,25 @@ async function forfeitOnlineGameAndExit() {
 
 
 function initializeGame() {
+	// make sure we don't have the same character
+	const gameMode = document.getElementById("game-mode-option").value;
+    const p1Name = document.getElementById("p1-name").value.trim();
+    const cpuName = document.getElementById("cpu-name").value.trim();
+	if (
+        gameMode !== "online" &&
+        !challengeActive &&
+        cpuName !== "Random" &&
+        p1Name === cpuName
+    ) {
+        showThemedAlert(
+            "Players cannot have the same character. Please select two different participants.",
+            "Choose Different Participants"
+        );
+
+        updateStartButtonState();
+        return false;
+    }
+	
     gameState.signatureSiobhanBonusPending = false;
     gameState.signatureSiobhanBonusRoll = false;
     gameState.signatureTexAllocationPending = false;
@@ -3234,7 +3381,6 @@ function initializeGame() {
     });
     const soundOption = document.getElementById("sound-effects-option");
     setSoundEnabled(!!(soundOption && soundOption.checked));
-    const gameMode = document.getElementById("game-mode-option").value;
     const showDiceText = document.getElementById("dice-text-option").value === "on";
     localShowDiceText = showDiceText;
     const showEnergyActions = false;
@@ -3323,8 +3469,6 @@ function initializeGame() {
         }
         cpuNFinal = pool[Math.floor(Math.random() * pool.length)];
     }
-
-    if (p1N === cpuNFinal && !challengeActive) { alert("Players cannot have the same name."); return; }
 
     // Then turn any "Random" form into a real one from THAT character's list
     let p1T = resolveRandomForm(document.getElementById("p1-transform-type").value, cpuNFinal);   // what the CPU becomes
@@ -3442,12 +3586,18 @@ function listenToFirebase(roomId) {
     const roomRef = window.dbRef(window.db, "games/" + roomId);
     
     window.dbOnValue(roomRef, (snapshot) => {
-        const data = snapshot.val();
-        if (!data || !data.gameState) return;
+        
+		const data = snapshot.val();
+		if (!data || !data.gameState) return;
 
-        isSyncingFromFirebase = true;
-        try {
-            gameState = data.gameState;
+		// Capture the exchange event before replacing the local game state.
+		const incomingIvyEvent = data.gameState.ivyExchangeEvent || null;
+		const isFirstFirebaseSnapshot = !ivyFirebaseInitialSnapshotSeen;
+
+		isSyncingFromFirebase = true;
+		try {
+			gameState = data.gameState;
+
             if (data.market) market = data.market;
             if (data.deck) deck = data.deck;
             if (data.discardPile) discardPile = data.discardPile;
@@ -3495,7 +3645,23 @@ function listenToFirebase(roomId) {
 				return;
 			}
 
-            updateUI();
+            
+			updateUI();
+
+			// Do not replay an old exchange when first joining or reconnecting.
+			if (isFirstFirebaseSnapshot) {
+				ivyFirebaseInitialSnapshotSeen = true;
+
+				if (incomingIvyEvent?.id) {
+					ivyLastDisplayedExchangeId = incomingIvyEvent.id;
+				}
+			} else if (
+				incomingIvyEvent?.id &&
+				incomingIvyEvent.id !== ivyLastDisplayedExchangeId
+			) {
+				showIvyExchangeAnimation(incomingIvyEvent);
+			}
+
         } catch (err) {
             console.error("Error in listenToFirebase:", err);
         } finally {
@@ -3866,6 +4032,7 @@ function cpuChooseDiceToKeep() {
     // Beginner / Easy: still never lock dice that cannot help
     const keepNow = gameState.dice.map(d => !!d.kept);
     cpuReleaseUselessKeeps(keepNow, gameState.rerollsLeft);
+	cpuLockSpecialDie(keepNow);
     gameState.dice.forEach((die, i) => { die.kept = keepNow[i]; });
 }
 
@@ -4005,9 +4172,9 @@ const CPU_DEBUG_LOG = true;   // true = the CPU explains its plan in the game lo
 // strategy -> which faces matter and which cards support it (1 = helpful, 3 = core piece)
 const CPU_STRATEGIES = {
     transform: { label: "Transform Rush",     faces: { TR: 1.0, SU: 0.7 },
-                 cards: { 55: 2, 56: 2, 2: 3, 41: 3, 22: 2, 17: 1, 4: 1, 3: 1, 30: 2, 25: 2, 47: 1 } },
+                 cards: { 55: 2, 56: 2, 2: 3, 41: 3, 22: 3, 17: 1, 4: 1, 3: 1, 30: 2, 25: 2, 47: 1 } },
     submission: { label: "Submission Squeeze", faces: { SU: 1.0, TR: 0.7 },
-                 cards: { 36: 3, 15: 3, 46: 2, 24: 2, 23: 1, 10: 2, 39: 2, 11: 1, 18: 1, 8: 1, 52: 2, 34: 1 } },
+                 cards: { 36: 3, 15: 3, 46: 2, 24: 3, 23: 3, 10: 2, 39: 2, 11: 1, 18: 1, 8: 1, 52: 2, 34: 1 } },
     arousal:   { label: "Arousal Lock",       faces: { AR: 1.0, TR: 0.5 },
                  cards: { 13: 3, 49: 3, 48: 2, 6: 2 } },
     trance:    { label: "Trance Engine",      faces: { SP: 1.0, EN: 0.6 },
@@ -4160,10 +4327,12 @@ function cpuNoteDamageTaken() {
 }
 function cpuReplan() {
     cpuBrain.planScores = cpuStrategyScores(2);
+	cpuApplySmartPlanBias(cpuBrain.planScores);
     cpuBrain.plan = cpuBestStrategy(cpuBrain.planScores, cpuBrain.plan);
     cpuBrain.oppScores = cpuStrategyScores(1);
     const threats = cpuObservedThreats();
     Object.keys(threats).forEach(k => { cpuBrain.oppScores[k] = (cpuBrain.oppScores[k] || 0) + threats[k]; });
+	cpuApplyPowerThreats(cpuBrain.oppScores);
     cpuBrain.oppPlan = cpuBestStrategy(cpuBrain.oppScores, cpuBrain.oppPlan);
 }
 function cpuPlanLabel() { return cpuBrain.plan === "none" ? "No plan yet" : CPU_STRATEGIES[cpuBrain.plan].label; }
@@ -4237,7 +4406,7 @@ function cpuFaceWeights() {
 	//in cpuKeepArousalUpTo / the Master loop.
     if (cpuArousalDiceNeeded() <= 0) w.AR = -100;
 
-    return w;
+    return cpuSynergyFaceWeights(w);
 }
 
 
@@ -4379,7 +4548,8 @@ function cpuApplySignatureKeepPlan(keep) {
         faces.forEach((f,i)=>{if(!seen.has(f)){keep[i]=true;seen.add(f);}});
     }
     else if(name==="tex") { if(counts.SU>0) keepFace("SU"); }
-    return keep;
+    cpuSmartKeepRules(keep, faces, counts);
+	return cpuLockSpecialDie(keep);
 }
 function cpuAdaptiveChooseKeep() {
     const plan = cpuAdaptiveKeepPlan(gameState.rerollsLeft);
@@ -4503,6 +4673,7 @@ function cpuDenyScore(card) {
     if (me.transform >= 6 && [4, 25, 30, 40, 3, 52].includes(card.id)) deny += 15 + (me.transform - 6) * 8;
     // they already have Powerful Transform: more Transform tools snowball it
     if (hasCard(1, 41) && [2, 22, 17, 4].includes(card.id)) deny += 12;
+	deny += cpuPowerDeny(card);
     return deny;
 }
 
@@ -4575,6 +4746,7 @@ function cpuAdaptiveCardScore(card) {
     // economy early, diminishing returns late
     if (gameState.round <= 4 && [45, 29, 28].includes(card.id)) score += 8;
     score -= Math.max(0, p2.inventory.length - 3) * 5;
+	score += cpuSmartCardBonus(card, cpuAdaptiveCardScore);
     return score;
 }
 
@@ -4582,7 +4754,7 @@ function cpuAdaptiveBuyThreshold() {
     const p = gameState.p2;
     let t = 40;
     if (p.inventory.length === 0) t = 34;       // opening: get something going
-    if (p.energy >= 9) t -= 8;                  // sitting on cash
+    if (p.energy >= 9) t -= 6;                  // sitting on cash
     if (isCpuPinnedInSubmission()) t -= 10;
     return t;
 }
@@ -4707,11 +4879,8 @@ function cpuAdaptiveNextShopAction() {
     }
     // Hypnotic Dominance: snipe a key card from the human
     if (hasCard(2, 5)) {
-        for (let i = 0; i < human.inventory.length; i++) {
-            const c = human.inventory[i];
-            if (c && !inventoryHasName(p, c.name) && p.energy >= c.cost && cpuAdaptiveCardScore(c) >= 55)
-                return { type: "snipe", idx: i, name: c.name };
-        }
+        const s = cpuBestSnipe(cpuAdaptiveCardScore, 55);
+        if (s) return { type: "snipe", idx: s.idx, name: s.name };
     }
 	
 	if (hasSignaturePower(2, "zixuan")) {
@@ -4794,6 +4963,7 @@ async function cpuAdaptiveShopPhase() {
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
         const act = cpuAdaptiveNextShopAction();
         if (!act) break;
+		if (act.type === "wipe" && !cpuCanSpendKeepingFS(getMarketWipeCost(2))) break;
         if (act.type === "buy") {
             cpuSay(`Buys ${act.name}${act.deny ? " (blocking the human's plan)" : ""}.`);
             if (!buyCard(act.idx)) break;
@@ -4854,13 +5024,13 @@ const CPU_TIERS = {
     //             liked cards    min score   saving window   deny-wipe   wipe when idle / flush      "trouble" starts at       lowered back to
     aggressive: { like: 55, buy: 32, reach: 3, patience: 3, denyMin: 55, idleWipe: 6, excessWipe: 8,  danger: { sub: 4, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
                   slip: { keep: 0.5, noise: 22, trouble: 0.4, deny: 0.7 }, maxRerolls: 1, capChance: 0.45 },
-    defensive:  { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
+    defensive:  { like: 55, buy: 29, reach: 3, patience: 3, denyMin: 55, idleWipe: 7, excessWipe: 10, danger: { sub: 2, arousal: 3, trance: 3 }, target: { arousal: 2, trance: 1 },
                   slip: { keep: 0.32, noise: 16, trouble: 0.1, deny: 0.5 } },
     // Virtuoso: 👁️ dice first, Energy second (to buy cards that boost that plan). Defends Submission only one step from the end,
     // Arousal from 3, barely cares about its own Trance. Wipes the market to deny the human's strategy cards (never Transform cards).
-    transformer: { like: 55, buy: 35, reach: 3, patience: 3, denyMin: 12, idleWipe: 7, excessWipe: 9, danger: { sub: 4, arousal: 3, trance: 4 }, target: { arousal: 2, trance: 3 },
+    transformer: { like: 55, buy: 29, reach: 3, patience: 3, denyMin: 12, idleWipe: 7, excessWipe: 9, danger: { sub: 4, arousal: 3, trance: 4 }, target: { arousal: 2, trance: 3 },
                   slip: {} },
-    v23low:     { like: 60, buy: 35, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
+    v23low:     { like: 60, buy: 29, reach: 4, patience: 3, denyMin: 60, idleWipe: 7, excessWipe: 9,  danger: { sub: 3, arousal: 4, trance: 4 }, target: { arousal: 3, trance: 3 },
                   slip: { keep: 0.35, noise: 18, trouble: 0.35, deny: 0.5 } }
 };
 // Virtuoso "burst finishing": cards that deal Transform straight away, and how much damage they do
@@ -5035,6 +5205,7 @@ function cpuTierCardScore(card, level) {
     // economy / dice-engine cards keep their priority while we can pay for them
     if ([7, 28, 29, 43, 45].includes(card.id) && p2.energy >= card.cost) score += 15;
     if ((level === "v23low" || level === "transformer") && [45, 28, 29, 27].includes(card.id)) score += 12;    // energy theme
+	score += cpuSmartCardBonus(card, c => cpuTierCardScore(c, level));
     const noise = (CPU_TIERS[level].slip && CPU_TIERS[level].slip.noise) || 0;
     if (noise > 0) {                                  // misjudgement: fixed for the whole turn
         if (!cpuBrain.noise) cpuBrain.noise = {};
@@ -5079,10 +5250,8 @@ function cpuTierNextAction(level) {
     }
     if (hasCard(2, 26) && liked.some(i => !canPay(i) && i.cost <= p.energy + 2)) return { type: "sell" };
     if (hasCard(2, 5)) {
-        for (let i = 0; i < human.inventory.length; i++) {
-            const c = human.inventory[i];
-            if (c && !inventoryHasName(p, c.name) && p.energy >= c.cost && cpuTierCardScore(c, level) >= cfg.like + 10) return { type: "snipe", idx: i, name: c.name };
-        }
+        const s = cpuBestSnipe(c => cpuTierCardScore(c, level), cfg.like + 10);
+        if (s) return { type: "snipe", idx: s.idx, name: s.name };
     }
 	
 	if (hasSignaturePower(2, "zixuan")) {
@@ -5135,6 +5304,7 @@ async function cpuTierShopPhase(level) {
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
         const act = cpuTierNextAction(level);
         if (!act) break;
+		if (act.type === "wipe" && !cpuCanSpendKeepingFS(getMarketWipeCost(2))) break;
         if (act.type === "buy") {
             if (!buyCard(act.idx)) break;
         
@@ -5314,6 +5484,7 @@ function passesCardSpecificConditions(card) {
     const p1 = gameState.p1;
     const p2 = gameState.p2;
     if (hasSignaturePower(2, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) return false;
+	if (!cpuCanSpendKeepingFS(getCardPurchaseCost(card, 2))) return false;
 	
 	if (inventoryHasName(gameState.p2, card.name)) return false;
 
@@ -6267,6 +6438,8 @@ function renderCardTriggerToast(notices) {
     if (cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
 }
 
+
+
 function renderInventory(playerId) {
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
     let invDiv = document.getElementById(`p${playerId}-inventory`);
@@ -6285,8 +6458,23 @@ function renderInventory(playerId) {
         const keepClass = card.type === "Keep" ? " active-keep-card" : "";
         const ownerColor = playerId === 1 ? "var(--player)" : "var(--cpu)";
         const inventoryTypeChip = card.type === "Instant" ? `<div class="card-type-chip">Instant</div>` : "";
-        let html = `<div class="inv-card${keepClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};">${inventoryTypeChip}<div style="font-weight:bold; color:var(--accent);">${card.name} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
+        const energyCostLabel = card.type === "Keep"
+			? ` <span class="inventory-energy-cost">${Number(card.cost)}⚡</span>` : "";
+		let html = `<div class="inv-card${keepClass} ${card.type === "Instant" ? "card-instant" : "card-keep"}" data-card-id="${Number(card.id)}" style="--card-owner-color:${ownerColor};">${inventoryTypeChip}<div style="font-weight:bold; color:var(--accent);">${card.name}${energyCostLabel} ${card.id === 20 ? `(Charges: ${card.charges})` : ''}</div><div style="font-size:0.8em; color:#bbb;">${card.desc}</div>`;
         if (isHuman && isTurn) {
+			// Ivy: Suggested Transference
+			if (
+				gameState.phase === "shop" &&
+				hasSignaturePower(playerId, "ivy") &&
+				!p.ivyExchangeUsedThisTurn &&
+				ivyCanExchangeCard(card, p)
+			) {
+				html += `
+					<button onclick="openIvyTransference(${idx}, ${playerId})"
+						style="background:#527a45;">
+						Suggested Transference
+					</button>`;
+			}
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
             if (card.id === 20 && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
             if (card.id === 26) html += `<button onclick="sellCard(${idx}, ${playerId})" style="background:#e76f51;">Sell (+2⚡)</button>`;
@@ -6304,10 +6492,28 @@ function renderInventory(playerId) {
 			const label = owned ? "Already owned" : `Buy for ${card.cost}⚡`;
 			html += `<button ${afford ? "" : "disabled"} onclick="buyCardFromOpponent(${buyerId}, ${idx})" style="background:#2a9d8f;">${label}</button>`;
 		}
-        html += `</div>`;
-        invDiv.innerHTML += html;
-    });
-}
+		// Ivy debug: exchange with the opponent.
+		if (
+			IVY_DEBUG_OPPONENT_EXCHANGE &&
+			isHuman &&
+			isTurn &&
+			gameState.phase === "shop" &&
+			hasSignaturePower(buyerId, "ivy") &&
+			!buyer.ivyExchangeUsedThisTurn &&
+			playerId !== buyerId &&
+			card.type === "Keep"
+		) {
+			html += `
+				<button onclick="openIvyOpponentTransference(
+					${idx}, ${buyerId}
+				)" style="background:#a855f7;">
+					Debug: Trade with Ivy
+				</button>`;
+		}
+				html += `</div>`;
+				invDiv.innerHTML += html;
+			});
+		}
 
 function buyReroll(energyCost, cardId, pId) {
     if (gameState.signatureSiobhanBonusRoll) return false;
@@ -6875,6 +7081,7 @@ function startTurn() {
 
     gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false; gameState.vulnGrantedThisTurn = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+	activeP.ivyExchangeUsedThisTurn = false;
     activeP.shieldActive = false; activeP.simmeringUsed = false;
     activeP.burningUpUsed = false; activeP.burningUpUses = 0;
     activeP.lastRoll = [];
@@ -7186,21 +7393,27 @@ async function resolveDice() {
             return;
         }
         if (submissionIndices.length && activePlayerNum === 2 && gameState.gameMode === "solo") {
-            const me = gameState.p2, opp = gameState.p1;
-            // Tex should actively exploit the conversion: build toward a Trance setback
-            // first, otherwise use Arousal while it can still affect the opponent, and
-            // fall back to Submission only when both tracks are already capped.
-            let preferredFace = (opp.trance >= 3 && opp.trance < 5)
-                ? "🌀 SPIRAL"
-                : (opp.arousal < 5 ? "🔥 AROUSAL" : (opp.trance < 5 ? "🌀 SPIRAL" : "⛓️ SUBMISSION"));
-            if (preferredFace !== "⛓️ SUBMISSION") {
-                submissionIndices.forEach((index, n) => {
-                    gameState.dice[index].face = preferredFace;
-                    log(`CPU Tex reassigned Submission die ${n + 1} to ${preferredFace.includes("SPIRAL") ? "Trance" : "Arousal"}.`);
-                });
-            } else {
-                log("CPU Tex kept Submission dice because the opponent's Trance and Arousal tracks are already capped.");
+            const opp = gameState.p1;
+            const stoking = hasCard(2, 13);
+            const arGain = k => (k >= 2 ? k - 1 : 0) + (stoking && k >= 2 ? 1 : 0);
+            const existingAR = gameState.dice.filter(d => d.face === "🔥 AROUSAL").length;
+            const needed = Math.max(0, 5 - (opp.arousal || 0));
+            // Lots of ⛓️ dice: push Arousal first, converting only as many as it takes to reach 5 (all of them if that still falls short).
+            // A single 🔥 does nothing, so it needs at least two 🔥 dice in total.
+            let toArousal = 0;
+            if (needed > 0 && !opp.shieldActive && existingAR + submissionIndices.length >= 2) {
+                toArousal = submissionIndices.length;
+                for (let k = existingAR; k <= existingAR + submissionIndices.length; k++) {
+                    if (arGain(k) >= needed) { toArousal = Math.max(0, k - existingAR); break; }
+                }
             }
+            submissionIndices.forEach((index, n) => {
+                let face = "⛓️ SUBMISSION";
+                if (n < toArousal) face = "🔥 AROUSAL";
+                else if (opp.trance < 5 && !opp.shieldActive) face = "🌀 SPIRAL";          // the rest build toward a Trance setback
+                gameState.dice[index].face = face;
+                if (face !== "⛓️ SUBMISSION") log(`CPU Tex reassigned Submission die ${n + 1} to ${face.includes("SPIRAL") ? "Trance" : "Arousal"}.`);
+            });
         }
         gameState.signatureTexAllocationDone = true;
     }
@@ -8051,8 +8264,13 @@ function buyCard(index) {
     }
 
     if (card.type === "Keep") {
-        p.inventory.push(JSON.parse(JSON.stringify(card)));
-    } else {
+		const acquiredCard = JSON.parse(JSON.stringify(card));
+
+		// Used by Ivy's Suggested Transference.
+		acquiredCard.acquiredRound = gameState.round;
+
+		p.inventory.push(acquiredCard);
+	} else {
         executeInstant(card, playerId);
         discardCard(card);
     }
@@ -8317,6 +8535,13 @@ function executeCPUTurn() {
                 cpuEnsureRitualKeep();
                 if (cpuIsAdaptive()) cpuBrainRecordRoll();
                 resolveDice();
+
+				// Ivy gets one opportunity to use Suggested Transference
+				// before making her normal card purchases.
+				if (hasSignaturePower(2, "ivy")) {
+					ivyCpuTryExchange();
+				}
+
 				if (cpuDebugBuyFirst()) {
 					endTurn();
 					return;
@@ -8602,7 +8827,8 @@ function presentFinishedGame() {
     const challengeMatch = challengeActive && gameState.gameMode === "solo";
     const challengeStatsContext = challengeMatch ? { isChallenge: true, rivalIndex: challengeIndex,
         completed: winnerId === 1 && challengeIndex === CHALLENGE_RIVALS.length - 1,
-        gamesInRun: challengeRunMatchesPlayed + 1 } : null;
+        gamesInRun: challengeRunMatchesPlayed + 1,
+		brainwash: challengeBrainwash } : null;
     if (challengeMatch) handleChallengeMatchEnded(winnerId);
     const challengeContinue = document.getElementById("go-challenge-continue");
     if (challengeContinue) {

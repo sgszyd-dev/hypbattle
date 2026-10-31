@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranceformation - Beta V20261028.1</title>
+    <title>Tranceformation - Beta V20261030.1</title>
 	<link rel="apple-touch-icon" sizes="57x57" href="apple-icon-57x57.png">
 	<link rel="apple-touch-icon" sizes="60x60" href="apple-icon-60x60.png">
 	<link rel="apple-touch-icon" sizes="72x72" href="apple-icon-72x72.png">
@@ -130,7 +130,18 @@
     <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="modal-overlay">
         <div class="modal-content setup-modal-content">
-            <div class="setup-brand"><h2><span class="title-trance">Trance</span><span class="title-formation">formation</span></h2><div class="setup-tagline">The mind is the battlefield</div></div>
+            <!--div class="setup-brand"><h2><span class="title-trance">Trance</span><span class="title-formation">formation</span></h2><div class="setup-tagline">The mind is the battlefield</div></div-->
+			<div class="setup-brand">
+				<h2>
+					<span class="title-trance" data-shimmer-text="Trance">Trance</span><span class="title-formation" data-shimmer-text="formation">formation</span>
+				</h2>
+				<div class="setup-tagline">The mind is the battlefield</div>
+
+				<span class="brand-sparkle sparkle-1" aria-hidden="true">✧</span>
+				<span class="brand-sparkle sparkle-2" aria-hidden="true">✦</span>
+				<span class="brand-sparkle sparkle-3" aria-hidden="true">✧</span>
+				<span class="brand-sparkle sparkle-4" aria-hidden="true">✦</span>
+			</div>
             <div class="settings-grid">
                <div class="modal-col" id="p1-setup-col">
                     <h3 id="p1-header-label" style="color: var(--player)">Player 1</h3>
@@ -595,6 +606,7 @@
 
 <script src="taunts.js"></script>
 <script src="help_additions.js"></script>
+<script src="cpu_int.js"></script>
 <script src="hypbattle.js"></script>
 
 
