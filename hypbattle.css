@@ -591,7 +591,26 @@
         #btn-end-turn-2 { justify-self:end; }
         .turn-end-p1:not(:disabled) { background:var(--player) !important; }
         .turn-end-p2:not(:disabled) { background:var(--cpu) !important; }
-        .rerolls-status { display:block; text-align:center; font-size:.85em; font-weight:normal; margin-top:5px; }
+        .rerolls-status { display:block; text-align:center; font-size:.85em; font-weight:normal; margin-top:5px; overflow:visible;}
+		#rerolls-indicator {
+			position: relative;
+			overflow: visible;
+		}
+
+		#rerolls-indicator .stat-float {
+			position: absolute
+			right: 0;
+			top: -20px;
+			z-index: 100;
+			pointer-events: none;
+		}
+		/* Position the reroll floating number relative to its containing area 
+		.rerolls-status + .stat-float,
+		.rerolls-status ~ .stat-float {
+			right: 0;
+			top: -18px;
+		}
+*/
         /* Tiny last-effect ticker under the dice (human turn only). */
         #last-effect-ticker {
             min-height: 1.15em; margin: -6px 0 8px; text-align: center;
@@ -2128,6 +2147,29 @@ body.game-ethereal-enabled { background-color: transparent; }
     .ivy-animation-active .ivy-animation-card:last-child {
         transform: translateX(-55%) scale(1);
     }
+}
+
+/* Player-to-player transference */
+#ivy-exchange-animation.ivy-opponent-exchange .ivy-animation-panel {
+    border-color: #4cc9f0;
+    box-shadow:
+        0 0 20px rgba(76, 201, 240, 0.25),
+        0 0 45px rgba(157, 78, 221, 0.2);
+}
+
+#ivy-exchange-animation.ivy-opponent-exchange h2 {
+    color: #4cc9f0;
+    text-shadow: 0 0 12px rgba(76, 201, 240, 0.5);
+}
+
+#ivy-exchange-animation.ivy-opponent-exchange .ivy-animation-stage {
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(76, 201, 240, 0.12),
+            rgba(157, 78, 221, 0.08),
+            transparent 75%
+        );
 }
 
 @media (prefers-reduced-motion: reduce) {

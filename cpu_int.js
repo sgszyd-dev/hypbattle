@@ -25,6 +25,8 @@ function ivyCpuDebug(message, data = null) {
     }
 }
 
+
+
 // ############################################################
 // PART 1: NEW CODE
 // ############################################################
@@ -149,7 +151,8 @@ function cpuSynergyFaceWeights(w) {
     else if (has(31) && subPlan) { w.SP += 0.2; w.EN += 0.25; }
     if (hasSignaturePower(2, "mark")) w.SP += 0.3;                         // Lingering Trance
     if (hasSignaturePower(2, "zixuan") && has(31)) { w.SP += 0.2; w.SU += 0.2; }
-    return w;
+    cpuRescueFaceWeights(w); cpuForecastFaceWeights(w); cpuStyleFaceWeights(w);
+    return cpuEndgameFaceWeights(w);
 }
 
 // ---------- dice locking rules (called at the end of cpuApplySignatureKeepPlan) ----------
@@ -168,7 +171,7 @@ function cpuSmartKeepRules(keep, faces, counts) {
             if (f === "SP" && opp.trance < 5) keep[i] = true;
         });
     }
-    return keep;
+    return cpuEndgameKeepRules(keep, faces, counts);
 }
 
 // Deeper Bargains: when the special die shows its real face (not Blank) the CPU always locks it.
@@ -225,6 +228,8 @@ function cpuSmartCardBonus(card, scoreFn) {
     if (id === 38) b += cpuNewIdentityBonus();                              // losing: New Identity is a good card
     if (id === 5) b += Math.min(45, cpuStealValue(scoreFn) * 0.45);        // Hypnotic Dominance: worth what it can take
     if (id === 3 && (ownKey === "hyeri") ) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
+	b += cpuEndgameCardBonus(card);
+	b += cpuForesightCardBonus(card) + cpuStyleCardBonus(card);
     return b;
 }
 
@@ -306,6 +311,24 @@ function showIvyExchangeAnimation(event) {
     const playerName = ivyEscapeHTML(event.playerName || "Ivy");
     const oldName = ivyEscapeHTML(event.oldCard.name);
     const newName = ivyEscapeHTML(event.newCard.name);
+	
+	const isOpponentExchange = event.exchangeType === "opponent";
+
+	const animationTitle = isOpponentExchange
+		? "Rival Transference"
+		: "Suggested Transference";
+
+	const oldCardLabel = isOpponentExchange
+		? "GIVING TO OPPONENT"
+		: "RETURNING TO MARKET";
+
+	const newCardLabel = isOpponentExchange
+		? "RECEIVED FROM OPPONENT"
+		: "ACQUIRED FROM MARKET";
+
+	const animationMessage = isOpponentExchange
+		? `${event.playerName} exchanged cards with the opposing player!`
+		: `${event.playerName} returned one card to the market and acquired another!`;
 
     overlay.innerHTML = `
         <div class="ivy-animation-panel">
@@ -315,13 +338,13 @@ function showIvyExchangeAnimation(event) {
             </div>
 
             <div class="ivy-animation-stage">
-                ${ivyExchangeCardHTML(event.oldCard, "RETURNING TO MARKET")}
+                ${ivyExchangeCardHTML(event.oldCard, oldCardLabel)}
                 <div class="ivy-animation-spark">✧</div>
-                ${ivyExchangeCardHTML(event.newCard, "JOINING INVENTORY")}
+                ${ivyExchangeCardHTML(event.newCard, newCardLabel)}
             </div>
 
             <div class="ivy-animation-message">
-                ${playerName} used Suggested Transference to exchange
+                ${playerName} used <em>Suggested Transference</em> to exchange
                 <strong>${oldName}</strong> for <strong>${newName}</strong>!
             </div>
 
@@ -345,6 +368,8 @@ function showIvyExchangeAnimation(event) {
 			}, IVY_EXCHANGE_REVEAL_DELAY);
 		});
 	});
+	
+	overlay.classList.toggle("ivy-opponent-exchange", isOpponentExchange);
 
 	// No automatic dismissal. The player must press Continue.
 }
@@ -363,17 +388,18 @@ function closeIvyExchangeAnimation() {
 
 // Record and display an exchange on the client that performed it.
 // The event is included in gameState so Firebase sends it to the other player.
-function ivyPublishExchangeAnimation(playerId, oldCard, newCard) {
+function ivyPublishExchangeAnimation(playerId, oldCard, newCard, exchangeType = "market") {
     const player = playerId === 1 ? gameState.p1 : gameState.p2;
 
     const event = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        playerId,
-        playerName: player?.name || (playerId === 2 ? "Ivy" : "Player"),
-        oldCard: { ...oldCard },
-        newCard: { ...newCard },
-        round: gameState.round
-    };
+		id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+		playerId,
+		playerName: player?.name || (playerId === 2 ? "Ivy" : "Player"),
+		oldCard: {...oldCard},
+		newCard: {...newCard},
+		round: gameState.round,
+		exchangeType
+	};
 
     gameState.ivyExchangeEvent = event;
 
@@ -507,7 +533,7 @@ function ivyExchangeWithMarket(inventoryIndex, marketIndex, playerId) {
     closePopup();
 
     // Create the shared event before synchronizing.
-    ivyPublishExchangeAnimation(playerId, oldCard, newCard);
+    ivyPublishExchangeAnimation(playerId, oldCard, newCard, "market");
 
     syncToFirebase();
     updateUI();
@@ -734,13 +760,15 @@ function ivyCpuTryOpponentExchange(plan = ivyCpuCurrentPlan()) {
 			card.type === "Keep" &&
 			Number.isFinite(Number(card.cost)) &&
 			Number(card.cost) >= 0 &&
-			Number.isFinite(Number(card.acquiredRound)) &&
-			Number(card.acquiredRound) !== Number(gameState.round) &&
+			!(
+				Number.isFinite(Number(card.acquiredRound)) &&
+				Number(card.acquiredRound) === Number(gameState.round)
+			) &&
 			!ivy.inventory.some(owned => owned.name === card.name)
 		);
 
     let bestExchange = null;
-
+	
     for (const offered of ivyCards) {
         for (const received of opponentCards) {
             // Ivy cannot receive a card more expensive than the one she offers.
@@ -765,7 +793,9 @@ function ivyCpuTryOpponentExchange(plan = ivyCpuCurrentPlan()) {
         }
     }
 
-    if (!bestExchange) return false;
+    if (!bestExchange) {
+		return false;
+	}
 
     const offeredCard = ivy.inventory[bestExchange.offeredIndex];
     const receivedCard = opponent.inventory[bestExchange.receivedIndex];
@@ -786,7 +816,7 @@ function ivyCpuTryOpponentExchange(plan = ivyCpuCurrentPlan()) {
     playSound("card");
 
     // Reuse the existing shared exchange animation.
-    ivyPublishExchangeAnimation(2, offeredCard, receivedCard);
+    ivyPublishExchangeAnimation(2, offeredCard, receivedCard, "opponent");
 
     syncToFirebase();
     updateUI();
@@ -798,7 +828,7 @@ function ivyCpuTryOpponentExchange(plan = ivyCpuCurrentPlan()) {
 // Try one exchange at the beginning of Ivy's CPU shop phase.
 function ivyCpuTryExchange() {
     const p = gameState.p2;
-
+/*
     ivyCpuDebug("Exchange attempt started", {
         name: p.name,
         difficulty: p.difficulty,
@@ -807,14 +837,14 @@ function ivyCpuTryExchange() {
         round: gameState.round,
         exchangeUsed: p.ivyExchangeUsedThisTurn
     });
-
+*/
     if (!hasSignaturePower(2, "ivy")) {
-        ivyCpuDebug("STOPPED: Ivy's signature power was not detected.");
+        //ivyCpuDebug("STOPPED: Ivy's signature power was not detected.");
         return false;
     }
 
     if (p.ivyExchangeUsedThisTurn) {
-        ivyCpuDebug("STOPPED: Ivy has already exchanged this turn.");
+        //ivyCpuDebug("STOPPED: Ivy has already exchanged this turn.");
         return false;
     }
 
@@ -850,9 +880,9 @@ function ivyCpuTryExchange() {
         };
     });
 
-ivyCpuDebug("ALL owned Keep cards (including ineligible):",
-    allOwnedKeepCards
-);
+//ivyCpuDebug("ALL owned Keep cards (including ineligible):",
+//    allOwnedKeepCards
+//);
 
     const marketCards = market
     .map((card, index) => ({ card, index }))
@@ -944,10 +974,458 @@ ivyCpuDebug("Eligible market Keep cards:",
 	);
 
     // The shared presentation also runs on the CPU's own screen.
-    ivyPublishExchangeAnimation(2, oldCard, newCard);
+    ivyPublishExchangeAnimation(2, oldCard, newCard, "market");
 
     syncToFirebase();
     updateUI();
 
     return true;
 }
+
+// ============================================================
+// CPU ENDGAME + SUBMISSION WAR   (Virtuoso and Master only: "smart tier 2" from cpu_smarts.js)
+// Needs cpu_smarts.js in place first (it provides cpuSmartTier, CPU_SUBMISSION_KEEPS, the hooks this plugs into).
+//
+// PART 1 = new code (paste as one block next to the cpu_smarts.js code).  PART 2 = the small hooks.
+//
+// Facts the code relies on (from the game code):
+//   * gameState.submission runs -5 (the HUMAN's end) ... +5 (the CPU's end).
+//   * a ⛓️ or 👁️ roll of 3 gives effect 1, and every extra die adds 1 (4 dice = 2, 5 dice = 3).
+//   * a push past an end overflows into Transform. A marker sitting on a player's end at the end of THEIR turn = +1 Transform.
+//   * a Trance Setback lets the attacker choose "Push Submission 2", so 🌀 also pushes the marker.
+// ============================================================
+
+
+// ############################################################
+// PART 1: NEW CODE
+// ############################################################
+
+// ---------- where the marker is ----------
+function cpuEdge() {
+    const s = gameState.submission;
+    return { toOpp: 5 + s, toMe: 5 - s };        // points until the human's end / until our end
+}
+
+// ---------- endgame state ----------
+function cpuEndgameInfo() {
+    const opp = gameState.p1;
+    const e = cpuEdge();
+    return {
+        need: Math.max(0, 10 - (opp.transform || 0)),     // Transforms still needed
+        active: (opp.transform || 0) >= 6,                // endgame: every Transform counts
+        urgent: (opp.transform || 0) >= 8,                // 8-9: hunt for the last points
+        toOpp: e.toOpp, toMe: e.toMe,
+        pinned: e.toOpp <= 2                              // marker on or next to their end: ⛓️ points overflow into Transforms
+    };
+}
+function cpuInDanger() {                                  // our own endgame: don't starve ourselves of defense
+    return gameState.p2.transform >= 8 || gameState.submission >= 4;
+}
+
+// ---------- the submission war ----------
+// Cards that push ⛓️ or 🌀 (weight = how hard they push)
+const CPU_SUB_PUSH_WEIGHT = { 36: 3, 15: 2, 46: 2, 24: 2, 34: 1.5, 22: 1.5, 23: 1, 31: 2, 0: 1, 17: 1 };
+function cpuSubPower(playerId) {
+    const inv = (playerId === 1 ? gameState.p1.inventory : gameState.p2.inventory) || [];
+    let s = 0;
+    inv.forEach(c => { if (c) s += CPU_SUB_PUSH_WEIGHT[Number(c.id)] || 0; });
+    if (hasSignaturePower(playerId, "luci")) s += 1.5;
+	if (playerId === 1 && cpuStyle().subPress) s += 2;        // they play a ⛓️ game: treat them as holding more pushing power
+    return s;
+}
+// "press"   = we have the better ⛓️/🌀 cards (or have them pinned): push hard
+// "defend"  = they out-gun us: get the marker back to the middle, then tread water and let the other plans have the dice
+// "neutral" = no strong lean
+function cpuSubmissionMode() {
+    const mine = cpuSubPower(2), theirs = cpuSubPower(1), s = gameState.submission;
+    if (theirs >= mine + 2 && s > -2) return "defend";
+    if (mine >= 2 || s <= -2) return "press";
+    return "neutral";
+}
+
+// ---------- dice weights (Master) ----------
+function cpuEndgameFaceWeights(w) {
+    if (cpuSmartTier() < 2) return w;
+    const opp = gameState.p1, s = gameState.submission;
+    const info = cpuEndgameInfo(), mode = cpuSubmissionMode();
+    const mine = cpuSubPower(2), theirs = cpuSubPower(1);
+
+    if (info.active) {
+        const urgency = opp.transform - 5;                                   // 1 at 6 ... 4 at 9
+        w.TR += 0.25 * urgency;                                              // a 👁️ triple is a Transform
+        if (info.pinned) {
+            w.SU += 0.3 * urgency + 0.2;                                     // every ⛓️ point past the edge is a Transform
+            if (opp.trance >= 3) w.SP += 0.3 * urgency;                      // a Setback pushes ⛓️ by 2
+        }
+        if (info.urgent) w.EN += 0.2;                                        // energy buys the finishing card
+    }
+    if (mode === "press") {
+        w.SU += Math.min(1.0, 0.3 + 0.15 * mine);
+        w.SP += Math.min(0.5, 0.1 * mine);
+        if (s <= -3) w.SU += 0.3;
+    } else if (mode === "defend") {
+        if (s >= 1) w.SU += Math.min(1.2, 0.3 * s + 0.1 * theirs);           // pull the marker back toward the middle
+        else { w.TR += 0.1; w.AR += 0.05; w.EN += 0.1; }                     // treading water: other plans get the dice
+    }
+    return w;
+}
+
+// ---------- dice locks (Master and Virtuoso; runs at the end of the keep plan) ----------
+function cpuEndgameKeepRules(keep, faces, counts) {
+    if (cpuSmartTier() < 2) return keep;
+    const opp = gameState.p1, s = gameState.submission;
+    const info = cpuEndgameInfo(), mode = cpuSubmissionMode();
+    const free = keep.filter(k => !k).length;
+    const lock = f => faces.forEach((x, i) => { if (x === f) keep[i] = true; });
+
+    // Pinned in the endgame: ⛓️ (and a nearly full 🌀) are the finishers
+    if (info.active && info.pinned) {
+        if (counts.SU >= 2 && free >= 1) lock("SU");
+        if (opp.trance >= 3 && counts.SP >= 1) lock("SP");
+    }
+    // Pressing with good ⛓️ / 🌀 cards: keep pairs and go for the triple
+    if (mode === "press") {
+        if (counts.SU >= 2 && free >= 1) lock("SU");
+        if (counts.SP >= 2 && free >= 1) lock("SP");
+    }
+    // They out-gun us and the marker is on our side: use ⛓️ to pull it back
+    if (mode === "defend" && s >= 1 && counts.SU >= 2 && free >= 1) lock("SU");
+    return keep;
+}
+
+// ---------- shop ----------
+// Extra score for a market card (add to cpuSmartCardBonus)
+function cpuEndgameCardBonus(card) {
+    if (cpuSmartTier() < 2) return 0;
+    const id = Number(card.id), opp = gameState.p1;
+    const info = cpuEndgameInfo(), mode = cpuSubmissionMode();
+    let b = 0;
+    const dmg = CPU_BURST[id] || 0;                                         // cards that deliver Transforms directly
+    if (dmg && info.active) {
+        b += dmg * (opp.transform - 4) * 8;                                 // 8 Transform: +32 per point
+        if (dmg >= info.need) b += 40;                                      // it finishes the game
+    }
+    const push = CPU_SUB_PUSH_WEIGHT[id] || 0;
+    if (push && mode === "press") b += 8 * push;
+    if (push && mode === "defend") b += 4 * push;
+    if (mode === "defend" && (id === 53 || id === 35 || id === 34)) b += 25;   // I Will Not Obey / Mesmerizing Rhythm / Cognitive Override
+    if (info.active && info.pinned && id === 17) b += 20;                   // Physical Manipulation: every Setback becomes a Transform
+    return b;
+}
+// Keeping cards from the human (add to cpuDenyScore)
+function cpuEndgameDeny(card) {
+    if (cpuSmartTier() < 2) return 0;
+    const id = Number(card.id), me = gameState.p2;
+    let d = 0;
+    if (me.transform >= 7) d += (CPU_BURST[id] || 0) * (me.transform - 5) * 12;     // we are the one in the endgame: they must not get finishers
+    if (cpuSubmissionMode() === "defend") d += 6 * (CPU_SUB_PUSH_WEIGHT[id] || 0);  // they are winning the ⛓️ war: don't hand them more
+    return d;
+}
+// In the endgame, don't spend the energy a finishing card needs on something else (defense is still allowed when we are in danger)
+function cpuEndgameAllowsPurchase(card) {
+    if (cpuSmartTier() < 2) return true;
+    if (!cpuEndgameInfo().urgent) return true;
+    if (CPU_BURST[Number(card.id)] || cpuInDanger()) return true;
+    return gameState.p2.energy - getCardPurchaseCost(card, 2) >= cpuBurstMinCost();
+}
+// Nothing to finish with in the market: wipe to hunt for a finisher, but keep the ⚡ to buy it
+function cpuEndgameWipeHunt() {
+    if (cpuSmartTier() < 2) return null;
+    const info = cpuEndgameInfo(), p = gameState.p2;
+    if (!info.urgent || cpuFallingSensationMode()) return null;
+    if ((cpuBrain.huntWipes || 0) >= 3) return null;
+    if (market.some(c => c && CPU_BURST[Number(c.id)])) return null;        // there is already one to buy
+    if (deck.length === 0 || p.energy < getMarketWipeCost(2) + cpuBurstMinCost()) return null;
+    cpuBrain.huntWipes = (cpuBrain.huntWipes || 0) + 1;
+    return { type: "wipe", why: "hunting a finishing card" };
+}
+
+
+// PART 1: SUBMISSION RESCUE
+// Why the Master AI stays squeezed: the only tools it had were ⛓️ dice (one point per triple) and a small score bonus on
+// rescue cards. It never SAVED the 6-7 ⚡ those cards cost, kept spending on other cards, and never went looking for one.
+// ############################################################
+
+// card id -> how many points of ⛓️ it takes off OUR side
+const CPU_RESCUE_POINTS = {
+    53: s => s,                 // I Will Not Obey: back to neutral (needs the marker on our side)
+    10: () => 4, 39: () => 4,   // Subconscious Prompt
+    11: () => 2,                // Sluggish Mind
+    18: () => 2, 8: () => 2,    // Pulsing Light / Mind Fog (both also add 🌀 to the human)
+    61: s => s                  // Blank: back to neutral, but wipes our ⚡/🌀/🔥: last resort
+};
+
+// 0 = fine, 1 = marker on our side, 2 = squeezed, 3 = emergency
+function cpuPressure() {
+    const s = gameState.submission;
+    if (s <= 1) return 0;
+    const theirs = cpuSubPower(1);
+    if (s >= 4) return 3;
+    if (s >= 3) return theirs >= 2 ? 3 : 2;
+    return theirs >= 3 ? 2 : 1;
+}
+
+function cpuRescueEligible(card) {
+    const id = Number(card.id), s = gameState.submission;
+    if (inventoryHasName(gameState.p2, card.name)) return false;
+    if (hasSignaturePower(2, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(id)) return false;
+    if (id === 53 && s <= 0) return false;
+    if (id === 61 && cpuPressure() < 3) return false;
+    return true;
+}
+// Rescue cards in the market, best first. value = points removed (capped at what we need) minus the price
+function cpuRescueOptions() {
+    const s = gameState.submission;
+    return market
+        .map((c, idx) => (c && CPU_RESCUE_POINTS[Number(c.id)] && cpuRescueEligible(c))
+            ? { idx, card: c, cost: getCardPurchaseCost(c, 2), pts: CPU_RESCUE_POINTS[Number(c.id)](s) } : null)
+        .filter(Boolean)
+        .map(o => Object.assign(o, { value: Math.min(o.pts, s + 2) * 14 - o.cost * 3 - (Number(o.card.id) === 61 ? 15 : 0) }))
+        .filter(o => o.value > 0)
+        .sort((a, b) => b.value - a.value);
+}
+
+// Shop action: buy the best way out we can afford; if there is none in the market, hunt for one (keeping the ⚡ to buy it)
+function cpuRescueShopAction() {
+    if (cpuSmartTier() < 2 || cpuPressure() < 2) return null;
+    const p = gameState.p2;
+    const opts = cpuRescueOptions();
+    const affordable = opts.filter(o => o.cost <= p.energy || gameState.freeBuyActive);
+    if (affordable.length) return { type: "buy", idx: affordable[0].idx, name: affordable[0].card.name };
+    if (!opts.length && (cpuBrain.rescueWipes || 0) < 2 && deck.length > 0
+        && p.energy >= getMarketWipeCost(2) + 4 && !cpuFallingSensationMode()) {
+        cpuBrain.rescueWipes = (cpuBrain.rescueWipes || 0) + 1;
+        return { type: "wipe", why: "hunting a way out of the Submission squeeze" };
+    }
+    return null;
+}
+// While squeezed, never spend the energy a rescue card in the market is waiting for
+function cpuRescueAllowsPurchase(card) {
+    if (cpuSmartTier() < 2 || cpuPressure() < 2) return true;
+    if (CPU_RESCUE_POINTS[Number(card.id)]) return true;
+    const p = gameState.p2;
+    const target = cpuRescueOptions().filter(o => o.cost > p.energy && o.cost <= p.energy + 3).sort((a, b) => a.cost - b.cost)[0];
+    if (!target) return true;
+    return p.energy - getCardPurchaseCost(card, 2) >= target.cost;
+}
+// Dice: push back harder, and bank energy so the rescue card becomes affordable
+function cpuRescueFaceWeights(w) {
+    if (cpuSmartTier() < 2) return w;
+    const pr = cpuPressure();
+    if (pr >= 2) { w.SU += 0.3 * pr; w.EN += 0.25; }
+    return w;
+}
+
+// ############################################################
+// PART 2: THREAT FORECAST (look one turn ahead)
+// What is the most the human could do to our Transform next turn?  dice + the cards they could afford + Submission overflow.
+// ############################################################
+
+const CPU_PUSH_INSTANTS = { 10: 4, 39: 4, 11: 2, 18: 2, 8: 2 };      // instants that push ⛓️ (against whoever the marker favours)
+const CPU_TRANSFORM_DEFENSE = { 44: 40, 59: 30, 38: 30 };            // Flow Reversal, Transformation Sigil, New Identity
+
+function cpuBurstMinCost() {                                         // cheapest card that delivers Transforms
+    const costs = Object.keys(CPU_BURST).map(id => { const c = KNOWN_CARDS.find(k => Number(k.id) === Number(id)); return c ? c.cost : 4; });
+    return costs.length ? Math.min(...costs) : 4;
+}
+
+function cpuThreatForecast() {
+    const me = gameState.p2, hu = gameState.p1, s = gameState.submission;
+    const key = [gameState.round, hu.energy, hu.transform, me.transform, s, me.trance, market.map(c => c ? c.id : 0).join(",")].join("|");
+    if (cpuBrain.forecastKey === key && cpuBrain.forecast) return cpuBrain.forecast;
+
+    const margin = Math.max(0, 10 - (me.transform || 0));
+    const toMe = 5 - s;                                              // points until the marker is over OUR end
+    const budget = (hu.energy || 0) + 2;                             // ⚡ they can have next turn (their dice add about 2)
+    const has = id => hasCard(1, id);
+    const keepPush = (has(36) ? 1 : 0) + (has(15) ? 1 : 0) + (has(34) && s > 0 ? 1 : 0) + (has(46) ? 1 : 0)
+        + (has(22) ? 0.5 : 0) + (hasSignaturePower(1, "luci") ? 1 : 0);
+    const setbackPush = me.trance >= 3 ? 2 : 0;                      // a Setback lets them "Push Submission 2"
+    const physManip = (has(17) && me.trance >= 3) ? 1 : 0;           // Physical Manipulation turns it into a Transform
+
+    const cards = market.filter(Boolean).map(c => ({
+        id: Number(c.id), cost: getCardPurchaseCost(c, 1),
+        dmg: CPU_BURST[Number(c.id)] || 0, push: CPU_PUSH_INSTANTS[Number(c.id)] || 0, kill: Number(c.id) === 52 && s > 0
+    })).filter(c => c.dmg || c.push || c.kill);
+
+    let best = { total: 0, ids: [], overflow: 0 };
+    for (let mask = 0; mask < (1 << cards.length); mask++) {
+        let cost = 0, dmg = 0, push = 0, kill = false; const ids = [];
+        cards.forEach((c, i) => { if (mask & (1 << i)) { cost += c.cost; dmg += c.dmg; push += c.push; kill = kill || c.kill; ids.push(c.id); } });
+        if (cost > budget) continue;
+        const extra = keepPush + setbackPush + push;
+        const ovDice = kill ? toMe + 2 : Math.max(0, 2 + extra - toMe);    // their dice go into ⛓️ (2 = a strong roll)
+        const ovNoDice = kill ? toMe + 2 : Math.max(0, extra - toMe);      // their dice go into 👁️ instead (also 2)
+        const total = dmg + Math.max(ovDice, ovNoDice + 2) + physManip;
+        if (total > best.total) best = { total, ids, overflow: Math.max(ovDice, ovNoDice) };
+    }
+    const style = cpuStyle();
+    const max = best.total || (2 + physManip);
+    const likely = max * 0.5 + (style.transformer ? 0.5 : 0);
+    const f = { margin, max, likely, lethal: max >= margin, likelyLethal: likely >= margin, overflow: best.overflow, ids: best.ids };
+    cpuBrain.forecastKey = key; cpuBrain.forecast = f;
+    return f;
+}
+// 0 = safe, 1 = they could finish us, 2 = they probably will
+function cpuDanger() {
+    if (cpuSmartTier() < 2) return 0;
+    const f = cpuThreatForecast();
+    return f.lethal ? (f.likelyLethal ? 2 : 1) : 0;
+}
+
+// Shop action when we are in danger: survive, take their finishing cards away, or wipe them out of the market
+function cpuEmergencyShopAction() {
+    const sev = cpuDanger();
+    if (!sev) return null;
+    const p = gameState.p2, f = cpuThreatForecast();
+    const free = gameState.freeBuyActive;
+
+    // 1) buy a way to survive
+    const defs = market.map((c, idx) => (c && CPU_TRANSFORM_DEFENSE[Number(c.id)]) ? { idx, card: c, id: Number(c.id), cost: getCardPurchaseCost(c, 2) } : null)
+        .filter(o => o && (o.cost <= p.energy || free) && !inventoryHasName(p, o.card.name)
+            && (o.id !== 38 || p.transform >= 7) && (o.id !== 44 || p.transform > 0))
+        .sort((a, b) => CPU_TRANSFORM_DEFENSE[b.id] - CPU_TRANSFORM_DEFENSE[a.id]);
+    if (defs.length) return { type: "buy", idx: defs[0].idx, name: defs[0].card.name };
+
+    // 2) a way out of a Submission overflow
+    if (f.overflow > 0 && cpuPressure() >= 1) {
+        const r = cpuRescueOptions().filter(o => o.cost <= p.energy || free)[0];
+        if (r) return { type: "buy", idx: r.idx, name: r.card.name };
+    }
+    // 3) take their finishing cards (they transform THEM when we play them) if we can use them ourselves
+    const takeable = market.map((c, idx) => (c && f.ids.includes(Number(c.id)) && CPU_BURST[Number(c.id)] && Number(c.id) !== 40) ? { idx, card: c, cost: getCardPurchaseCost(c, 2) } : null)
+        .filter(o => o && (o.cost <= p.energy || free) && passesCardSpecificConditions(o.card));
+    if (takeable.length) return { type: "buy", idx: takeable[0].idx, name: takeable[0].card.name };
+
+    // 4) they can afford a finisher and we cannot take it: wipe it away
+    const stillThere = market.some(c => c && f.ids.includes(Number(c.id)));
+    if (stillThere && (cpuBrain.emergencyWipes || 0) < 2 && deck.length > 0 && p.energy >= getMarketWipeCost(2) && !cpuFallingSensationMode()) {
+        cpuBrain.emergencyWipes = (cpuBrain.emergencyWipes || 0) + 1;
+        return { type: "wipe", why: "denying their finishing cards" };
+    }
+    return null;
+}
+function cpuForesightCardBonus(card) {
+    const sev = cpuDanger();
+    if (!sev) return 0;
+    const id = Number(card.id);
+    let b = (CPU_TRANSFORM_DEFENSE[id] || 0) * sev;
+    if (CPU_RESCUE_POINTS[id] && cpuThreatForecast().overflow > 0) b += 20 * sev;
+    return b;
+}
+function cpuForesightDeny(card) {                  // cards the human could use to finish us: keep them out of the market
+    const sev = cpuDanger();
+    if (!sev) return 0;
+    const f = cpuThreatForecast();
+    return f.ids.includes(Number(card.id)) ? 40 * sev : 0;
+}
+function cpuForecastFaceWeights(w) {
+    const sev = cpuDanger();
+    if (!sev) return w;
+    const f = cpuThreatForecast();
+    if (f.overflow > 0) w.SU += 0.4 * sev;         // push the marker away from our end
+    w.EN += 0.2;                                    // energy buys the way out
+    return w;
+}
+
+// ############################################################
+// PART 3: SMART LUCIDITY
+// The old order was always: Vulnerability, then Arousal, then Trance, with nothing about what actually matters.
+// Now every possible split of the 💧 is scored (rerolls regained, Setback danger, Vulnerability) and the best one is used.
+// ############################################################
+
+function cpuTranceThreat() {                       // how much 🌀 the human could add to us next turn
+    const hu = gameState.p1, st = cpuStyle();
+    let t = 1;
+    [0, 31, 14, 8, 18].forEach(id => { if (hasCard(1, id)) t += 1; });
+    if (st.trancer) t += 1.5;
+    if (hasSignaturePower(1, "mark") || hasSignaturePower(1, "tex")) t += 1;
+    return t;
+}
+function cpuLucidityValue(p, v, a, t) {
+    const rerolls = x => (x <= 2 ? 2 : (x <= 4 ? 1 : 0));
+    let val = v * 1.6;                                                          // each Vulnerability point = one fewer die next turn
+    const a0 = p.arousal || 0, a1 = a0 - a;
+    val += (rerolls(a1) - rerolls(a0)) * 2.2 + a * 0.35;                       // crossing a reroll band is what matters
+    if (cpuStyle().arousal || hasSignaturePower(1, "xander") || hasSignaturePower(1, "tex")) val += a * 0.5;
+    const t0 = p.trance || 0, t1 = t0 - t, th = cpuTranceThreat();
+    val += t * 0.45;
+    if (t0 + th >= 5 && t1 + th < 5) val += 2.5 * (1 + 0.3 * Math.max(0, gameState.submission - 1));   // a Setback is worse the closer we are to our end
+    return val;
+}
+// Same contract as autoAllocateLucidity(points, playerObj, arousalCost): spends the points and returns {trance, arousal, vuln}
+function cpuAllocateLucidity(points, playerObj, arousalCost = 1) {
+    const cost = Math.max(1, Number(arousalCost) || 1);
+    const P = Math.max(0, Number(points) || 0);
+    let best = { v: 0, a: 0, t: 0, val: -1 };
+    for (let v = 0; v <= Math.min(playerObj.vulnerability || 0, P); v++) {
+        for (let a = 0; a <= Math.min(playerObj.arousal || 0, Math.floor((P - v) / cost)); a++) {
+            for (let t = 0; t <= Math.min(playerObj.trance || 0, P - v - a * cost); t++) {
+                const val = cpuLucidityValue(playerObj, v, a, t) + (v + a * cost + t) * 0.01;   // tiny push to actually use the dice
+                if (val > best.val) best = { v, a, t, val };
+            }
+        }
+    }
+    playerObj.vulnerability = (playerObj.vulnerability || 0) - best.v;
+    playerObj.arousal = (playerObj.arousal || 0) - best.a;
+    playerObj.trance = (playerObj.trance || 0) - best.t;
+    return { vuln: best.v, arousal: best.a, trance: best.t };
+}
+
+// ############################################################
+// PART 4: COUNTER-STYLE (read how the human plays, then counter it)
+// ############################################################
+
+function cpuNoteHumanStyle(counts) {               // once per human turn, with their final roll counts
+    const st = cpuBrain.style = cpuBrain.style || { n: 0, su: 0, tr: 0, ar: 0, sp: 0, en: 0, lu: 0, energyHigh: 0 };
+    const a = st.n === 0 ? 1 : 0.4;                // recent turns count more
+    const mix = (k, v) => { st[k] = st[k] * (1 - a) + v * a; };
+    mix("su", counts.SU || 0); mix("tr", counts.TR || 0); mix("ar", counts.AR || 0);
+    mix("sp", counts.SP || 0); mix("en", counts.EN || 0); mix("lu", counts.LU || 0);
+    mix("energyHigh", (gameState.p1.energy || 0) >= 7 ? 1 : 0);
+    st.n++;
+}
+function cpuStyle() {
+    const st = cpuBrain.style, t = cpuBrain.taken || [];
+    const none = { subPress: false, transformer: false, arousal: false, trancer: false, hoarder: false, lucid: false };
+    if (!st || st.n < 2) return none;
+    const avg = k => t.length ? t.reduce((s, x) => s + (x[k] || 0), 0) / t.length : 0;
+    return {
+        subPress: st.su >= 2.3 || avg("sub") >= 1.4,
+        transformer: st.tr >= 2.3 || avg("tf") >= 0.5,
+        arousal: st.ar >= 2 || avg("ar") >= 1.5,
+        trancer: st.sp >= 2 || avg("tr") >= 1.5,
+        hoarder: st.energyHigh >= 0.6,
+        lucid: st.lu >= 2.2
+    };
+}
+function cpuAnnounceStyle() {                      // write it to the brain log when it changes
+    const st = cpuStyle();
+    const names = Object.keys(st).filter(k => st[k]);
+    const label = names.length ? names.join(", ") : "nothing clear";
+    if (cpuBrain.styleLabel !== label) { cpuBrain.styleLabel = label; cpuSay(`Reading your style: ${label}.`); }
+}
+// What to buy against each style
+const CPU_STYLE_COUNTER_CARDS = {
+    subPress:    { cards: [35, 53, 34],        pts: 15 },
+    transformer: { cards: [44, 59, 38],        pts: 25 },
+    arousal:     { cards: [12, 50, 33, 9],     pts: 20 },       // Rapid Pulse, Mutual Heat, Quiet Mind, Deep Safeties
+    trancer:     { cards: [12, 21],            pts: 18 }        // Rapid Pulse, Switch Play
+};
+function cpuStyleCardBonus(card) {
+    if (cpuSmartTier() < 2) return 0;
+    const st = cpuStyle(), id = Number(card.id);
+    let b = 0;
+    Object.keys(CPU_STYLE_COUNTER_CARDS).forEach(k => {
+        if (st[k] && CPU_STYLE_COUNTER_CARDS[k].cards.includes(id)) b += CPU_STYLE_COUNTER_CARDS[k].pts;
+    });
+    if (st.hoarder && card.cost >= 6) b += 8;                                   // they are sitting on energy: expensive cards are the ones they'll take
+    return b;
+}
+function cpuStyleFaceWeights(w) {
+    if (cpuSmartTier() < 2) return w;
+    const st = cpuStyle();
+    if (st.lucid) { w.AR -= 0.15; w.SP -= 0.1; w.TR += 0.1; w.SU += 0.1; }     // they clear 🔥/🌀 with 💧: push Transform and ⛓️ instead
+    return w;
+}
+

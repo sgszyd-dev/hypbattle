@@ -127,6 +127,104 @@ const TRANSFORMATION_TAUNTS = {
             ]
         }
     },
+	
+	Demon_male: {
+		player: {
+			TransformPlayer: [
+				"Another step toward horns, a wicked tail, and a cock that will demand far more than your human one ever did.",
+				"Feel that heat coiling in your gut? Your body is learning how an incubus feeds… and what it hungers for.",
+				"Your skin is darkening, your senses sharpening. Soon every pulse of arousal in the room will be yours to taste.",
+				"That human restraint is melting. An incubus doesn’t ask—he takes, and he leaves them begging for more.",
+				"Horns budding, tail uncoiling… you’re becoming something that turns desire into a weapon. Enjoy the upgrade."
+			  ],
+			  PlayerAt5Transform: [
+				"Halfway to an incubus. That new weight between your legs is already thicker, hotter, and far less patient.",
+				"Five stages in. Your thoughts are getting hungrier. Can you feel how easily you could pull someone under?",
+				"Half demon already. That tail is long enough to wrap around a wrist… or a throat. Test it.",
+				"Your old body is losing the argument. This one knows exactly how to make someone moan your name.",
+				"Halfway transformed and you’re already leaking at the thought of feeding. Good. Keep going."
+			  ],
+			  PlayerAt8Transform: [
+				"Two steps left. That heavy, ridged cock is almost ready to claim whatever you want.",
+				"Nearly an incubus. Your eyes are starting to glow with the kind of hunger that doesn’t take no for an answer.",
+				"Almost finished. Soon every drop of pleasure you pull from someone will feed you instead of just feeling good.",
+				"Two stages from complete. That tail is twitching with anticipation. So is the rest of you.",
+				"One good push and you’ll be nothing but horns, heat, and the absolute need to take and take and take."
+			  ]
+		},
+		cpu: {
+			AIGetsTransformed: [
+				"Horns? A tail? You’re turning me into an incubus. I hope you understand what kind of appetite you’re unlocking.",
+				"I can feel the heat building low in my gut. This body is going to want things you’re not ready for.",
+				"My cock is thickening already. Keep pushing if you want to see what an incubus does when he’s hungry.",
+				"You’re rewriting me into something that feeds on desire. Bold. Reckless. Interesting.",
+				"This form is waking up with very specific needs. When it finishes, don’t expect me to be gentle about them."
+		  ],
+		  AIAt5Transform: [
+			"Halfway to an incubus and I can already feel the hunger clawing at me. This is intolerable… and intoxicating.",
+			"Five stages of this and my new cock won’t stay soft. You’re going to regret every throb you caused.",
+			"My tail is twitching and my thoughts are getting filthier by the second. I hate how natural it feels.",
+			"Halfway there and I can smell arousal like blood in the water. Including yours.",
+			"This body wants to pin, to claim, to feed. I’m holding it back with pure spite—for now."
+		  ],
+		  AIAt9Transform: [
+			"One step left. Fine. Let the incubus finish rising. I’ll decide who gets drained first.",
+			"Almost complete. This heavy, demanding cock is going to need a purpose. Guess who just volunteered.",
+			"So close. I’ll wear the horns and the hunger. I’ll still choose exactly how I use them on you.",
+			"One stage remaining. An incubus can be very persuasive. You’re about to learn how persuasive.",
+			"Let it finish. I’ll be the one who decides whether this new appetite is a gift… or a weapon aimed at you."
+		  ]
+		}
+	},
+	
+	Demon_female: {
+		player: {
+			TransformPlayer: [
+			"Another step toward horns, a wicked tail, and a body that knows exactly how to make someone weak.",
+			"Feel that heat blooming low in your belly? Your body is learning how a succubus feeds… and what she craves.",
+			"Your skin is darkening, your curves sharpening. Soon every pulse of desire in the room will be yours to drink.",
+			"That human restraint is melting. A succubus doesn’t ask—she takes, and she leaves them empty and begging.",
+			"Horns budding, tail uncoiling… you’re becoming something that turns lust into a leash. Enjoy the upgrade."
+		  ],
+		  PlayerAt5Transform: [
+			"Halfway to a succubus. That new heat between your legs is already slicker, hotter, and far less patient.",
+			"Five stages in. Your thoughts are getting hungrier. Can you feel how easily you could pull someone under?",
+			"Half demon already. That tail is long enough to wrap around a wrist… or a throat. Test it.",
+			"Your old body is losing the argument. This one knows exactly how to make someone moan your name.",
+			"Halfway transformed and you’re already dripping at the thought of feeding. Good. Keep going."
+		  ],
+		  PlayerAt8Transform: [
+			"Two steps left. That aching, emptiness is almost ready to claim whatever you want.",
+			"Nearly a succubus. Your eyes are starting to glow with the kind of hunger that doesn’t take no for an answer.",
+			"Almost finished. Soon every drop of pleasure you pull from someone will feed you instead of just feeling good.",
+			"Two stages from complete. That tail is twitching with anticipation. So is the rest of you.",
+			"One good push and you’ll be nothing but horns, heat, and the absolute need to be taken again and again."
+		  ]
+		},
+		cpu: {
+			AIGetsTransformed: [
+			"Horns? A tail? You’re turning me into a succubus. I hope you understand what kind of appetite you’re unlocking.",
+			"I can feel the heat building low in my belly. This body is going to want things you’re not ready for.",
+			"I’m already getting wetter just from the change. Keep pushing if you want to see what a succubus does when she’s hungry.",
+			"You’re rewriting me into something that feeds on desire. Bold. Reckless. Interesting.",
+			"This form is waking up with very specific needs. When it finishes, don’t expect me to be gentle about them."
+		  ],
+			AIAt5Transform: [
+			"Halfway to a succubus and I can already feel the hunger clawing at me. This is intolerable… and intoxicating.",
+			"Five stages of this and I’m already soaked. You’re going to regret every throb you caused.",
+			"My tail is twitching and my thoughts are getting filthier by the second. I hate how natural it feels.",
+			"Halfway there and I can smell arousal like blood in the water. Including yours.",
+			"This body wants to pin, to claim, to feed. I’m holding it back with pure spite—for now."
+		  ],
+			AIAt9Transform: [
+			"One step left. Fine. Let the succubus finish rising. I’ll decide who gets drained first. You seem to be the closest",
+			"Almost complete. This empty, aching feeling is going to need a purpose. Guess who just volunteered.",
+			"So close. I’ll wear the horns and the hunger. I’ll still choose exactly how I use them on you.",
+			"One stage remaining. A succubus can be very persuasive. You’re about to learn how persuasive.",
+			"Let it finish. I’ll be the one who decides whether this new appetite is a gift… or a weapon aimed at you."
+		  ]
+		}
+	},
 
     Dog: {
         player: {
@@ -695,6 +793,20 @@ const CPU_VICTORY_TAUNTS = {
 			"Tail up, back arched… just how I like my cats. Stay like that.",
 			"You used to hunt. Now you’re the one getting caught and played with."
         ],
+		Demon_male: [
+			"Look at you… horns, tail, and that heavy new thing between your legs you don’t even know how to control yet. I made an incubus and then beat you. Stay on your knees.",
+			"You were supposed to be the one feeding. Instead you’re the one who just lost. How does it feel to be a demon and still end up under me?",
+			"All that new power and you still couldn’t win. An incubus who can’t even claim the one who created him. Pathetic… and perfect.",
+			"I turned you into something built to dominate, then proved you still belong underneath. Present for your better.",
+			"Congratulations on the upgrade. Shame it didn’t come with the strength to actually use it. I’ll show you how a real winner takes what {HIM} wants."
+		],
+		Demon_female: [
+			"Look at that new body… soft, wet, and already aching, and you still couldn’t beat me. A succubus who loses on her first night. How delicious.",
+			"I gave you the hunger, the curves, the need to feed… then made sure you went to bed empty. Stay open. I’m not done enjoying this.",
+			"All that new sensitivity and you still ended up underneath me. A freshly made succubus who can’t even claim her first meal. Adorable.",
+			"You were supposed to drain others. Instead you’re the one dripping and defeated. Present properly so I can show you how it’s done.",
+			"I turned you into something built for pleasure and power, then proved you still belong on your back for me. Don’t waste the lesson."
+		],
         Dog: [
             "A dog. I wonder if you'll recognize the person you used to be beneath all that fur.",
             "Floppy ears, paws, a muzzle. Quite a transformation. And you thought you could defeat me.",
@@ -944,6 +1056,20 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"My tail’s in the air and my pride is somewhere on the floor. Use this cat however you like.",
 			"I lost… and somehow that just makes me want to rub against you harder.",
         ],
+		Demon_male: [
+			"You actually beat me… and turned me into this. Horns, tail, and a libido that won’t calm down even while I’m losing. Take what you want.",
+			"I’m an incubus now and I still lost to you. The hunger is already clawing at me. Don’t expect me to stay quiet while you claim the victory.",
+			"Fine. You’ve got a freshly made incubus on his knees. This body wants to take, but right now it’s yours to use.",
+			"I can feel the power and the need and the absolute failure all at once. Use the demon you created. I’ll remember every second.",
+			"You win. I’m horns, heat, and submission for as long as you can hold me. Just know this appetite doesn’t disappear when the match ends."
+		],
+		Demon_female: [
+			"You beat me… and left me like this. Horns, a twitching tail, and I can't stop aching even while I’m losing. Take it.",
+			"I’m a succubus now and I still couldn’t win. The need is already soaking through me. Use what you created before I remember how to fight back.",
+			"Fine. You’ve got a freshly made succubus on her knees, dripping and defeated. This body wants to feed, but right now it’s yours.",
+			"I can feel every new nerve ending and every failed attempt at dominance at the same time. Claim the demon you made. I’ll feel all of it.",
+			"You win. I’m heat, hunger, and open submission for as long as you can keep me here. Just know this appetite is going to remember your name."
+		],
         Dog: [
             "All right! I give up! You win! ...Why am I wagging my tail? This is humiliating.",
 			"I’m on my back, belly up, tail tucked. Do whatever you want with this good dog.",

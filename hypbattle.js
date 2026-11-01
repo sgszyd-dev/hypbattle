@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261030.1"; // Update this label for each release.
+const GAME_VERSION = "20261031.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -11,9 +11,12 @@ const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: null,                // number = Player 1 starts with this much ⚡, null = normal start
     cpuEnergy: null,               // same for the CPU
-    p1Cards: [45],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
-    cpuCards: [33],                  // Keep-card ids the CPU starts holding
-    cpuBuyFirst: null              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
+    p1Cards: [24],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
+    cpuCards: [],                  // Keep-card ids the CPU starts holding
+    cpuBuyFirst: null,              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
+	submission: null,					// -5 is human obey and +5 is cpu obey
+	p1Transform: null,
+	cpuTransform: null
 };
 
 
@@ -209,7 +212,7 @@ const CHARACTER_MANIFEST = {
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"], // Squirrel
     "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
-	"Ivy": ["Demon"] // Demon
+	"Ivy": ["Demon", "Statue", "Dog", "Cat"] // Demon
 	};
 
 
@@ -299,7 +302,8 @@ let gameState = {
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
     //dice: Array(6).fill({ face: "-", kept: false }),
 	dice: Array.from(6, () => ({ face: "-", kept: false })),
-    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false, endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
+    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false,
+	extraTurn: false, somnambulismTurn: false, bonusTurnType: "none", endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
     signatureSiobhanBonusPending: false, signatureSiobhanBonusRoll: false, signatureTexAllocationPending: false, signatureTexAllocationDone: false, signatureFableDecisionPending: false, signatureFableDecisionMade: false, signatureFableSpend: false, signatureHyeriPromptPending: false, signatureRozBonusGranted: false, signatureAlexAbsorbedThisTurn: false,
 	log: [] // Store log messages here
 };
@@ -405,9 +409,8 @@ function isOnlineSetup() { const m = document.getElementById("game-mode-option")
 
 // One icon per transformation, shown in the setup dropdowns (the option VALUE stays the plain form name).
 const TRANSFORM_ICONS = {
-    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊",
-    Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", Robot: "🤖", Snake: "🐍",
-    Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
+    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
+	Robot: "🤖", Snake: "🐍", Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
 };
 function transformIcon(form) { return TRANSFORM_ICONS[form] || "✨"; }
 function transformOptionLabel(form) { return `${transformIcon(form)} ${form}`; }
@@ -530,7 +533,7 @@ const CHALLENGE_CHARACTER_FORMS = {
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
-const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [35, 53];
+const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [34, 35, 53];
 const SIGNATURE_POWERS = {
     Roz: { key:"roz", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
     Luci: { key:"luci", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
@@ -1063,13 +1066,37 @@ function renderChallengeScreen(kind, extra={}) {
         const signaturePower = getSignaturePowerForName(r.name);
         const signaturePowerLine = signaturePower ? `<p style="margin:4px 0"><strong>Special ability · ${signaturePower.title}:</strong> ${signaturePower.description}</p>` : "";
 		let displayForm = r?.form ?? "Gender";
-		if (displayForm === "Gender" || displayForm === "Cow") {
+		if (displayForm === "Gender" || displayForm === "Cow" || displayForm == "Demon") {
 			const gender = r ? getGender(r.name) : null;
-			if (gender === "male") {
-				displayForm === "Gender" ? displayForm = "Woman" : displayForm = "Bull";
-			} else if (gender === "female") {
-				displayForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
+			switch (displayForm) {
+				case "Gender":
+					if (gender === "male") {
+						displayForm = "Woman";
+					} else if (gender === "female") {
+						displayForm = "Man";
+					}
+				break;
+				case "Cow":
+					if (gender === "male") {
+						displayForm = "Bull";
+					} else if (gender === "female") {
+						displayForm = "Cow";
+					}
+					break;
+
+				case "Demon":
+					if (gender === "male") {
+						displayForm = "Demon";
+					} else if (gender === "female") {
+						displayForm = "Succubus";
+					}
+					break;
+
+				default:
+						// future cases go here
+					break;
 			}
+			
 		}
 	
         title.textContent=`RIVAL ${challengeIndex+1}: ${r.name.toUpperCase()}`;
@@ -1393,7 +1420,7 @@ function resetPlayerTransformationTaunts() {
 
 function getTransformationConv(target) {
 	const form = String(target?.transformTarget || "").trim();
-	if (form !== "Gender" && form !== "Cow") return form;
+	if (form !== "Gender" && form !== "Cow" && form !== "Demon") return form;
 	const gender = getGender(target?.name);
 
     if (gender === "male" || gender === "female") {
@@ -1401,6 +1428,8 @@ function getTransformationConv(target) {
 			return gender === "male" ? "Woman" : "Man";
 		else if (form == "Cow")
 			return gender === "male" ? "Bull" : "Cow";
+		else if (form == "Demon")
+			return gender === "male" ? "Demon" : "Succubus";
     }
 
     // Safe fallback if a character's gender is not defined.
@@ -1409,7 +1438,7 @@ function getTransformationConv(target) {
 
 function getTransformationTauntKey(target) {
     const form = String(target?.transformTarget || "").trim();
-    if (form !== "Gender" && form !== "Cow") return form;
+    if (form !== "Gender" && form !== "Cow" && form !== "Demon") return form;
 
     const gender = getGender(target?.name);
 
@@ -1520,7 +1549,7 @@ function selectCPUVictoryTaunt() {
     let formKey = form;
 
     // Match the gender-aware transformation naming in the cinematic.
-    if (form === "Gender" || form === "Cow") {
+    if (form === "Gender" || form === "Cow" || form === "Demon") {
         const gender = getGender(human.name);
         if (gender === "male" || gender === "female") {
             formKey = `${form}_${gender}`;
@@ -1563,13 +1592,14 @@ function selectCPUDefeatSubmission() {
     const form = String(cpu.transformTarget || "").trim();
     let formKey = form;
 
-    if (form === "Gender" || form === "Cow") {
+    if (form === "Gender" || form === "Cow" || form === "Demon") {
         const gender = getGender(cpu.name);
 
         if (gender === "male") {
             formKey = `${form}_male`;
         }
-        // Female characters use the base Cow/Gender pool.
+		else
+			formKey = `${form}_female`;
     }
 
     const transformationLines =
@@ -1691,6 +1721,12 @@ function applyDebugStart() {
     give(gameState.p1, debugStart.p1Cards);
     give(gameState.p2, debugStart.cpuCards);
     refillMarket();
+	if (Number.isFinite(debugStart.submission))
+		gameState.submission = debugStart.submission;
+	if (Number.isFinite(debugStart.p1Transform))
+		gameState.p1.transform = debugStart.p1Transform;
+	if (Number.isFinite(debugStart.cpuTransform))
+		gameState.p2.transform = debugStart.cpuTransform;
     log("🧪 Debug start applied.");
 }
 
@@ -2083,26 +2119,54 @@ function updateLobbyUI(me, opp, note) {
     const sameName = !!(opp && opp.name === myName);
 	let transformMeInto = describeTransformChoice(opp?.target ?? "Gender", myName);
     let transformOpponentInto = describeTransformChoice(document.getElementById("p1-transform-type").value, opp?.name);
-
-	if (transformOpponentInto === "Gender" || transformOpponentInto === "Cow") {
-		const gender = opp ? getGender(opp.name) : null;
-		if (gender === "male") {
-			transformOpponentInto === "Gender" ? transformOpponentInto = "Woman" : transformOpponentInto = "Bull";
-		} else if (gender === "female") {
-			transformOpponentInto === "Gender" ? transformOpponentInto = "Man" : transformOpponentInto = "Cow";
-		}
-	}
-    //alert("5 Opp Name: " + (opp ? opp.name : "NA") + " Transform Opp into: " + transformOpponentInto + ", Gender: " + (opp ? getGender(opp.name) : "NA") + ", old: " + (opp?.target ?? "Gender"));
+	const gender = opp ? getGender(opp.name) : null;
 	
-	if (transformMeInto === "Gender" || transformMeInto === "Cow") {
-		if (getGender(myName) === "male") {
-			transformMeInto === "Gender" ? transformMeInto = "Woman" : transformMeInto = "Bull";
-		} else if (getGender(myName) === "female") {
-			transformMeInto === "Gender" ? transformMeInto = "Man" : transformMeInto = "Cow";
-		}
+	switch(transformOpponentInfo)
+	{
+		case "Gender":
+			if (gender === "male")
+				transformOpponentInto = "Woman";
+			else
+				transformOpponentInto = "Man";
+			break;
+		case "Cow":
+			if (gender === "male")
+				transformOpponentInto = "Bull";
+			else
+				transformOpponentInto = "Cow";
+			break;
+		case "Demon":
+			if (gender === "male")
+				transformOpponentInto = "Demon";
+			else
+				transformOpponentInto = "Succubus";
+			break;
+		default:
+			break;
 	}
-    //alert("My Name: " + myName + " Transform me into: " + transformMeInto + ", Gender: " + getGender(myName) + ", old: " + document.getElementById("p1-transform-type").value);
-	
+	switch(transformMeInto)
+	{
+		case "Gender":
+			if (gender === "male")
+				transformMeInto = "Woman";
+			else
+				transformMeInto = "Man";
+			break;
+		case "Cow":
+			if (gender === "male")
+				transformMeInto = "Bull";
+			else
+				transformMeInto = "Cow";
+			break;
+		case "Demon":
+			if (gender === "male")
+				transformMeInto = "Demon";
+			else
+				transformMeInto = "Succubus";
+			break;
+		default:
+			break;
+	}
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${transformMeInto}` : "Share the room code so they can join.");
     set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${transformOpponentInto}` : "");
@@ -2728,14 +2792,37 @@ async function replayLastCinematic() {
 function showStatDelta(anchorEl, delta, glyph) {
     const amount = Number(delta) || 0;
     if (!anchorEl || !amount) return;
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const host = anchorEl.closest(".stat, .transform-progress-wrap, .track-container") || anchorEl;
+
+    if (window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const floater = document.createElement("span");
     floater.className = `stat-float ${amount > 0 ? "stat-float-up" : "stat-float-down"}`;
     floater.textContent = `${amount > 0 ? "+" : ""}${amount}${glyph ? " " + glyph : ""}`;
-    host.appendChild(floater);
+
+    if (anchorEl.id === "rerolls-indicator") {
+        // Position relative to the indicator's actual viewport coordinates.
+        const rect = anchorEl.getBoundingClientRect();
+
+        floater.style.position = "fixed";
+        floater.style.right = "auto";
+        floater.style.top = `${rect.bottom + 2}px`;
+        floater.style.left = `${rect.left + rect.width / 2}px`;
+        floater.style.zIndex = "99999";
+        floater.style.transform = "translateX(-50%)";
+
+        document.body.appendChild(floater);
+    } else {
+        const host = anchorEl.closest(
+            ".stat, .transform-progress-wrap, .track-container"
+        ) || anchorEl;
+
+        host.appendChild(floater);
+    }
+
     window.setTimeout(() => floater.remove(), 950);
 }
+
 
 function rejectMarketCard(el) {
     playSound("deny");
@@ -4343,11 +4430,13 @@ function cpuBrainBeginTurn() {
     cpuNoteDamageTaken();
     const lr = gameState.p1.lastRoll || [];
     if (lr.length && cpuBrain.lastOppRound !== gameState.round) {
+		cpuNoteHumanStyle(cpuCountsFromFaces(lr));
         cpuBrain.oppHistory.push(cpuCountsFromFaces(lr));
         if (cpuBrain.oppHistory.length > 3) cpuBrain.oppHistory.shift();
         cpuBrain.lastOppRound = gameState.round;
     }
     cpuReplan();
+	cpuAnnounceStyle();
     const opp = cpuBrain.oppPlan === "none" ? "nothing clear" : CPU_STRATEGIES[cpuBrain.oppPlan].label;
     const tk = cpuBrain.taken.length ? cpuBrain.taken[cpuBrain.taken.length - 1] : null;
     cpuSay(`Plan: ${cpuPlanLabel()}. Reading the human as: ${opp}.${tk ? ` Last human turn did: Arousal +${tk.ar}, Trance +${tk.tr}, Submission +${tk.sub}, Transform +${tk.tf}.` : ""}`);
@@ -4674,6 +4763,8 @@ function cpuDenyScore(card) {
     // they already have Powerful Transform: more Transform tools snowball it
     if (hasCard(1, 41) && [2, 22, 17, 4].includes(card.id)) deny += 12;
 	deny += cpuPowerDeny(card);
+	deny += cpuEndgameDeny(card);
+	deny += cpuForesightDeny(card);
     return deny;
 }
 
@@ -4883,6 +4974,9 @@ function cpuAdaptiveNextShopAction() {
         if (s) return { type: "snipe", idx: s.idx, name: s.name };
     }
 	
+	{ const rescue = cpuEmergencyShopAction() || cpuRescueShopAction(); if (rescue) return rescue; }
+	{ const hunt = cpuEndgameWipeHunt(); if (hunt) return hunt; }
+	
 	if (hasSignaturePower(2, "zixuan")) {
         return cpuZixuanShopAction(info.map(i => ({
             idx: i.idx, card: i.card, cost: i.cost,
@@ -4947,6 +5041,8 @@ function cpuAdaptiveWantsCalm() {
 
 // What the CPU picks when it causes a Setback (no Physical Manipulation, or pinned)
 function cpuAdaptiveSetbackChoice(victim) {
+	if (cpuSmartTier() >= 2 && cpuEndgameInfo().active && cpuEndgameInfo().toOpp <= 3) return "submission";   // +2 ⛓️ is at or over their edge: it becomes a Transform
+	
     if (gameState.submission >= 2) return "submission";             // sliding toward our end: push it back toward neutral
     if (gameState.submission <= -3) return "submission";            // marker already near the human's end: push toward overflow
     const blocked = hasCard(1, 50) || hasCard(1, 32) || victim.shieldActive;   // Mutual Heat / Guided Heat / Rapid Pulse
@@ -4958,6 +5054,8 @@ function cpuAdaptiveSetbackChoice(victim) {
 async function cpuAdaptiveShopPhase() {
     cpuReplan();
 	cpuBrain.zixDigs = 0; cpuBrain.zixDenies = 0;
+	cpuBrain.huntWipes = 0;
+	cpuBrain.rescueWipes = 0; cpuBrain.emergencyWipes = 0;
     const p = gameState.p2;
     const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
@@ -5254,6 +5352,9 @@ function cpuTierNextAction(level) {
         if (s) return { type: "snipe", idx: s.idx, name: s.name };
     }
 	
+	{ const rescue = cpuEmergencyShopAction() || cpuRescueShopAction(); if (rescue) return rescue; }
+	{ const hunt = cpuEndgameWipeHunt(); if (hunt) return hunt; }
+	
 	if (hasSignaturePower(2, "zixuan")) {
         return cpuZixuanShopAction(info.map(i => {
             let deny = cpuDenyScore(i.card);
@@ -5298,6 +5399,8 @@ function cpuTierNextAction(level) {
 async function cpuTierShopPhase(level) {
     cpuBrain.wipes = 0;
 	cpuBrain.zixDigs = 0; cpuBrain.zixDenies = 0;
+	cpuBrain.huntWipes = 0;
+	cpuBrain.rescueWipes = 0; cpuBrain.emergencyWipes = 0;
     const p = gameState.p2;
     if (level === "transformer") cpuReplan();      // read the human's strategy (their cards, rolls and what they did to us)
     const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
@@ -5483,8 +5586,14 @@ function cpuCardPurchaseScore(card) {
 function passesCardSpecificConditions(card) {
     const p1 = gameState.p1;
     const p2 = gameState.p2;
+	// A card that finishes the game is always allowed
+	const burstDmg = CPU_BURST[Number(card.id)] || 0;
+	const finishesGame = burstDmg > 0 && burstDmg >= Math.max(0, 10 - p1.transform);
+	
     if (hasSignaturePower(2, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) return false;
 	if (!cpuCanSpendKeepingFS(getCardPurchaseCost(card, 2))) return false;
+	if (!cpuEndgameAllowsPurchase(card)) return false; // endgame: keep the ⚡ a finishing card needs
+	if (!cpuRescueAllowsPurchase(card)) return false;	
 	
 	if (inventoryHasName(gameState.p2, card.name)) return false;
 
@@ -5500,10 +5609,10 @@ function passesCardSpecificConditions(card) {
 
     // (1) Cards 25 and 30: Don't buy if submission is on the CPU side of the board
     // Note: Assuming positive submission value indicates CPU side (adjust polarity if negative is CPU side in your setup)
-    if (card.id === 25 || card.id === 30) {
-        const submissionOnCpuSide = gameState.submission > 0;
-        if (submissionOnCpuSide) return false;
-    }
+    if ((card.id === 25 || card.id === 30) && !finishesGame) {
+		if (gameState.submission > 0)
+			return false;
+	}
 
     // (2) Card 40: Don't buy unless it pushes player to 10 transform level OR CPU has lower transform than opponent
     if (card.id === 40) {
@@ -5793,14 +5902,30 @@ async function playFinalTransformationCinematic(loserId) {
     const targetForm = loser.transformTarget || "new form";
 	const loserGender = getGender(loser.name);
 	let displayForm = targetForm;
-	
-	if (targetForm === "Gender" || targetForm === "Cow") {
-		if (loserGender === "male") {
-			targetForm === "Gender" ? displayForm = "Woman" : displayForm = "Bull";
-		} else if (loserGender === "female") {
-			targetForm === "Gender" ? displayForm = "Man" : displayForm = "Cow";
-		}
+	switch(targetForm)
+	{
+		case "Gender":
+			if (loserGender === "male")
+				displayForm = "Woman";
+			else
+				displayForm = "Man";
+			break;
+		case "Cow":
+			if (loserGender === "male")
+				displayForm = "Bull";
+			else
+				displayForm = "Cow";
+			break;
+		case "Demon":
+			if (loserGender === "male")
+				displayForm = "Demon";
+			else
+				displayForm = "Succubus";
+			break;
+		default:
+			break;
 	}
+	
     const targetArticle = /^[AEIOU]/i.test(String(displayForm).trim()) ? "an" : "a";
     const isForfeit =
 		gameState.endReason === "forfeit" &&
@@ -6217,7 +6342,16 @@ function updateUI() {
         if (panel2) { panel2.classList.toggle("panel-active-p2", gameLive && !isP1); panel2.classList.toggle("panel-inactive", gameLive && hotSeat && isP1); }
     }
     
-    document.getElementById("rerolls-indicator").innerText = `(Rerolls: ${gameState.rerollsLeft})`;
+    const rerollsIndicator = document.getElementById("rerolls-indicator");
+
+	if (rerollsIndicator) {
+		rerollsIndicator.innerText = `(Rerolls: ${gameState.rerollsLeft})`;
+
+		//if (gameState.rozRerollAnimationPending) {
+		//	showStatDelta(rerollsIndicator, 1, "");
+		//	gameState.rozRerollAnimationPending = false;
+		//}
+	}
     const boardEl = document.querySelector(".board");
     if (boardEl) {
         boardEl.classList.toggle("phase-rolling", gameState.phase === "rolling");
@@ -6236,6 +6370,18 @@ function updateUI() {
     document.getElementById("btn-buy-arousal-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 3 || gameState.phase !== "shop";
     document.getElementById("btn-buy-transform-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 5 || gameState.phase !== "shop";
     document.getElementById("btn-buy-submission-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 6 || gameState.phase !== "shop";
+	
+	// Update End Turn button labels for bonus actions.
+	const endTurnLabel =
+		gameState.bonusTurnType === "roll" ? "Bonus Roll" :
+		gameState.bonusTurnType === "turn" ? "Bonus Turn" :
+		"End Turn";
+
+	const btnEndLabel1 = document.getElementById("btn-end-turn-1");
+	const btnEndLabel2 = document.getElementById("btn-end-turn-2");
+
+	if (btnEndLabel1) btnEndLabel1.textContent = endTurnLabel;
+	if (btnEndLabel2) btnEndLabel2.textContent = endTurnLabel;
     
     let btnEnd1 = document.getElementById("btn-end-turn-1");
     btnEnd1.disabled = !isHumanTurn || !isP1 || gameState.phase !== "shop" || isChoicePending();
@@ -6950,7 +7096,11 @@ function executeInstant(card, playerId) {
     let opp = playerId === 1 ? gameState.p2 : gameState.p1;
     let oppId = playerId === 1 ? 2 : 1;
 
-    if (card.id === 1) { gameState.extraTurn = true; log(`${p.name} plays Sudden Flash! Taking an extra turn!`); }
+    if (card.id === 1) {
+		gameState.extraTurn = true;
+		gameState.bonusTurnType = "turn";
+		log(`${p.name} plays Sudden Flash! Taking an extra turn!`);
+	}
     else if (card.id === 4) { applyTransform(oppId, 1, playerId); p.trance = 0; log(`Whispered Command! Opponent Transform +1, Trance reduced to 0.`); }
     else if (card.id === 6) {
         if (opp.shieldActive) {
@@ -7065,6 +7215,12 @@ function startTurn() {
     gameState.signatureSiobhanTriggerFace = null;
     const signatureSiobhanBonusTurn = !!gameState.signatureSiobhanBonusPending && hasSignaturePower(Number(gameState.activePlayer), "siobhan");
 	const activePlayerIsSiobhan = hasSignaturePower(Number(gameState.activePlayer), "siobhan");
+	// Keep the button label synchronized with the bonus turn actually starting.
+	if (signatureSiobhanBonusTurn) {
+		gameState.bonusTurnType = "roll";
+	} else if (gameState.somnambulismTurn) {
+		gameState.bonusTurnType = "turn";
+	}
     if (signatureSiobhanBonusTurn) {
         gameState.signatureSiobhanBonusPending = false;
         gameState.signatureSiobhanBonusRoll = true;
@@ -7184,10 +7340,26 @@ function maybeGrantRozBonusReroll() {
         }
     });
     gameState.rerollsLeft = 1;
-    const pObj = playerId === 1 ? gameState.p1 : gameState.p2;
-    log(`${pObj.name}'s Triple Trouble activates: ${count} ${face.split(" ")[0]} dice locked; one bonus reroll granted.`);
-    syncToFirebase();
-    return true;
+	const pObj = playerId === 1 ? gameState.p1 : gameState.p2;
+
+	const bonusMessage =
+		`${pObj.name}'s Triple Trouble activates! ` +
+		`${count} ${face.split(" ")[0]} dice locked. ` +
+		`+1 bonus reroll granted!`;
+
+	log(bonusMessage);
+	showTurnAlert(bonusMessage, playerId);
+
+	// Remember that this reroll was granted so the counter can animate.
+	syncToFirebase();
+	updateUI();
+
+	const rerollsIndicator = document.getElementById("rerolls-indicator");
+	if (rerollsIndicator) {
+		showStatDelta(rerollsIndicator, 1, "");
+	}
+
+	return true;
 }
 
 function rollDiceAction() {
@@ -7223,7 +7395,7 @@ function rollDiceAction() {
         FACES[Math.floor(Math.random() * FACES.length)]
     ]));
 
-    maybeGrantRozBonusReroll();
+    //maybeGrantRozBonusReroll();
     playSound("roll");
     syncToFirebase();
     updateUI();
@@ -7242,17 +7414,35 @@ function rollDiceAction() {
     }, 75);
 
     // Visual-only animation: the real roll is already determined and synchronized.
-    window.setTimeout(() => {
-        if (animationToken !== diceAnimationToken) return;
-        if (diceAnimationInterval !== null) {
-            window.clearInterval(diceAnimationInterval);
-            diceAnimationInterval = null;
-        }
-        diceAnimationFaces.clear();
-        diceAnimating.clear();
-        // Reveal the actual results only when the dice have finished settling.
-        if (gameState && !gameState.gameEnded) updateUI();
-    }, 850);
+	window.setTimeout(() => {
+		if (animationToken !== diceAnimationToken) return;
+
+		if (diceAnimationInterval !== null) {
+			window.clearInterval(diceAnimationInterval);
+			diceAnimationInterval = null;
+		}
+
+		diceAnimationFaces.clear();
+		diceAnimating.clear();
+
+		// Reveal the actual results only when the dice have finished settling.
+		if (gameState && !gameState.gameEnded) {
+			 // If doing Siobhan's bonus roll, it is now complete.
+			// Restore the normal End Turn label, but leave the bonus-roll
+			// state itself intact for the rest of the turn.
+			if (gameState.signatureSiobhanBonusRoll &&
+				gameState.bonusTurnType === "roll") {
+				gameState.bonusTurnType = "none";
+			}
+			updateUI();
+
+			// Check Roz's Triple Trouble only after the roll has settled.
+			if (maybeGrantRozBonusReroll()) {
+				// The bonus has been granted and synchronized by the helper.
+				updateUI();
+			}
+		}
+	}, 850);
 }
 
 // LUCIDITY MODAL LOGIC
@@ -7505,6 +7695,7 @@ async function resolveDice() {
             activeP.signatureSiobhanUsed = true;
             gameState.signatureSiobhanBonusPending = true;
             gameState.signatureSiobhanTriggerFace = triggerFace;
+			gameState.bonusTurnType = "roll";
             const keptCount = counts[triggerFace];
             counts = { SPIRAL:0, LUCIDITY:0, ENERGY:0, SUBMISSION:0, AROUSAL:0, TRANSFORM:0 };
             counts[triggerFace] = keptCount;
@@ -7580,7 +7771,7 @@ async function resolveDice() {
                 log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
             }
         } else {
-            const allocations = autoAllocateLucidity(lCount, activeP, arousalCost);
+            const allocations = (activePlayerNum === 2 && gameState.gameMode === "solo" && cpuSmartTier() >= 2) ? cpuAllocateLucidity(lCount, activeP, arousalCost) : autoAllocateLucidity(lCount, activeP, arousalCost);
             const lucidityParts = lucidityResultParts(activeP, allocations, hasCard(oppId, 41));
             log(lucidityParts.length ? `${activeP.name} used 💧: ${lucidityParts.join(", ")}.` : `Lucidity rolled, but ${activeP.name} is clear-headed.`);
         }
@@ -7623,6 +7814,7 @@ async function resolveDice() {
         if (hasCard(activePlayerNum, 24)) {
             gameState.somnambulismPenalty = (Number(gameState.somnambulismPenalty) || 0) + 1;
             gameState.somnambulismTurn = true;
+			gameState.bonusTurnType = gameState.signatureSiobhanBonusPending ? "roll" : "turn";
             const fewer = gameState.somnambulismPenalty;
             queueCardTrigger(activePlayerNum, 24, `Earned an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}`);
             log(`Somnambulism triggered: Taking an extra turn with ${fewer} fewer di${fewer === 1 ? "e" : "ce"}!`);
@@ -8410,11 +8602,14 @@ function finishEndTurn() {
     }
 
     if (gameState.activePlayer === 2) {
-        gameState.round++;
-    }
+		gameState.round++;
+	}
 
-    gameState.signatureSiobhanBonusRoll = false;
-    gameState.activePlayer = gameState.activePlayer === 1 ? 2 : 1;
+	// The bonus sequence is finished. Restore the normal button label.
+	gameState.bonusTurnType = "none";
+
+	gameState.signatureSiobhanBonusRoll = false;
+	gameState.activePlayer = gameState.activePlayer === 1 ? 2 : 1;
 
     syncToFirebase();
     updateUI();
