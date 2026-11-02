@@ -294,7 +294,7 @@ main {
   <!-- Gateway Action Trigger (Appears after 2 seconds) -->
   <div class="enter-wrapper" id="enterWrapper">
     <button class="enter-btn" id="enterBtn" onclick="enterGame()">
-      <span>Enter the Trance</span>
+      <span id="btnText">Enter the Trance</span>
       <svg class="timer-ring" viewBox="0 0 24 24" aria-hidden="true">
         <circle class="bg" cx="12" cy="12" r="10" />
         <circle class="progress" id="timerProgress" cx="12" cy="12" r="10" />
@@ -402,6 +402,23 @@ function drawSpiral() {
 
 requestAnimationFrame(drawSpiral);
 
+// --- Random Button Text Logic ---
+const buttonNames = [
+  "Enter the Trance",
+  "Ready to Sink",
+  "Surrender Now",
+  "Embrace the Change",
+  "Going Blank",
+  "Helpless to Resist",
+  "Claim Dominance"
+];
+
+// Pick a random string from the array and set it
+const btnTextSpan = document.getElementById('btnText');
+const randomIndex = Math.floor(Math.random() * buttonNames.length);
+btnTextSpan.textContent = buttonNames[randomIndex];
+
+
 // --- Gateway Entrance & Timer Logic ---
 const TOTAL_AUTO_TIME = 10; // Total seconds before auto-redirect
 const APPEAR_DELAY = 2; // Seconds before "Enter the Trance" appears
@@ -412,7 +429,7 @@ const enterWrapper = document.getElementById('enterWrapper');
 const timerProgress = document.getElementById('timerProgress');
 const warpOverlay = document.getElementById('warp-overlay');
 
-// Reveal "Enter the Trance" button after 2 seconds
+// Reveal button after 2 seconds
 setTimeout(() => {
   enterWrapper.classList.add('visible');
 }, APPEAR_DELAY * 1000);
