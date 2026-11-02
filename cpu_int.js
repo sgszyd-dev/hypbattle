@@ -151,7 +151,7 @@ function cpuSynergyFaceWeights(w) {
     else if (has(31) && subPlan) { w.SP += 0.2; w.EN += 0.25; }
     if (hasSignaturePower(2, "mark")) w.SP += 0.3;                         // Lingering Trance
     if (hasSignaturePower(2, "zixuan") && has(31)) { w.SP += 0.2; w.SU += 0.2; }
-    cpuRescueFaceWeights(w); cpuForecastFaceWeights(w); cpuStyleFaceWeights(w);
+    cpuRescueFaceWeights(w); cpuForecastFaceWeights(w); cpuStyleFaceWeights(w); cpuShoppingFaceWeights(w);
     return cpuEndgameFaceWeights(w);
 }
 
@@ -319,15 +319,15 @@ function showIvyExchangeAnimation(event) {
 		: "Suggested Transference";
 
 	const oldCardLabel = isOpponentExchange
-		? "GIVING TO OPPONENT"
+		? `IVY GIVING TO ${event.opponentName}`
 		: "RETURNING TO MARKET";
 
 	const newCardLabel = isOpponentExchange
-		? "RECEIVED FROM OPPONENT"
+		? `IVY RECEIVING FROM ${event.opponentName}`
 		: "ACQUIRED FROM MARKET";
 
 	const animationMessage = isOpponentExchange
-		? `${event.playerName} exchanged cards with the opposing player!`
+		? `${event.playerName} exchanged cards with ${event.opponentName}!`
 		: `${event.playerName} returned one card to the market and acquired another!`;
 
     overlay.innerHTML = `
@@ -390,11 +390,14 @@ function closeIvyExchangeAnimation() {
 // The event is included in gameState so Firebase sends it to the other player.
 function ivyPublishExchangeAnimation(playerId, oldCard, newCard, exchangeType = "market") {
     const player = playerId === 1 ? gameState.p1 : gameState.p2;
+	const opponent = playerId === 1 ? gameState.p2 : gameState.p1;
+	
 
     const event = {
 		id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
 		playerId,
 		playerName: player?.name || (playerId === 2 ? "Ivy" : "Player"),
+		opponentName: opponent?.name || (playerId === 2 ? "Player" : "Ivy"),
 		oldCard: {...oldCard},
 		newCard: {...newCard},
 		round: gameState.round,
@@ -441,11 +444,13 @@ function openIvyTransference(inventoryIndex, playerId) {
     if (!ivyCanUseExchange(playerId)) return;
 
     const p = playerId === 1 ? gameState.p1 : gameState.p2;
+	const opponentId = playerId === 1 ? 2 : 1;
+    const opponent = opponentId === 1 ? gameState.p1 : gameState.p2;
     const offeredCard = p.inventory[inventoryIndex];
 
     if (!ivyCanExchangeCard(offeredCard, p)) return;
 
-    const options = market
+    const marketOptions = market
         .map((card, marketIndex) => ({ card, marketIndex }))
         .filter(({ card }) =>
 			card &&
@@ -453,11 +458,24 @@ function openIvyTransference(inventoryIndex, playerId) {
 			Number(card.cost) <= Number(offeredCard.cost) &&
 			!inventoryHasName(p, card.name)
 		);
+		
+	// Find eligible cards in the opponent's inventory.
+    const opponentOptions = IVY_DEBUG_OPPONENT_EXCHANGE
+        ? opponent.inventory
+            .map((card, index) => ({ card, index }))
+            .filter(({ card }) =>
+                card &&
+                card.type === "Keep" &&
+                Number(card.cost) <= Number(offeredCard.cost) &&
+                !inventoryHasName(p, card.name)
+            )
+        : [];
 
-    if (!options.length) {
+	// no eligible choices from either source
+    if (!marketOptions.length && !opponentOptions.length) {
         showPopup(
             "Suggested Transference",
-            "There are no eligible market cards of equal or lower Energy cost."
+            "There are no eligible Keep cards in the market or the opponent's inventory of equal or lower Energy cost."
         );
         return;
     }
@@ -466,7 +484,7 @@ function openIvyTransference(inventoryIndex, playerId) {
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[ch]));
 
-    const choices = options.map(({ card, marketIndex }) => `
+    const marketChoices = marketOptions.map(({ card, marketIndex }) => `
         <div class="ivy-exchange-option">
             <strong>${esc(card.name)}</strong>
             <span>${Number(card.cost)}⚡ · ${esc(card.type)}</span>
@@ -476,11 +494,39 @@ function openIvyTransference(inventoryIndex, playerId) {
             </button>
         </div>
     `).join("");
+	
+	// Build opponent choices.
+    const opponentChoices = opponentOptions.map(({ card, index }) => `
+        <div class="ivy-exchange-option">
+            <strong>${esc(card.name)}</strong>
+            <span>${Number(card.cost)}⚡ · ${esc(card.type)} · ${esc(opponent.name)}</span>
+            <p>${esc(card.desc || "")}</p>
+            <button onclick="ivyExchangeWithOpponent(${inventoryIndex}, ${index}, ${playerId})">
+                Exchange for this card
+            </button>
+        </div>
+    `).join("");
+	
+	// Assemble the popup
+	let choicesHTML = "";
+	
+	if (marketOptions.length) {
+        choicesHTML += `
+            <h3>Market Cards</h3>
+            <div class="ivy-exchange-list">${marketChoices}</div>
+        `;
+    }
+
+    if (opponentOptions.length) {
+        choicesHTML += `
+            <h3>Opponent's Cards</h3>
+            <div class="ivy-exchange-list">${opponentChoices}</div>
+        `;
+    }
 
     showPopup(
         "Suggested Transference",
-        `<p>Exchange <strong>${esc(offeredCard.name)}</strong> (Cost: ${offeredCard.cost}⚡) for one of these cards:</p>
-         <div class="ivy-exchange-list">${choices}</div>`
+        `<p>Exchange <strong>${esc(offeredCard.name)}</strong> (Cost: ${offeredCard.cost}⚡) for one of these cards:</p>${choicesHTML}`
     );
 }
 
@@ -529,11 +575,13 @@ function ivyExchangeWithMarket(inventoryIndex, marketIndex, playerId) {
 		`${p.name} used Suggested Transference to exchange ${oldCard.name} (${oldCard.cost}⚡) for ${newCard.name} (${newCard.cost}⚡).`
 	);
     playSound("card");
+	
+	// Create the shared event before synchronizing.
+    ivyPublishExchangeAnimation(playerId, oldCard, newCard, "market");
 
     closePopup();
 
-    // Create the shared event before synchronizing.
-    ivyPublishExchangeAnimation(playerId, oldCard, newCard, "market");
+    
 
     syncToFirebase();
     updateUI();
@@ -591,6 +639,7 @@ function openIvyOpponentTransference(inventoryIndex, playerId) {
     );
 }
 
+
 function ivyExchangeWithOpponent(inventoryIndex, opponentIndex, playerId) {
     if (!IVY_DEBUG_OPPONENT_EXCHANGE || !ivyCanUseExchange(playerId)) return false;
 
@@ -601,11 +650,14 @@ function ivyExchangeWithOpponent(inventoryIndex, opponentIndex, playerId) {
     const offeredCard = p.inventory[inventoryIndex];
     const receivedCard = opponent.inventory[opponentIndex];
 
-    if (!ivyCanExchangeCard(offeredCard, p) || !receivedCard || receivedCard.type !== "Keep") return false;
+    if (!ivyCanExchangeCard(offeredCard, p) ||
+        !receivedCard ||
+        receivedCard.type !== "Keep") return false;
 
     if (Number(receivedCard.cost) > Number(offeredCard.cost)) return false;
     if (inventoryHasName(p, receivedCard.name)) return false;
 
+    // Exchange ownership.
     p.inventory.splice(inventoryIndex, 1);
     opponent.inventory.splice(opponentIndex, 1);
 
@@ -614,8 +666,14 @@ function ivyExchangeWithOpponent(inventoryIndex, opponentIndex, playerId) {
 
     p.ivyExchangeUsedThisTurn = true;
 
-    log(`${p.name} used Suggested Transference to exchange ${offeredCard.name} for ${opponent.name}'s ${receivedCard.name}.`);
+    log(
+        `${p.name} used Suggested Transference to exchange ${offeredCard.name} (${offeredCard.cost}⚡) for ${opponent.name}'s ${receivedCard.name} (${receivedCard.cost}⚡).`
+    );
+
     playSound("card");
+
+    // Show the same shared exchange animation used by CPU Ivy.
+    ivyPublishExchangeAnimation(playerId, offeredCard, receivedCard, "opponent");
 
     closePopup();
     syncToFirebase();

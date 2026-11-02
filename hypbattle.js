@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261031.1"; // Update this label for each release.
+const GAME_VERSION = "20261101.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -4841,14 +4841,61 @@ function cpuAdaptiveCardScore(card) {
     return score;
 }
 
-function cpuAdaptiveBuyThreshold() {
+// ---------- (1) thresholds that relax as energy piles up ----------
+function cpuAdaptiveBuyThreshold() {                 // REPLACES the existing function (Master)
     const p = gameState.p2;
-    let t = 40;
-    if (p.inventory.length === 0) t = 34;       // opening: get something going
-    if (p.energy >= 9) t -= 6;                  // sitting on cash
+    let t = 32;                                       // was 40
+    if (p.inventory.length === 0) t = 26;             // opening: get something going (was 34)
+    else if (p.inventory.length === 1) t = 29;
+    t -= Math.max(0, p.energy - 4) * 1.5;             // the more energy we are sitting on, the less picky (was: only at 9+)
     if (isCpuPinnedInSubmission()) t -= 10;
-    return t;
+    return Math.max(14, t);
 }
+
+function cpuTierBuyThreshold(level, cfg) {           // used by cpuTierNextAction (Hard / Expert / Virtuoso)
+    const p = gameState.p2;
+    let t = cfg.buy;
+    if (level === "transformer" || level === "v23low" || level === "defensive") t -= 7;
+    if (p.inventory.length === 0) t -= 8;
+    t -= Math.max(0, p.energy - 4) * 1.5;
+    return Math.max(14, t);
+}
+
+// ---------- (2) saving for a better card: at most 2 turns in a row, whatever the target ----------
+function cpuMaySaveThisTurn() {
+    const b = cpuBrain, r = gameState.round;
+    if (b.saveRound === r) return !!b.saveOk;                              // already decided this turn
+    if (b.saveRound == null || r - b.saveRound > 1) b.saveStreak = 0;     // a turn without saving: start over
+    b.saveRound = r;
+    b.saveStreak = (b.saveStreak || 0) + 1;
+    b.saveOk = b.saveStreak <= 2;
+    return b.saveOk;
+}
+
+// ---------- (3) energy dice when there is something to buy ----------
+// The best card we want but cannot pay for yet (within 3 ⚡)
+function cpuShoppingTarget() {
+    const p = gameState.p2;
+    const thr = cpuAdaptiveBuyThreshold();
+    return cpuAdaptiveMarketInfo()
+        .filter(i => i.passes && !i.dup && i.cost > p.energy && i.cost <= p.energy + 3 && i.score >= thr)
+        .sort((a, b) => b.score - a.score)[0] || null;
+}
+function cpuShoppingFaceWeights(w) {                 // add to cpuSynergyFaceWeights (see PART 2)
+    if (cpuSmartTier() < 1) return w;
+    const p = gameState.p2;
+    if (p.inventory.length <= 1) w.EN += 0.2;         // an empty hand is the weakest position in a card game
+    if (cpuShoppingTarget()) w.EN += 0.25;            // a card we want is just out of reach
+    return w;
+}
+
+// ---------- (4) diagnostics: WHY did the CPU buy or pass? (shows in the brain log) ----------
+function cpuShopReport(rows, thr, decision) {
+    const p = gameState.p2;
+    const list = rows.map(i => `${i.card.name} ${i.passes ? Math.round(i.score) : "blocked"} (${i.cost}⚡${i.cost > p.energy ? " can't afford" : ""})`).join(", ");
+    cpuSay(`Shop: ⚡${p.energy}, buy at ${Math.round(thr)} | ${list} → ${decision}`);
+}
+
 
 // extra "is this card actually useful right now?" checks, on top of passesCardSpecificConditions()
 function cpuAdaptiveExtraConditions(card) {
@@ -5000,10 +5047,10 @@ function cpuAdaptiveNextShopAction() {
             const sf = cpuBrain.savingFor;
             if (!sf || sf.id !== target.card.id) cpuBrain.savingFor = { id: target.card.id, round: gameState.round, turns: 1 };
             else if (sf.round !== gameState.round) { sf.round = gameState.round; sf.turns++; }
-            if (cpuBrain.savingFor.turns <= 2) best = null;                  // wait at most 2 turns, then buy what we can afford
+            if (cpuMaySaveThisTurn()) { cpuShopReport(info, thr, `saving for ${target.card.name}`); best = null; }
         }
     }
-    if (best) return { type: "buy", idx: best.idx, name: best.card.name, deny: best.deny > best.score * 0.5 && best.deny >= 40 };
+    if (best) { cpuShopReport(info, thr, `buy ${best.card.name}`); return { type: "buy", idx: best.idx, name: best.card.name, deny: best.deny > best.score * 0.5 && best.deny >= 40 }; }
 
     // wipe to deny a dangerous card the human can afford
     if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 2) && p.energy >= getMarketWipeCost(2) && deck.length > 0 && market.length > 0) {
@@ -5013,6 +5060,7 @@ function cpuAdaptiveNextShopAction() {
         const usefulExists = info.some(i => i.passes && i.score >= thr);
         if (!usefulExists && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : 5) && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 1)) return { type: "wipe", why: "nothing useful" };
     }
+	cpuShopReport(info, thr, "no purchase");
     return null;
 }
 
@@ -5271,6 +5319,7 @@ function cpuLegacyHasFreeDice() {              // would a reroll change anything
 function cpuTierCardScore(card, level) {
     const p2 = gameState.p2, p1 = gameState.p1;
     let score = (card.ai && card.ai[level] != null) ? card.ai[level] : 30;
+    if (level === "transformer" && card.ai && card.ai.adaptive != null) score = Math.max(score, card.ai.adaptive - 12);
     const pr = cpuTierProblems(level);
 	
 	// xander wants these cards
@@ -5339,6 +5388,7 @@ function cpuTierNextAction(level) {
                  humanNear: human.energy + 2 >= getCardPurchaseCost(card, 1) };      // about to be able to afford it (their income is ~2 per turn)
     }).filter(Boolean);
     const canPay = i => i.cost <= p.energy || gameState.freeBuyActive;
+	const buyThr = cpuTierBuyThreshold(level, cfg);
     const liked = info.filter(i => i.passes && i.score >= cfg.like).sort((a, b) => b.score - a.score);
 
     // tools that help us reach a liked card
@@ -5379,21 +5429,22 @@ function cpuTierNextAction(level) {
     const threat = liked.find(i => !canPay(i) && (i.humanCanAfford || (level === "transformer" && i.humanNear)) && i.score >= cfg.denyMin);
     if (threat && !cpuBrain.denyBlind && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < (level === "transformer" ? 2 : 1)) && p.energy >= getMarketWipeCost(2) && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
-    let best = info.filter(i => i.passes && canPay(i) && i.score >= cfg.buy).sort((a, b) => b.score - a.score)[0] || null;
+    let best = info.filter(i => i.passes && canPay(i) && i.score >= buyThr).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
         const target = liked.find(i => !canPay(i) && i.cost <= p.energy + cfg.reach);
         if (target && (p.energy - best.cost) + 2 < target.cost) {
             const sf = cpuBrain.savingFor;
             if (!sf || sf.id !== target.card.id) cpuBrain.savingFor = { id: target.card.id, round: gameState.round, turns: 1 };
             else if (sf.round !== gameState.round) { sf.round = gameState.round; sf.turns++; }
-            if (cpuBrain.savingFor.turns <= cfg.patience) return null;   // keep the energy and the target card: end the shop
+            if (cpuMaySaveThisTurn()) { cpuShopReport(info, buyThr, `saving for ${target.card.name}`); return null; }
         }
     }
     if (best) return { type: "buy", idx: best.idx, name: best.card.name };
     // 4) nothing worth buying and plenty of energy: refresh the market
-    const anyUseful = info.some(i => i.passes && i.score >= cfg.buy);
+    const anyUseful = info.some(i => i.passes && i.score >= buyThr);
     if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 2) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : cfg.excessWipe)) return { type: "wipe", why: "excess energy" };
     if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 1) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : cfg.idleWipe) && !anyUseful) return { type: "wipe", why: "nothing useful" };
+	cpuShopReport(info, buyThr, "no purchase");
     return null;
 }
 async function cpuTierShopPhase(level) {
@@ -5466,13 +5517,68 @@ function cpuBlankUseful() {                  // Blank: clears our 🌀 🔥 ⚡ 
     const lost = Math.max(0, me.energy - 7) * 0.3;
     return trouble - lost >= 1.6;
 }
-function cpuBreakTargetWorthIt() {           // Submissive Break gives the owner 2 ⚡, so only use it on a strong Keep card of the human
-    return gameState.p1.inventory.some(c => c && c.type === "Keep" && cpuCardValueProxy(c) >= 50);
+function cpuBreakTargetWorthIt() {
+    const diff = getCpuDifficulty();
+    const candidates = [];
+
+    [1, 2].forEach(ownerId => {
+        const owner = ownerId === 1 ? gameState.p1 : gameState.p2;
+
+        (owner.inventory || []).forEach(card => {
+            if (!card || card.type !== "Keep" || Number(card.id) === 58) return;
+            if (cardResolvedThisTurn.has(`${ownerId}:${Number(card.id)}`)) return;
+
+            const value = cpuCardValueProxy(card);
+            if (!Number.isFinite(value)) return;
+
+            // Destroying our own card is usually less attractive.
+            const ownCardPenalty = ownerId === 2 ? 15 : 0;
+
+            // The card's owner receives 2 Energy.
+            const energyPenalty = owner.energy >= 8 ? 12 : 5;
+
+            const netValue = value - ownCardPenalty - energyPenalty;
+
+            candidates.push({ ownerId, card, netValue });
+        });
+    });
+
+    if (!candidates.length) return false;
+
+    const best = Math.max(...candidates.map(c => c.netValue));
+
+    // Different difficulties use different thresholds.
+    if (diff === "aggressive") return best >= 15;
+    if (diff === "defensive") return best >= 35;
+    if (diff === "v23low") return best >= 5;
+    if (diff === "smart") return best >= 25;
+    if (diff === "adaptive") return best >= 20;
+
+    // Fallback for other difficulty names.
+    return best >= 15;
 }
+
 function cpuChooseBreakTarget(targets, pid) {
-    const oppId = oppIdOf(pid);
-    let best = null, bestV = -1;
-    targets.filter(t => t.owner === oppId).forEach(t => { const v = cpuCardValueProxy(t.card); if (v > bestV) { bestV = v; best = t; } });
+    let best = null;
+    let bestValue = -Infinity;
+
+    targets.forEach(t => {
+        if (!t || !t.card || !t.owner) return;
+
+        const value = cpuCardValueProxy(t.card);
+
+        // Account for the 2 Energy awarded to the card's owner.
+        const energyPenalty = t.owner.energy >= 8 ? 12 : 5;
+        const ownCardPenalty = t.owner === gameState.p2 ? 15 : 0;
+
+        const netValue = value - energyPenalty - ownCardPenalty;
+
+        if (netValue > bestValue) {
+            bestValue = netValue;
+            best = t;
+        }
+    });
+
     return best;
 }
 function cpuChooseSpecialFace() {            // Deeper Bargains: which face the special die should show
@@ -8317,10 +8423,9 @@ function activateSubmissiveBreak(playerId) {
         return true;
     };
     if (playerId === 2 && gameState.gameMode === "solo") {
-        const target = candidates.filter(c => c.ownerId === 1).sort((a,b) => b.card.cost-a.card.cost)[0]
-            || candidates.sort((a,b) => b.card.cost-a.card.cost)[0];
-        return target ? removeCandidate(target) : false;
-    }
+		const target = cpuChooseBreakTarget(candidates, playerId);
+		return target ? removeCandidate(target) : false;
+	}
     showChoiceDialog({
         key: `submissive-break-${playerId}`,
         title: "Submissive Break",
