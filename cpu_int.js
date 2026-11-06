@@ -356,6 +356,9 @@ function showIvyExchangeAnimation(event) {
     `;
 
     document.body.appendChild(overlay);
+	
+	// Prevent background scroll on mobile
+    document.body.style.overflow = "hidden";
 
     // Show both cards in their original positions before starting the swap.
 	// Increase IVY_EXCHANGE_REVEAL_DELAY to make this pause longer.
@@ -383,6 +386,8 @@ function closeIvyExchangeAnimation() {
 
     setTimeout(() => {
         if (overlay.parentNode) overlay.remove();
+		// Restore scrolling
+		document.body.style.overflow = "";
     }, 250);
 }
 

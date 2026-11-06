@@ -1,0 +1,45 @@
+/* ============================================================
+   HELPER TOOLTIPS: add anywhere in your stylesheet
+   ============================================================ */
+#helper-tip {
+    position: fixed; left: 0; top: 0;
+    z-index: 2147483000;                         /* above every modal */
+    max-width: 290px; padding: 9px 11px;
+    background: rgba(22, 16, 34, .97);
+    border: 1px solid #9d4edd; border-radius: 9px;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .6), 0 0 14px rgba(157, 78, 221, .35);
+    color: #e6dff0; font-size: .82rem; line-height: 1.45; text-align: left;
+    pointer-events: none;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease;
+}
+#helper-tip.show { opacity: 1; transform: none; }
+#helper-tip.measuring { visibility: hidden; opacity: 0; }
+.helper-tip-title { color: #f0abfc; font-weight: 700; font-size: .95em; margin-bottom: 3px; }
+.helper-tip-text i { color: #b9a8ca; }
+
+/* Discoverability while tips are on: the help cursor over labels (no underline) */
+.helper-tips-on .stat-label,
+.helper-tips-on .transform-progress-caption,
+.helper-tips-on #rerolls-indicator,
+.helper-tips-on .turn-history-head h3,
+.helper-tips-on .track-container h3 { cursor: help; }
+
+/* card tips: small definitions under the card explanation */
+#helper-tip hr { border: 0; border-top: 1px solid rgba(157, 78, 221, .4); margin: 6px 0; }
+.helper-gloss { font-size: .92em; margin-top: 3px; color: #d7cbe6; }
+.helper-gloss b { color: #f0abfc; }
+
+/* one-time "Tips are on" toast */
+#helper-toast {
+    position: fixed; left: 50%; bottom: 22px;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 2147483001;
+    padding: 10px 16px;
+    background: rgba(22, 16, 34, .97); border: 1px solid #9d4edd; border-radius: 10px;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .6), 0 0 14px rgba(157, 78, 221, .35);
+    color: #e6dff0; font-size: .9rem; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+}
+#helper-toast.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }

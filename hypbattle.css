@@ -1924,9 +1924,12 @@ body.game-ethereal-enabled { background-color: transparent; }
     inset: 0;
     z-index: 100000;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 18px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
     background: rgba(8, 4, 18, 0.88);
     backdrop-filter: blur(7px);
     opacity: 0;
@@ -1944,6 +1947,8 @@ body.game-ethereal-enabled { background-color: transparent; }
 
 .ivy-animation-panel {
     width: min(760px, 100%);
+	max-width: 100%;
+	margin: auto;
     padding: 26px;
     border: 1px solid rgba(190, 130, 255, 0.7);
     border-radius: 18px;
@@ -1955,6 +1960,7 @@ body.game-ethereal-enabled { background-color: transparent; }
     text-align: center;
     transform: translateY(14px) scale(0.97);
     transition: transform 0.4s ease;
+	max-height: none;
 }
 
 .ivy-animation-active .ivy-animation-panel {

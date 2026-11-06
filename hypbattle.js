@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261101.1"; // Update this label for each release.
+const GAME_VERSION = "20261102.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -9,10 +9,10 @@ let gameSpiralBackgroundEnabled = true;
 const cardDebugOn = false;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
-    p1Energy: null,                // number = Player 1 starts with this much ⚡, null = normal start
+    p1Energy: 10,                // number = Player 1 starts with this much ⚡, null = normal start
     cpuEnergy: null,               // same for the CPU
-    p1Cards: [24],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
-    cpuCards: [],                  // Keep-card ids the CPU starts holding
+    p1Cards: [34],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
+    cpuCards: [22],                  // Keep-card ids the CPU starts holding
     cpuBuyFirst: null,              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
@@ -3310,6 +3310,8 @@ function openOptionsModal(returnTarget = "game") {
     if (logToggle) logToggle.checked = localShowGameLog;
     const brainToggle = document.getElementById("show-brain-comments-option");
     if (brainToggle) brainToggle.checked = localShowBrainComments;
+	const tipToggle = document.getElementById("show-helper-tips-option");
+    if (tipToggle) tipToggle.checked = helperTipsEnabled;
     const modal = document.getElementById("options-modal");
     if (modal) modal.style.display = "flex";
     if (window.firebaseAuthReady && typeof window.initializeLeaderboardProfile === "function") {

@@ -25,6 +25,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="hypbattle.css">
+	<link rel="stylesheet" href="helper_tips.css">
 
     <!-- Firebase Compatibility SDKs for simple CDN integration -->
     <script type="module">
@@ -273,6 +274,13 @@
 						<span id="music-volume-label" class="music-volume-label">18%</span>
 					</div>
 				</div>
+				   <div class="option-row">
+				   <label class="option-toggle" for="show-helper-tips-option">
+					   <input type="checkbox" id="show-helper-tips-option" checked onchange="setHelperTipsEnabled(this.checked)">
+					   <span>Show helper tooltips</span>
+				   </label>
+				   <span style="color:#9e91ad;font-size:.78rem;">Hover over stats, bars and buttons</span>
+			   </div>
                 <div class="option-row">
                     <label class="option-toggle" for="show-game-log-option">
                         <input type="checkbox" id="show-game-log-option" onchange="setGameLogVisible(this.checked)">
@@ -286,7 +294,7 @@
                         <span>Show AI/brain comments in Chronicle</span>
                     </label>
                     <span style="color:#9e91ad;font-size:.78rem;">Off by default</span>
-                </div>
+				</div>
             </section>
 
             <section class="options-section" aria-labelledby="options-profile-heading">
@@ -608,6 +616,7 @@
 <script src="help_additions.js"></script>
 <script src="cpu_int.js"></script>
 <script src="hypbattle.js"></script>
+<script src="helper_tips.js"></script>
 
 
 <!-- HELP / RULES MODAL -->
