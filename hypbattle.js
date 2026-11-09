@@ -6,7 +6,7 @@ const MOBILE_AMBIENCE_QUERY = "(max-width: 700px), (pointer: coarse)";
 let gameSpiralBackgroundEnabled = true;
 
 // --- DEBUG CONFIGURATION ---
-const cardDebugOn = true;
+const cardDebugOn = false;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
