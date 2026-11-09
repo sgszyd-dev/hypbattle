@@ -12,6 +12,7 @@
 //       - Arousal phrases for levels 1..current Arousal
 //       - Submission phrases for levels 1..how far the marker is toward the player's side
 //       - Transform phrases for the form being applied to the player, in tiers as the Transform level rises
+//   * Every style is colour coded by category (base = lilac, Arousal = pink, Submission = violet, form = gold, unlock = blue).
 //   * A subliminal is shown for a random time: "too fast" (2-3 screen frames), "flash" (110-260 ms) or "readable"
 //     (700-1300 ms). More Setbacks shift the odds toward readable.
 //   * Purely cosmetic: nothing here changes the game.
@@ -104,7 +105,7 @@
         reducedMinMs: 450        // with "reduce motion" nothing shorter than this
     };
     const STYLES = [
-        ["center", "Center flash"], ["color", "Color coded"], ["glitch", "Glitch / scramble"], ["ghostdie", "Ghost die"],
+        ["center", "Center flash"], ["glitch", "Glitch / scramble"], ["ghostdie", "Ghost die"],
         ["spiral", "Spiral reveal"], ["edge", "Edge banner"], ["drift", "Peripheral drift"], ["cursor", "Cursor halo"],
         ["random", "Random mix of all"]
     ];
@@ -232,8 +233,19 @@
         const d = document.createElement("div");
         d.className = "sub-text tier-" + tier + (extra ? " " + extra : "");
         d.textContent = entry.text;
-        d.style.color = CAT_COLORS[entry.cat] || "#fff";
+        const col = CAT_COLORS[entry.cat] || "#fff";
+        d.style.color = col; d.style.setProperty("--sub-col", col);              // colour coding applies to EVERY style
         return d;
+    }
+    // soft glow of the category colour behind the dice area (used by the styles that sit over the dice)
+    function addWash(entry, tier) {
+        const col = CAT_COLORS[entry.cat] || "#fff", r = diceRect();
+        const wash = document.createElement("div");
+        wash.className = "sub-wash tier-" + tier;
+        wash.style.cssText = `left:${r.left - 40}px;top:${r.top - 30}px;width:${r.width + 80}px;height:${r.height + 60}px;` +
+            `background:radial-gradient(ellipse at center, ${col}66 0%, ${col}22 55%, transparent 75%);`;
+        layer.appendChild(wash);
+        return wash;
     }
     function placeAtDice(d) {
         const r = diceRect();
@@ -248,20 +260,13 @@
 
     const RENDER = {
         center(entry, tier) {
-            const d = mkText(entry, tier, "sub-center"); d.style.color = "#fff"; placeAtDice(d); show(d, tier);
-        },
-        color(entry, tier) {
-            const col = CAT_COLORS[entry.cat] || "#fff", r = diceRect();
-            const wash = document.createElement("div");
-            wash.className = "sub-wash tier-" + tier;
-            wash.style.cssText = `left:${r.left - 40}px;top:${r.top - 30}px;width:${r.width + 80}px;height:${r.height + 60}px;` +
-                `background:radial-gradient(ellipse at center, ${col}66 0%, ${col}22 55%, transparent 75%);`;
+            const wash = addWash(entry, tier);
             const d = mkText(entry, tier, "sub-center"); placeAtDice(d);
-            layer.appendChild(wash);
             show(d, tier, () => wash.remove(), wash);
         },
         glitch(entry, tier) {
-            const d = mkText(entry, tier, "sub-center sub-glitch"); d.style.color = "#fff"; d.dataset.text = entry.text; placeAtDice(d);
+            const wash = addWash(entry, tier);
+            const d = mkText(entry, tier, "sub-center sub-glitch"); d.dataset.text = entry.text; placeAtDice(d);
             if (tier !== "fast" && !reduceMotion()) {                              // letters scramble, then settle
                 const glyphs = "#%&@$?!*+=<>", final = entry.text; let n = 0;
                 const iv = setInterval(() => {
@@ -271,8 +276,8 @@
                     d.dataset.text = d.textContent;
                     if (n >= 7) { clearInterval(iv); d.textContent = final; d.dataset.text = final; }
                 }, 45);
-                show(d, tier, () => clearInterval(iv));
-            } else show(d, tier);
+                show(d, tier, () => { clearInterval(iv); wash.remove(); }, wash);
+            } else show(d, tier, () => wash.remove(), wash);
         },
         ghostdie(entry, tier) {
             const dice = Array.from(document.querySelectorAll("#dice-container .die")).filter(x => x.textContent.trim() && x.textContent.trim() !== "-");
@@ -285,8 +290,9 @@
         },
         spiral(entry, tier) {
             const sp = ensureSpiral(); sp.classList.add("pulse");
-            const d = mkText(entry, tier, "sub-center"); placeAtDice(d); d.style.color = "#fff";
-            show(d, tier, () => sp.classList.remove("pulse"));
+            const wash = addWash(entry, tier);
+            const d = mkText(entry, tier, "sub-center"); placeAtDice(d);
+            show(d, tier, () => { sp.classList.remove("pulse"); wash.remove(); }, wash);
         },
         edge(entry, tier) {
             const d = mkText(entry, tier, "sub-edge");
@@ -305,7 +311,7 @@
             setTimeout(() => d.remove(), dur * 1000 + 200);
         },
         cursor(entry, tier) {
-            const d = mkText(entry, tier, "sub-cursor"); d.style.color = "#fff";
+            const d = mkText(entry, tier, "sub-cursor");
             d.style.left = Math.min(window.innerWidth - 160, S.mouse.x + 22) + "px"; d.style.top = (S.mouse.y + 18) + "px";
             show(d, tier);
         }
@@ -360,7 +366,8 @@
         isEnabled: () => S.enabled,
         loadSetting() {
             S.enabled = load(KEY_ENABLED) === "true";                                  // default OFF
-            const st = load(KEY_STYLE); if (st && STYLES.some(x => x[0] === st)) S.style = st;
+            let st = load(KEY_STYLE); if (st === "color") st = "center";               // the old "Color coded" style is now built into all styles
+            if (st && STYLES.some(x => x[0] === st)) S.style = st;
             const box = document.getElementById("subliminals-option"); if (box) box.checked = S.enabled;
         },
         setEnabled(on) { S.enabled = !!on; store(KEY_ENABLED, String(S.enabled)); if (!S.enabled) clear(); },
@@ -441,16 +448,16 @@
     const STYLE_CSS = `
 #subliminal-layer { position: fixed; inset: 0; pointer-events: none; z-index: 900; overflow: hidden; }
 .sub-text { position: fixed; font-family: var(--font-display, Cinzel, serif); font-weight: 700; white-space: nowrap;
-    text-shadow: 0 0 14px rgba(190, 120, 255, .9), 0 0 3px #000; letter-spacing: .08em; }
+    text-shadow: 0 0 14px var(--sub-col, rgba(190, 120, 255, .9)), 0 0 3px #000; letter-spacing: .08em; }
 .sub-center { transform: translate(-50%, -50%); font-size: 2.6rem; }
 .sub-text.tier-readable { animation: subFade var(--sub-ms, 1s) ease-in-out both; }
 @keyframes subFade { 0% { opacity: 0; } 18% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
 .sub-wash { position: fixed; pointer-events: none; }
 .sub-wash.tier-readable { animation: subFade var(--sub-ms, 1s) ease-in-out both; }
-.sub-glitch { text-shadow: 2px 0 rgba(255, 0, 90, .85), -2px 0 rgba(0, 220, 255, .85), 0 0 12px rgba(190, 120, 255, .7); animation: subJitter .12s steps(2) infinite; }
+.sub-glitch { text-shadow: 2px 0 rgba(255, 0, 90, .85), -2px 0 rgba(0, 220, 255, .85), 0 0 12px var(--sub-col, rgba(190, 120, 255, .7)); animation: subJitter .12s steps(2) infinite; }
 @keyframes subJitter { 0% { transform: translate(-50%, -50%) skewX(0deg); } 50% { transform: translate(calc(-50% + 3px), calc(-50% - 2px)) skewX(-6deg); } 100% { transform: translate(calc(-50% - 3px), calc(-50% + 1px)) skewX(5deg); } }
 .sub-ghost { display: flex; align-items: center; justify-content: center; text-align: center; white-space: normal; overflow: hidden;
-    box-sizing: border-box; background: rgba(18, 10, 30, .94); border: 1px solid rgba(190, 120, 255, .7); border-radius: 12px; z-index: 5; color: #fff; }
+    box-sizing: border-box; background: rgba(18, 10, 30, .94); border: 1px solid var(--sub-col, #c084fc); box-shadow: inset 0 0 16px var(--sub-col, #c084fc); border-radius: 12px; z-index: 5; }
 .sub-edge { left: 0; right: 0; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; letter-spacing: .5em; text-transform: uppercase; }
 .sub-drift { left: -30vw; font-size: 2rem; opacity: 0; animation-name: subDrift; animation-timing-function: linear; animation-fill-mode: forwards; }
 @keyframes subDrift { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: var(--sub-op, .15); } 85% { opacity: var(--sub-op, .15); } 100% { transform: translateX(160vw); opacity: 0; } }
