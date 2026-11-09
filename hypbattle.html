@@ -281,6 +281,13 @@
 				   </label>
 				   <span style="color:#9e91ad;font-size:.78rem;">Hover over stats, bars and buttons</span>
 			   </div>
+			   <div class="option-row">
+					<label class="option-toggle" for="subliminals-option">
+					<input type="checkbox" id="subliminals-option" onchange=				"Subliminal.setEnabled(this.checked)">
+					<span>Subliminals (vs CPU and online only)</span>
+					</label>
+					<span style="color:#9e91ad;font-size:.78rem;">Brief flashes of text. Off by default.</span>
+				</div>
                 <div class="option-row">
                     <label class="option-toggle" for="show-game-log-option">
                         <input type="checkbox" id="show-game-log-option" onchange="setGameLogVisible(this.checked)">
@@ -613,6 +620,7 @@
     </div>
 
 <script src="taunts.js"></script>
+<script src="subliminal.js"></script>
 <script src="help_additions.js"></script>
 <script src="cpu_int.js"></script>
 <script src="hypbattle.js"></script>

@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261102.1"; // Update this label for each release.
+const GAME_VERSION = "20261107.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -6,13 +6,13 @@ const MOBILE_AMBIENCE_QUERY = "(max-width: 700px), (pointer: coarse)";
 let gameSpiralBackgroundEnabled = true;
 
 // --- DEBUG CONFIGURATION ---
-const cardDebugOn = false;
+const cardDebugOn = true;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
-    p1Energy: 10,                // number = Player 1 starts with this much ⚡, null = normal start
+    p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
     cpuEnergy: null,               // same for the CPU
-    p1Cards: [34],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
-    cpuCards: [22],                  // Keep-card ids the CPU starts holding
+    p1Cards: [],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
+    cpuCards: [],                  // Keep-card ids the CPU starts holding
     cpuBuyFirst: null,              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
@@ -599,7 +599,11 @@ function allSixStandardFacesPresent(dice = gameState?.dice || []) {
     const uniqueFaces = new Set(faces);
 
     // Need at least 6 distinct faces, and all standard faces must be among them.
-    return uniqueFaces.size >= 6 && FACES.every(face => uniqueFaces.has(face));
+    const hasSix = uniqueFaces.size >= 6 && FACES.every(face => uniqueFaces.has(face));
+	if (window.Subliminal && hasSix)
+		Subliminal.onEvent("allSix");
+	
+	return hasSix;
 }
 function chooseHyeriSignatureFace(playerId, availableFaces) {
     const me = playerId === 1 ? gameState.p1 : gameState.p2;
@@ -2117,56 +2121,45 @@ function updateLobbyUI(me, opp, note) {
     const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
     const myName = lobbyMyName();
     const sameName = !!(opp && opp.name === myName);
-	let transformMeInto = describeTransformChoice(opp?.target ?? "Gender", myName);
-    let transformOpponentInto = describeTransformChoice(document.getElementById("p1-transform-type").value, opp?.name);
-	const gender = opp ? getGender(opp.name) : null;
-	
-	switch(transformOpponentInfo)
-	{
-		case "Gender":
-			if (gender === "male")
-				transformOpponentInto = "Woman";
-			else
-				transformOpponentInto = "Man";
-			break;
-		case "Cow":
-			if (gender === "male")
-				transformOpponentInto = "Bull";
-			else
-				transformOpponentInto = "Cow";
-			break;
-		case "Demon":
-			if (gender === "male")
-				transformOpponentInto = "Demon";
-			else
-				transformOpponentInto = "Succubus";
-			break;
-		default:
-			break;
-	}
-	switch(transformMeInto)
-	{
-		case "Gender":
-			if (gender === "male")
-				transformMeInto = "Woman";
-			else
-				transformMeInto = "Man";
-			break;
-		case "Cow":
-			if (gender === "male")
-				transformMeInto = "Bull";
-			else
-				transformMeInto = "Cow";
-			break;
-		case "Demon":
-			if (gender === "male")
-				transformMeInto = "Demon";
-			else
-				transformMeInto = "Succubus";
-			break;
-		default:
-			break;
-	}
+
+    // Determine what each player will transform the other into.
+    let transformMeInto = describeTransformChoice(opp?.target ?? "Gender", myName);
+    let transformOpponentInto = describeTransformChoice(
+        document.getElementById("p1-transform-type").value,
+        opp?.name
+    );
+
+    // Each transformation description depends on the gender
+    // of the person RECEIVING the transformation.
+    const myGender = getGender(myName);
+    const oppGender = opp ? getGender(opp.name) : null;
+
+    // What the opponent will transform YOU into.
+    switch (transformMeInto) {
+        case "Gender":
+            transformMeInto = myGender === "male" ? "Woman" : "Man";
+            break;
+        case "Cow":
+            transformMeInto = myGender === "male" ? "Bull" : "Cow";
+            break;
+        case "Demon":
+            transformMeInto = myGender === "male" ? "Demon" : "Succubus";
+            break;
+    }
+
+    // What YOU will transform the OPPONENT into.
+    switch (transformOpponentInto) {
+        case "Gender":
+            transformOpponentInto = oppGender === "male" ? "Woman" : "Man";
+            break;
+        case "Cow":
+            transformOpponentInto = oppGender === "male" ? "Bull" : "Cow";
+            break;
+        case "Demon":
+            transformOpponentInto = oppGender === "male" ? "Demon" : "Succubus";
+            break;
+    }
+
     set("lobby-opp-name", opp ? `Opponent: ${opp.name}` : "Waiting for an opponent to join...");
     set("lobby-opp-status", opp ? `${opp.ready ? "Ready" : "Choosing..."} - will transform you into: ${transformMeInto}` : "Share the room code so they can join.");
     set("lobby-you-status", opp ? `You will transform ${opp.name} into: ${transformOpponentInto}` : "");
@@ -3312,6 +3305,8 @@ function openOptionsModal(returnTarget = "game") {
     if (brainToggle) brainToggle.checked = localShowBrainComments;
 	const tipToggle = document.getElementById("show-helper-tips-option");
     if (tipToggle) tipToggle.checked = helperTipsEnabled;
+	const subBox = document.getElementById("subliminals-option");
+	if (subBox) subBox.checked = Subliminal.isEnabled();
     const modal = document.getElementById("options-modal");
     if (modal) modal.style.display = "flex";
     if (window.firebaseAuthReady && typeof window.initializeLeaderboardProfile === "function") {
@@ -3518,6 +3513,8 @@ function initializeGame() {
             else gameState.p1.energy = 1;
 
             refillMarket();
+			if (window.Subliminal)
+				Subliminal.onGameStart();
             startTurn(); 
             syncToFirebase();
             listenToFirebase(onlineRoomId);
@@ -3607,6 +3604,8 @@ function initializeGame() {
     refillMarket(); 
 	applyDebugStart();
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
+	if (window.Subliminal)
+		Subliminal.onGameStart();
     startTurn();
     updateUI();
 	
@@ -5824,6 +5823,9 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
 
     const [stolenCard] = seller.inventory.splice(opponentCardIndex, 1);
     buyer.inventory.push(stolenCard);
+	
+	if (window.Subliminal)
+		Subliminal.onCardBought(buyerNum, stolenCard.id);
 
     log(`${buyer.name} used Hypnotic Dominance to buy ${stolenCard.name} from ${seller.name} for ${cost} ⚡!`);
 	syncToFirebase();
@@ -6979,6 +6981,8 @@ function checkTranceSetback(oppP, activePlayerId) {
     while (oppP.trance >= 5) {
         oppP.trance -= 5;
         const victimId = oppP === gameState.p1 ? 1 : 2;
+		if (window.Subliminal)
+			Subliminal.onTranceSetback(victimId);
         if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
             oppP.trance += 1;
             log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after the setback.`);
@@ -7428,6 +7432,8 @@ function startTurn() {
     updateUI();
     playSound(gameState.activePlayer === 1 ? "turn1" : "turn2");
     if (gameState.activePlayer === 2 && gameState.gameMode === "solo") setTimeout(executeCPUTurn, 1000);
+	if (window.Subliminal)
+		Subliminal.onTurnStart(gameState.activePlayer);
 }
 
 function maybeGrantRozBonusReroll() {
@@ -7551,6 +7557,9 @@ function rollDiceAction() {
 			}
 		}
 	}, 850);
+	
+	if (window.Subliminal)
+		Subliminal.onRoll();
 }
 
 // LUCIDITY MODAL LOGIC
@@ -7740,6 +7749,8 @@ async function resolveDice() {
     triggerHaptic("resolve");
 
     gameState.phase = "shop";
+	if (window.Subliminal)
+		Subliminal.onResolve();
     
     let oppId = activePlayerNum === 1 ? 2 : 1;
     let isHumanTurn = isLocalPlayerTurn();
@@ -8569,6 +8580,8 @@ function buyCard(index) {
 		acquiredCard.acquiredRound = gameState.round;
 
 		p.inventory.push(acquiredCard);
+		if (window.Subliminal)
+			Subliminal.onCardBought(playerId, card.id);
 	} else {
         executeInstant(card, playerId);
         discardCard(card);
@@ -9125,6 +9138,8 @@ function presentFinishedGame() {
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
+	if (window.Subliminal)
+		Subliminal.onGameOver();
     playSound("win");
     const challengeMatch = challengeActive && gameState.gameMode === "solo";
     const challengeStatsContext = challengeMatch ? { isChallenge: true, rivalIndex: challengeIndex,
