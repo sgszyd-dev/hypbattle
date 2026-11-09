@@ -3491,6 +3491,7 @@ function initializeGame() {
         let localTarget = document.getElementById("p1-transform-type").value;
         const lc = window.lobbyConfirmed; window.lobbyConfirmed = null;
 		localTarget = resolveRandomForm(localTarget, (lc && lc.oppName) || lobbyOpponentName);   // "Random" becomes a real form for the opponent's character
+		gameState.p1.setbacksSuffered = 0; gameState.p2.setbacksSuffered = 0;
 
         if (onlineLocalRole === 1) {
             // --- HOST (PLAYER 1) ---
@@ -3536,6 +3537,8 @@ function initializeGame() {
                 updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
                 window.dbUpdate(window.dbRef(window.db), updates);
             }
+			if (window.Subliminal)
+				Subliminal.onGameStart();
         }
         return;
     }
@@ -3567,6 +3570,7 @@ function initializeGame() {
     gameState.gameMode = gameMode;
     gameState.showDiceText = showDiceText;
     gameState.showEnergyActions = showEnergyActions;
+	gameState.p1.setbacksSuffered = 0; gameState.p2.setbacksSuffered = 0;
 
     gameState.p1.name = p1N.split(" ")[0]; 
     gameState.p1.transformTarget = cpuT;
@@ -6929,6 +6933,7 @@ function useSimmeringArousal(pId) {
 }
 
 function increaseTrance(targetObj, amount, sourcePlayerId) {
+	console.log("Called increase trance " + targetObj + " amt: " + amount + " src: " + sourcePlayerId);
     if (!targetObj || !(amount > 0)) return false;
     const targetId = targetObj === gameState.p1 ? 1 : 2;
 
@@ -6981,7 +6986,8 @@ function checkTranceSetback(oppP, activePlayerId) {
     while (oppP.trance >= 5) {
         oppP.trance -= 5;
         const victimId = oppP === gameState.p1 ? 1 : 2;
-		if (window.Subliminal)
+		oppP.setbacksSuffered = (oppP.setbacksSuffered || 0) + 1;      // lives in gameState, so it syncs to the other player online
+        if (window.Subliminal)
 			Subliminal.onTranceSetback(victimId);
         if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
             oppP.trance += 1;

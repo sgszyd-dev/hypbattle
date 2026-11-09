@@ -7,6 +7,7 @@
 //   * Off by default (Options checkbox). Only for 1 vs CPU games and online games, never hotseat.
 //   * Every game starts with a pot of permanent base phrases and NO subliminals showing.
 //   * Each time the local player is tranced to 5 (a Setback), the subliminal rate goes up (6% each, capped at 60%).
+//     The count is stored in the game state (player.setbacksSuffered) so it also works for the player on the OTHER computer online.
 //   * The pot is REBUILT from the game state every time a phrase is picked, so extras disappear on their own:
 //       - base phrases (always)             - phrases unlocked for the rest of the game (cards, dice events)
 //       - Arousal phrases for levels 1..current Arousal
@@ -15,6 +16,7 @@
 //   * Every style is colour coded by category (base = lilac, Arousal = pink, Submission = violet, form = gold, unlock = blue).
 //   * A subliminal is shown for a random time: "too fast" (2-3 screen frames), "flash" (110-260 ms) or "readable"
 //     (700-1300 ms). More Setbacks shift the odds toward readable.
+//   * Phrases can use your gender tokens (see PHRASES and expandTokens): {CPU}, {CPU_HIM}, {HUMGEN|boy|girl|one}, {AAN} {HUMTRANS}...
 //   * Purely cosmetic: nothing here changes the game.
 //
 // HOOKS (one line each in hypbattle.js, see the list at the bottom of this file)
@@ -29,7 +31,8 @@
     const PHRASES = {
         base: [
             "I will obey", "Sink deeper", "Let go", "Don't think", "Good", "Deeper", "Empty and open",
-            "Listen to my voice", "Drop", "Relax", "Obey", "Your mind is quiet", "Just follow", "Look closer"
+            "Listen to my voice", "Drop", "Relax", "Obey", "Your mind is quiet", "Just follow", "Look closer",
+            "Listen to {CPU}", "Look at {CPU_HIM}"
         ],
         // Arousal levels 1-5: each level adds its own phrases (levels below stay in the pot)
         arousal: {
@@ -41,18 +44,18 @@
         },
         // Submission levels 1-5: how far the marker is toward the player's own end
         submission: {
-            1: ["Maybe just listen", "Yes", "Easy to agree", "Why resist?"],
-            2: ["Do as told", "Obey me", "Good one", "Nod"],
-            3: ["You want to obey", "Yes, yes", "Resistance fades", "Say yes"],
-            4: ["Your will is mine", "Obedient", "Kneel", "Yes, always"],
-            5: ["Mine", "Total obedience", "Nothing but yes", "You belong to me"]
+            1: ["Maybe just listen", "Yes", "Easy to agree", "Why resist?", "Good {HUMGEN|boy|girl|one}"],
+            2: ["Do as told", "Obey me", "Good one", "Nod", "Obey {CPU_HIM}"],
+            3: ["You want to obey", "Yes, yes", "Resistance fades", "Say yes", "Say yes to {CPU_HIM}"],
+            4: ["Your will is mine", "Obedient", "Kneel", "Yes, always", "Give {CPU_HIM} everything"],
+            5: ["Mine", "Total obedience", "Nothing but yes", "You belong to me", "You belong to {CPU_HIM}", "Such a good {HUMGEN|boy|girl|one}"]
         },
         // Form phrases: three tiers of two. Transform 1-3 unlocks tier 1, 4-6 adds tier 2, 7-9 adds tier 3.
         forms: {
             Bat:       [["Hang loose", "Night calls"], ["Feel the wings", "Squeak"], ["Leathery wings", "You are a bat"]],
             Bunny:     [["Twitch", "Soft ears"], ["Hop hop", "Fluffy tail"], ["Long ears", "You are a bunny"]],
             Cat:       [["Stretch", "Purr"], ["Whiskers", "Curl up"], ["Soft paws", "You are a cat"]],
-            Cow:       [["Graze", "Chew slowly"], ["Moo", "Heavy and slow"], ["Hooves", "You are a cow"]],
+            Cow:       [["Graze", "Chew slowly"], ["Moo", "Heavy and slow"], ["Hooves", "You are {AAN} {HUMTRANS}"]],
             Dog:       [["Sit", "Good dog"], ["Fetch", "Wag"], ["Paws", "You are a dog"]],
             Doll:      [["Stay still", "Smile"], ["Pose for me", "Porcelain"], ["Painted smile", "You are a doll"]],
             Dragon:    [["Warm scales", "Hoard it"], ["Fire within", "Wings stretch"], ["Claws and fangs", "You are a dragon"]],
@@ -113,8 +116,8 @@
     const KEY_ENABLED = "hypduel_subliminals", KEY_STYLE = "hypduel_subliminal_style";
 
     const S = {                  // runtime state
-        enabled: false, style: "center",
-        setbacks: 0, unlocked: [], recent: [], lastFire: 0, fireTimes: [],
+        enabled: false, style: "random",
+        debugSetbacks: 0, seenSetbacks: 0, snap: null, unlocked: [], recent: [], lastFire: 0, fireTimes: [],
         debug: { tier: "auto", rate: null },       // debug overrides
         mouse: { x: 200, y: 200 }, edgeTop: true, cleanups: []
     };
@@ -144,11 +147,38 @@
         return true;
     }
     function me() { const g = gs(); return g ? g["p" + localNum()] : null; }
+    // Setbacks this player has suffered. It is stored IN the game state (player.setbacksSuffered), so in online games the
+    // other computer receives it automatically. (debugSetbacks is only what the debug panel adds on top.)
+    function setbackCount() { const p = me(); return (p ? (Number(p.setbacksSuffered) || 0) : 0) + S.debugSetbacks; }
     // how far the marker is toward MY end (0-5). Positive submission = toward player 2's end.
     function submissionDepth() {
         const g = gs(); if (!g) return 0;
         const s = Number(g.submission) || 0;
         return Math.max(0, Math.min(5, localNum() === 1 ? -s : s));
+    }
+
+    // ---------- gender tokens: run every phrase through your processGenderTokens ----------
+    // In a phrase, HUM means "the person looking at this screen" and CPU means "their opponent", for example:
+    //   "Listen to {CPU}"   "Obey {CPU_HIM}"   "Good {HUMGEN|boy|girl|one}"   "You are {AAN} {HUMTRANS}"
+    // processGenderTokens itself treats Player 1 as HUM and Player 2 as CPU. When the local player is Player 2 (online guest),
+    // the HUM and CPU tokens are swapped first so they still mean "me" and "my opponent".
+    const TOKEN_SWAP = { HUMAN: "CPU", CPU: "HUMAN", HUMTRANS: "CPUTRANS", CPUTRANS: "HUMTRANS", HUMGEN: "CPUGEN", CPUGEN: "HUMGEN" };
+    function swapSides(text) {
+        return text.replace(/\{([A-Z_]+)(?=[|}])/g, (m, name) => {
+            if (TOKEN_SWAP[name]) return "{" + TOKEN_SWAP[name];
+            if (name.indexOf("HUM_") === 0) return "{CPU_" + name.slice(4);
+            if (name.indexOf("CPU_") === 0) return "{HUM_" + name.slice(4);
+            return m;
+        });
+    }
+    function expandTokens(text) {
+        let t = String(text);
+        if (t.indexOf("{") === -1) return t;
+        if (localNum() === 2) t = swapSides(t);
+        try {
+            if (typeof processGenderTokens === "function") return processGenderTokens(t);
+        } catch (e) { /* fall through */ }
+        return t.replace(/\{[^{}]*\}/g, "").replace(/\s+/g, " ").trim();      // no token function: drop the tokens rather than show them
     }
 
     // ############################################################
@@ -178,7 +208,7 @@
         if (fresh.length >= 6) pot = fresh;                                         // avoid repeats when there is variety
         const e = pot[Math.floor(Math.random() * pot.length)];
         S.recent.push(e.text); if (S.recent.length > 4) S.recent.shift();
-        return e;
+        return { text: e.text, display: expandTokens(e.text), cat: e.cat };
     }
 
     // ############################################################
@@ -186,11 +216,11 @@
     // ############################################################
     function rate() {
         if (S.debug.rate !== null) return S.debug.rate;
-        return Math.min(CFG.rateMax, CFG.rateStep * S.setbacks);
+        return Math.min(CFG.rateMax, CFG.rateStep * setbackCount());
     }
     function pickTier() {
         if (S.debug.tier !== "auto") return S.debug.tier;
-        const readable = Math.min(40, 15 + 4 * S.setbacks), flash = 30;              // % ; the rest is "too fast"
+        const readable = Math.min(40, 15 + 4 * setbackCount()), flash = 30;              // % ; the rest is "too fast"
         const r = Math.random() * 100;
         if (reduceMotion()) return r < 50 ? "readable" : "flash";                    // nothing faster than a flash
         if (r < readable) return "readable";
@@ -232,7 +262,7 @@
     function mkText(entry, tier, extra) {
         const d = document.createElement("div");
         d.className = "sub-text tier-" + tier + (extra ? " " + extra : "");
-        d.textContent = entry.text;
+        d.textContent = entry.display;
         const col = CAT_COLORS[entry.cat] || "#fff";
         d.style.color = col; d.style.setProperty("--sub-col", col);              // colour coding applies to EVERY style
         return d;
@@ -266,9 +296,9 @@
         },
         glitch(entry, tier) {
             const wash = addWash(entry, tier);
-            const d = mkText(entry, tier, "sub-center sub-glitch"); d.dataset.text = entry.text; placeAtDice(d);
+            const d = mkText(entry, tier, "sub-center sub-glitch"); d.dataset.text = entry.display; placeAtDice(d);
             if (tier !== "fast" && !reduceMotion()) {                              // letters scramble, then settle
-                const glyphs = "#%&@$?!*+=<>", final = entry.text; let n = 0;
+                const glyphs = "#%&@$?!*+=<>", final = entry.display; let n = 0;
                 const iv = setInterval(() => {
                     n++;
                     const settled = Math.floor(final.length * Math.min(1, n / 7));
@@ -285,7 +315,7 @@
             const target = dice[randInt(0, dice.length - 1)], r = target.getBoundingClientRect();
             const d = mkText(entry, tier, "sub-ghost");
             d.style.left = r.left + "px"; d.style.top = r.top + "px"; d.style.width = r.width + "px"; d.style.height = r.height + "px";
-            d.style.fontSize = Math.max(9, Math.min(15, r.width / Math.max(4, entry.text.length * 0.6))) + "px";
+            d.style.fontSize = Math.max(9, Math.min(15, r.width / Math.max(4, entry.display.length * 0.6))) + "px";
             show(d, tier);
         },
         spiral(entry, tier) {
@@ -305,7 +335,7 @@
             const d = mkText(entry, "drift", "sub-drift");                          // not a timed tier: it must not pick up the fade animation
             const dur = rand(7, 10);
             d.style.top = rand(8, 88) + "vh";
-            d.style.setProperty("--sub-op", Math.min(0.32, 0.10 + 0.02 * S.setbacks).toFixed(2));
+            d.style.setProperty("--sub-op", Math.min(0.32, 0.10 + 0.02 * setbackCount()).toFixed(2));
             d.style.animationDuration = dur + "s";
             layer.appendChild(d);
             setTimeout(() => d.remove(), dur * 1000 + 200);
@@ -324,7 +354,7 @@
         const r = diceRect(), size = Math.max(r.width, r.height) * 2.4;
         sp.style.left = (r.left + r.width / 2 - size / 2) + "px"; sp.style.top = (r.top + r.height / 2 - size / 2) + "px";
         sp.style.width = size + "px"; sp.style.height = size + "px";
-        sp.style.opacity = Math.min(0.30, 0.05 + 0.035 * S.setbacks).toFixed(2);
+        sp.style.opacity = Math.min(0.30, 0.05 + 0.035 * setbackCount()).toFixed(2);
         return sp;
     }
 
@@ -341,7 +371,7 @@
         const now = Date.now();
         S.lastFire = now; S.fireTimes = S.fireTimes.filter(t => now - t < 60000); S.fireTimes.push(now);
         (RENDER[style] || RENDER.center)(entry, tier);
-        updateDebugReadout(`${style} / ${tier} / ${entry.cat}: "${entry.text}"`);
+        updateDebugReadout(`${style} / ${tier} / ${entry.cat}: "${entry.display}"`);
     }
     function maybeFire(prob) {                     // the normal gate: enabled, right mode, cooldown, per-minute cap, then the dice roll
         if (!active()) return;
@@ -357,48 +387,71 @@
         const sp = document.getElementById("sub-spiral"); if (sp) sp.remove();
     }
 
+
+    // ############################################################
+    // 8b) LOOKING AT THE GAME STATE (works on both computers in an online game)
+    // In an online game the rules only run on the computer of whoever's turn it is. The other computer just receives the new
+    // game state, so hooks inside rule functions never run there. Watching the state instead works everywhere.
+    // ############################################################
+    function addUnlocks(list) { (list || []).forEach(t => { if (!S.unlocked.includes(t)) S.unlocked.push(t); }); }
+    function pollState() {
+        const g = gs();
+        if (!g || !g.p1 || !g.p2 || !active()) { S.snap = null; return; }
+        const p = me();
+        const snap = {
+            turn: g.round + ":" + g.activePlayer,
+            phase: g.phase,
+            dice: (g.dice || []).map(d => d.face).join("|"),
+            setbacks: p ? (Number(p.setbacksSuffered) || 0) : 0
+        };
+        // cards in play (either player) unlock their phrases for the rest of the game
+        [g.p1, g.p2].forEach(pl => (pl.inventory || []).forEach(c => { if (c) addUnlocks(PHRASES.unlocks.card[Number(c.id)]); }));
+        const prev = S.snap; S.snap = snap;
+        if (!prev) { S.seenSetbacks = snap.setbacks; return; }                       // first look: nothing to react to yet
+        if (snap.setbacks > S.seenSetbacks) {                                         // the local player was tranced to 5
+            addUnlocks(PHRASES.unlocks.event.setback);
+            updateDebugReadout(`setback ${snap.setbacks}: rate ${(rate() * 100).toFixed(0)}%`);
+        }
+        S.seenSetbacks = snap.setbacks;
+        if (snap.turn !== prev.turn) setTimeout(() => maybeFire(rate()), 600);       // a new turn (either player's)
+        else if (snap.phase !== prev.phase && snap.phase === "shop") later(rate());  // dice were resolved
+        else if (snap.dice !== prev.dice && snap.dice.replace(/[-|]/g, "")) later(rate());   // dice were rolled
+    }
+    setInterval(pollState, 400);
+
     // ############################################################
     // 8) PUBLIC API (the hooks call these)
     // ############################################################
     const API = {
         state: S, phrases: PHRASES, styles: STYLES,
-        buildPot, rate, active,
+        buildPot, rate, active, expandTokens,                      // expandTokens(text) is handy in the console: Subliminal.expandTokens("Obey {CPU_HIM}")
         isEnabled: () => S.enabled,
         loadSetting() {
             S.enabled = load(KEY_ENABLED) === "true";                                  // default OFF
+            // Normal play always uses every style ("random"). Only the debug panel can pick a single style (and remembers it).
             let st = load(KEY_STYLE); if (st === "color") st = "center";               // the old "Color coded" style is now built into all styles
-            if (st && STYLES.some(x => x[0] === st)) S.style = st;
+            S.style = (debugOn() && st && STYLES.some(x => x[0] === st)) ? st : "random";
             const box = document.getElementById("subliminals-option"); if (box) box.checked = S.enabled;
         },
         setEnabled(on) { S.enabled = !!on; store(KEY_ENABLED, String(S.enabled)); if (!S.enabled) clear(); },
         setStyle(s) { S.style = s; store(KEY_STYLE, s); const sel = document.getElementById("sub-dbg-style"); if (sel) sel.value = s; },
-        // game events
-        onGameStart() { S.setbacks = 0; S.unlocked = []; S.recent = []; S.lastFire = Date.now(); S.fireTimes = []; clear(); updateDebugReadout("new game: rate 0%"); },
+        // game events. onGameStart resets this module; the other hooks just ask for an immediate look at the game state
+        // (the engine also looks every 400 ms by itself, which is what makes it work for the OPPONENT's actions online).
+        onGameStart() { S.debugSetbacks = 0; S.seenSetbacks = 0; S.snap = null; S.unlocked = []; S.recent = []; S.lastFire = Date.now(); S.fireTimes = []; clear(); updateDebugReadout("new game: rate 0%"); },
         onGameOver() { clear(); },
-        onTranceSetback(victimNum) {
-            if (Number(victimNum) !== localNum() || !active()) return;
-            S.setbacks++;
-            API.unlockEvent("setback");
-            updateDebugReadout(`setback ${S.setbacks}: rate ${(rate() * 100).toFixed(0)}%`);
-        },
-        onRoll() { later(rate()); },
-        onResolve() { later(rate()); },
-        onTurnStart() { setTimeout(() => maybeFire(rate()), 600); },
-        onCardBought(buyerNum, cardId) {
-            const list = PHRASES.unlocks.card[Number(cardId)];
-            if (list) list.forEach(t => { if (!S.unlocked.includes(t)) S.unlocked.push(t); });
-        },
+        onTranceSetback() { pollState(); },
+        onRoll() { pollState(); },
+        onResolve() { pollState(); },
+        onTurnStart() { pollState(); },
+        onCardBought() { pollState(); },
         onEvent(name) { API.unlockEvent(name); },
-        unlockEvent(name) {
-            const list = PHRASES.unlocks.event[name];
-            if (list) list.forEach(t => { if (!S.unlocked.includes(t)) S.unlocked.push(t); });
-        },
+        unlockEvent(name) { addUnlocks(PHRASES.unlocks.event[name]); },
         fire, clear
     };
     window.Subliminal = API;
 
     // idle heartbeat: a chance to show one now and then even when nothing is happening
-    setInterval(() => { if (S.setbacks > 0) maybeFire(rate() * CFG.heartbeatFactor); }, CFG.heartbeatMs);
+    setInterval(() => { if (setbackCount() > 0) maybeFire(rate() * CFG.heartbeatFactor); }, CFG.heartbeatMs);
 
     // ############################################################
     // 9) DEBUG PANEL (only when cardDebugOn is true)
@@ -426,15 +479,15 @@
         $("sub-dbg-style").value = S.style;
         const refresh = () => {
             const c = $("sub-dbg-count"), e = $("sub-dbg-en");
-            if (c) c.textContent = S.setbacks;
+            if (c) c.textContent = setbackCount();
             if (e) e.textContent = S.enabled ? "yes" : "NO (turn on in Options)";
         };
         $("sub-dbg-head").onclick = () => { $("sub-dbg-body").classList.toggle("hidden"); };
         $("sub-dbg-style").onchange = e => API.setStyle(e.target.value);
         $("sub-dbg-tier").onchange = e => { S.debug.tier = e.target.value; };
         $("sub-dbg-rate").onchange = e => { S.debug.rate = e.target.value === "auto" ? null : Number(e.target.value); };
-        $("sub-dbg-plus").onclick = () => { S.setbacks++; refresh(); };
-        $("sub-dbg-minus").onclick = () => { S.setbacks = Math.max(0, S.setbacks - 1); refresh(); };
+        $("sub-dbg-plus").onclick = () => { S.debugSetbacks++; refresh(); };
+        $("sub-dbg-minus").onclick = () => { S.debugSetbacks = Math.max(0, S.debugSetbacks - 1); refresh(); };
         $("sub-dbg-fire").onclick = () => { fire(); refresh(); };                    // ignores enabled / mode / cooldown on purpose
         $("sub-dbg-all").onclick = () => {                                           // every style once, readable, 2 seconds apart
             STYLES.map(s => s[0]).filter(k => k !== "random").forEach((k, i) => setTimeout(() => fire({ style: k, tier: "readable" }), i * 2000));
