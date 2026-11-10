@@ -397,6 +397,8 @@ function ivyPublishExchangeAnimation(playerId, oldCard, newCard, exchangeType = 
     const player = playerId === 1 ? gameState.p1 : gameState.p2;
 	const opponent = playerId === 1 ? gameState.p2 : gameState.p1;
 	
+	// Flash Ivy's signature power after a successful exchange.
+    flashSignaturePowerHint(playerId);
 
     const event = {
 		id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,

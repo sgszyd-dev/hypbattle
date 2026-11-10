@@ -134,7 +134,7 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Combinations vs. Individual Effects</h3>
-             <p>Some effects are based on individual dice while others require a set of matching faces. A <strong>⬜ Blank</strong> face has no effect and does not count toward any set. It appears on the special die from <i>Deeper Bargains</i> (three copies of your chosen face and three Blanks) and on 🌀 dice rolled by Tex when his signature power is active.</p>
+             <p>Some effects are based on individual dice while others require a set of matching faces. A <strong>⬜ Blank</strong> face has no effect and does not count toward any set. It appears on the special die from <i>Deeper Bargains</i> (three copies of your chosen face and three Blanks) and on 🌀 dice rolled by Tex when his special ability is active.</p>
         </div>
 		
 		
@@ -150,7 +150,7 @@ const HELP_CONTENT = {
         <div class="help-section">
             <h3>Claiming New Powers (Cards)</h3>
             <p>You may buy multiple cards during your shop phase if you have enough Energy. Hypnotic Focus reduces the cost of only your first purchase that turn; later purchases use their normal modified cost.</p>
-            <p><strong>Wipe Row</strong> costs 2 Energy (or 1 for Zixuan's signature power), discards the current market cards, and replaces the row with new cards when available. If you think the opponent will get a powerful card and you
+            <p><strong>Wipe Row</strong> costs 2 Energy (or 1 for Zixuan's special ability), discards the current market cards, and replaces the row with new cards when available. If you think the opponent will get a powerful card and you
 			can't afford it, it is sometimes beneficial to wipe the market so they can't get it.</p>
         </div>
     `,
@@ -190,86 +190,137 @@ const HELP_CONTENT = {
             <p>Beginner is more random. Easy uses basic strategy. Normal is more aggressive. Hard uses a stronger strategic profile. Expert emphasizes defensive play. Virtuoso favors Transformation-focused strategies. Master or Mistress adapts its plan to your play and can be very challenging.</p>
         </div>
     `,
-	seven: `
+	subliminals: `
         <div class="help-section">
-            <h3>The Seven: Solo Challenge</h3>
-            <p>Face seven rivals in a gauntlet that gets harder at every step. It is available in <strong>1 Player vs CPU</strong> mode from the setup screen.</p>
-            <ul>
-                <li><strong>The lineup:</strong> when a run begins, seven different characters are chosen at random from everyone except your own avatar. The lineup is fixed for that run, and it is saved with your progress.</li>
-                <li><strong>The ladder:</strong> rivals climb through the CPU levels Beginner, Easy, Normal, Hard, Expert, Virtuoso and Master, in that order.</li>
-                <li><strong>Winning</strong> moves you up to the next rival. Beating the seventh completes the challenge.</li>
-                <li><strong>Losing</strong> sends you back one rival, and you must beat them again. <strong>Losing to the first rival ends the run.</strong></li>
-                <li><strong>Going first:</strong> you always take the first turn in a challenge match. The CPU, as the second player, begins with 1 ⚡.</li>
-                <li><strong>Transformations:</strong> every rival is always transformed into their own signature form, so <strong>every rival's signature power is active</strong>. Your own form is random, except against the seventh rival, where you are given your signature form and your power is active for the final match.</li>
-            </ul>
-            <h4>Saving</h4>
-            <p>Progress is saved in this browser as you advance. A save restores your position in the gauntlet, not a match that is half played, so you restart the current rival's match when you resume. <strong>Export Challenge Save</strong> produces a code you can load on another browser. <strong>Challenge Record</strong> tracks your runs, wins, losses and furthest rival.</p>
+            <h3>Subliminals (Optional)</h3>
+            <p>Subliminals are brief flashes of text that appear near the dice while you play: whispers meant to slip past your thoughts. They are <strong>purely atmospheric</strong>. They never change the dice, the cards, or the rules.</p>
+            <p>Turn them on with the <strong>Subliminals</strong> checkbox in <strong>Options</strong>. They are <strong>off by default</strong>, and they work in <strong>1 Player vs CPU</strong> and <strong>2 Player Online</strong> games, not in 2 Player Local. In an online game you only see your own: each screen whispers to its own player.</p>
         </div>
         <div class="help-section">
-            <h3>Signature Powers</h3>
-            <p>Each character has one special power tied to one <strong>signature form</strong>. A power is only active when the transformation <em>being inflicted on that character</em> is their signature form. The setup screen shows a status line for each character: <em>ACTIVE for this setup</em>, or which form to choose to activate it. In online play, choose the <em>Signature</em> option to give your opponent their signature form.</p>
+            <h3>How They Build</h3>
+            <p>Every game begins clear: nothing appears at first. Each time you are tranced to 5 (a <strong>Setback</strong>), the chance of seeing a subliminal goes up, until it tops out at about 60%. The longer the duel goes on, the more often they come.</p>
+            <p>They also change in how long they stay. Some are <strong>too fast to read</strong> and are only a flicker, some <strong>flash</strong> by if you are watching closely, and some stay up <strong>long enough to read</strong>. Early on most are too fast, but each Setback makes the readable ones more common.</p>
+        </div>
+        <div class="help-section">
+            <h3>What They Say</h3>
+            <p>Each phrase is picked from a pool that changes with the state of the game, and the color of the text tells you where it came from.</p>
+            <div class="help-grid">
+                <div class="help-box"><strong style="color:#e9d5ff;">Lilac: always</strong><br>The basic suggestions every game starts with, such as "Sink deeper" or "Let go".</div>
+                <div class="help-box"><strong style="color:#ff6fb1;">Pink: Arousal 🔥</strong><br>The higher your Arousal, the more of these join the pool, and the hotter they get. When your Arousal drops, they drop out again.</div>
+                <div class="help-box"><strong style="color:#a78bfa;">Violet: Submission ⛓️</strong><br>The closer the Submission marker is to <em>your</em> end, the more of these join the pool. Push the marker back toward the middle or toward your opponent and they fade away.</div>
+                <div class="help-box"><strong style="color:#ffd166;">Gold: Transformation 👁️</strong><br>Phrases about the form you are becoming. More of them appear as your Transform level climbs.</div>
+                <div class="help-box"><strong style="color:#7dd3fc;">Blue: unlocked</strong><br>Some events add phrases for the rest of the game: your first Setback, and certain cards coming into play. Deep Gaze, Trigger Word, Hypnotic Dominance, Altered State, Mental Shackles, Somnambulism, Falling Sensation, Deeper Trance and Bondage each bring their own, whichever player holds them.</div>
+            </div>
+        </div>
+        <div class="help-section">
+            <h3>How They Appear</h3>
+            <p>Each one shows up in a different way: a flash in the middle of the board, letters that scramble and settle, over one of your dice, inside a spinning spiral, as a banner across the top or bottom of the screen, drifting faintly past, or right beside your cursor.</p>
+        </div>
+        <div class="help-section">
+            <h3>Good to Know</h3>
+            <ul>
+                <li>They never come in a rush: there is always a pause between them, and no more than about a dozen appear in a minute.</li>
+                <li>If your device is set to <em>reduce motion</em>, nothing is shorter than a brief but readable moment.</li>
+                <li>You can switch them off in Options at any time, even in the middle of a game.</li>
+                <li>Want to see fewer of them? Avoid being tranced to 5 (spend 💧 to lower your Trance), keep your Arousal low, and keep the Submission marker away from your end. That keeps the rate low and the targeted phrases out of the pool.</li>
+            </ul>
+        </div>
+    `,
+	characters: `
+        <div class="help-section">
+            <h3>Special Abilities</h3>
+            <p>Each character has one special ability. On the game setup screen, the box under each character's name describes their ability and has a checkbox: untick it to play without that ability, for either player. Abilities are <strong>on by default</strong>, and in The Seven and Brainwash they are always on.</p>
             <div class="help-grid">
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Alex/Alex_head.jpg" alt="Alex">
-                    <strong>Alex · <span class="signature-form">Bunny</span></strong><br>
+                    <strong>Alex</strong><br>
                     <em>Unyielding Resistance</em><br>
                     Once per opposing turn, Alex absorbs 1 point of an incoming Submission push. Alex cannot buy or use <i>Mesmerizing Rhythm</i> or <i>I Will Not Obey</i>.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Roz/Roz_head.jpg" alt="Roz">
-                    <strong>Roz · <span class="signature-form">Eevee</span></strong><br>
+                    <strong>Roz</strong><br>
                     <em>Triple Trouble</em><br>
                     When Roz has no rerolls left and holds three or more matching dice, those dice lock and she gets one bonus reroll (once per turn).
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Xander/Xander_head.jpg" alt="Xander">
-                    <strong>Xander · <span class="signature-form">Bat</span></strong><br>
+                    <strong>Xander</strong><br>
                     <em>Heated Opening</em><br>
                     Every 🔥 die adds 1 Arousal, starting with the first die, instead of the usual two-dice minimum.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Siobhn/Siobhn_head.jpg" alt="Siobhán">
-                    <strong>Siobhán · <span class="signature-form">Cat</span></strong><br>
+                    <strong>Siobhán</strong><br>
                     <em>Predatory Momentum</em><br>
                     A final roll with 4 or more 👁️ or ⛓️ resolves only that face (the other dice are lost), then Siobhán takes a bonus turn: one six-die roll with no rerolls. Once per turn.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Tex/Tex_head.jpg" alt="Tex">
-                    <strong>Tex · <span class="signature-form">Cow</span></strong><br>
+                    <strong>Tex</strong><br>
                     <em>Twisted Dice</em><br>
                     Every 🌀 Tex rolls becomes Blank. Each ⛓️ die in his final roll can be kept or reassigned to 🌀 or 🔥, one die at a time.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Luci/Luci_head.jpg" alt="Luci">
-                    <strong>Luci · <span class="signature-form">Robot</span></strong><br>
+                    <strong>Luci</strong><br>
                     <em>Submission Amplifier</em><br>
                     A final roll with 3 or more ⛓️ adds one extra point to the Submission push.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Zixuan/Zixuan_head.jpg" alt="Zixuan">
-                    <strong>Zixuan · <span class="signature-form">Doll</span></strong><br>
+                    <strong>Zixuan</strong><br>
                     <em>Market Manipulator</em><br>
                     Wiping the market costs 1 ⚡ instead of 2.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Hyeri/Hyeri_head.jpg" alt="Hyeri">
-                    <strong>Hyeri · <span class="signature-form">Squirrel</span></strong><br>
+                    <strong>Hyeri</strong><br>
                     <em>Perfect Harmony</em><br>
                     When all six faces appear in the final roll, every die changes to a face she has not used with this power yet. Each face can be used once per game.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Mark/Mark_head.jpg" alt="Mark">
-                    <strong>Mark · <span class="signature-form">Gender</span></strong><br>
+                    <strong>Mark</strong><br>
                     <em>Lingering Trance</em><br>
                     When Mark causes an opponent's Trance Setback, that opponent keeps 1 🌀 instead of dropping to the usual remainder.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Fable/Fable_head.jpg" alt="Fable">
-                    <strong>Fable · <span class="signature-form">Otter</span></strong><br>
+                    <strong>Fable</strong><br>
                     <em>Lucid Reversal</em><br>
                     If her final roll has three or more 💧 and she has any Transform, Fable may spend three 💧 to reduce her own Transform by 1; the rest of her 💧 resolve normally.
                 </div>
             </div>
+        </div>
+    `,
+	seven: `
+        <div class="help-section">
+            <h3>The Seven: Solo Challenge</h3>
+            <p>Face seven rivals in a gauntlet that gets harder at every step. It is available in <strong>1 Player vs CPU</strong> mode: press the Solo Challenge button on the setup screen.</p>
+            <ul>
+                <li><strong>The lineup:</strong> when a run begins, seven different characters are chosen at random from everyone except your own avatar. The lineup is fixed for that run, and it is saved with your progress.</li>
+                <li><strong>The ladder:</strong> rivals climb through the CPU levels Beginner, Easy, Normal, Hard, Expert, Virtuoso and Master, in that order.</li>
+                <li><strong>Winning</strong> moves you up to the next rival. Beating the seventh completes the challenge.</li>
+                <li><strong>Attempts:</strong> you get <strong>three attempts against each rival</strong>. Losing never sends you back a rival: you simply face the same one again. <strong>Three losses against the same rival end the run.</strong></li>
+                <li><strong>Going first:</strong> you always take the first turn in a challenge match. The CPU, as the second player, begins with 1 ⚡.</li>
+                <li><strong>Special abilities:</strong> every character's special ability is switched on, for you and for every rival. See the <em>Characters</em> tab.</li>
+                <li><strong>Transformations:</strong> your own form is chosen for you at random from the forms available for your character, and each rival comes with a fixed form.</li>
+            </ul>
+            <h4>Saving</h4>
+            <p>Progress is saved in this browser as you advance. A save restores your position in the gauntlet, not a match that is half played, so you restart the current rival's match when you resume. <strong>Export Challenge Save</strong> produces a code you can load on another browser. <strong>Challenge Record</strong> tracks your runs, wins, losses and furthest rival. When you complete the seventh rival the saved run is cleared, and a finished run cannot be saved again.</p>
+        </div>
+        <div class="help-section">
+            <h3>🧠 Brainwash Mode</h3>
+            <p>The ultimate test. Start it with the <strong>Brainwash Mode</strong> button on the Solo Challenge screen.</p>
+            <ul>
+                <li>Defeat <strong>all seven rivals in a row without losing a single match</strong>.</li>
+                <li><strong>One loss ends the run.</strong> There are no extra attempts.</li>
+                <li><strong>No saves.</strong> A Brainwash run cannot be saved, resumed or exported, and closing or refreshing the page ends it.</li>
+                <li>Everything else works like The Seven: seven random rivals, rising difficulty, and every special ability switched on.</li>
+                <li>Your saved The Seven run, if you have one, is never touched by a Brainwash run.</li>
+            </ul>
+            <p><strong>Succeed</strong> and your name enters the <strong>Brainwash Hall of Fame</strong> at the top of the global leaderboard, together with the date. Your Challenge Record also keeps separate Brainwash totals.</p>
         </div>
     `
 };

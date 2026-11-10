@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261107.1"; // Update this label for each release.
+const GAME_VERSION = "20261109.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -681,10 +681,43 @@ function updateSignaturePowerHints() {
     if (gameState?.p1) renderSignaturePowerHint(1, document.getElementById("p1-image"), "p1-signature-power-hint");
     if (gameState?.p2) renderSignaturePowerHint(2, document.getElementById("p2-image"), "p2-signature-power-hint");
 }
+
+
+// ============================================================
+// SIGNATURE POWER ACTIVATION FLASH
+// playerId: 1 = Player 1, 2 = Player 2
+// ============================================================
+
+function flashSignaturePowerHint(playerId) {
+    const hint = document.getElementById(
+        `p${Number(playerId)}-signature-power-hint`
+    );
+
+    if (!hint || hint.style.display === "none") return;
+
+    // Player 1 uses cyan; Player 2 uses red.
+    const flashColor = Number(playerId) === 1
+        ? "var(--player, #4cc9f0)"
+        : "var(--cpu, #ff4d4d)";
+
+    hint.style.setProperty("--signature-power-flash-color", flashColor);
+
+    // Remove and re-add the class to restart the animation.
+    hint.classList.remove("signature-power-activating");
+    void hint.offsetWidth;
+    hint.classList.add("signature-power-activating");
+
+    window.setTimeout(() => {
+        hint.classList.remove("signature-power-activating");
+    }, 950);
+}
+
+
 function queueTexDieChoices(playerId, indices, cursor = 0) {
     if (cursor >= indices.length) {
         gameState.signatureTexAllocationPending = false;
         gameState.signatureTexAllocationDone = true;
+		flashSignaturePowerHint(playerId);
         syncToFirebase();
         window.setTimeout(() => resolveDice(), 0);
         return;
@@ -6991,6 +7024,7 @@ function checkTranceSetback(oppP, activePlayerId) {
 			Subliminal.onTranceSetback(victimId);
         if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
             oppP.trance += 1;
+			flashSignaturePowerHint(activePlayerId);
             log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after the setback.`);
         }
         const canManipulate = activePlayerId && hasCard(activePlayerId, 17);
@@ -7451,6 +7485,7 @@ function maybeGrantRozBonusReroll() {
     if (!best || best[1] < 3) return false;
     const [face, count] = best;
     gameState.signatureRozBonusGranted = true;
+	flashSignaturePowerHint(playerId);
     let locked = 0;
     gameState.dice.forEach(die => {
         if (die && die.face === face && locked < count) {
@@ -7674,6 +7709,7 @@ async function resolveDice() {
                 const chosen = chooseHyeriSignatureFace(activePlayerNum, available);
                 preflightPlayer.signatureHyeriUsedFaces.push(chosen);
                 gameState.dice = gameState.dice.map(die => ({ ...die, face: chosen, kept: true }));
+				flashSignaturePowerHint(activePlayerNum);
                 log(`Hyeri's Perfect Harmony changes all six dice to ${chosen.split(" ")[0]}.`);
             } else {
                 gameState.signatureHyeriPromptPending = true;
@@ -7687,6 +7723,7 @@ async function resolveDice() {
                         if (!livePlayer.signatureHyeriUsedFaces.includes(face)) livePlayer.signatureHyeriUsedFaces.push(face);
                         gameState.dice = gameState.dice.map(die => ({ ...die, face, kept:true }));
                         gameState.signatureHyeriPromptPending = false;
+						flashSignaturePowerHint(activePlayerNum);
                         log(`Hyeri's Perfect Harmony changes all six dice to ${face.split(" ")[0]}.`);
                         syncToFirebase();
                         window.setTimeout(() => resolveDice(), 0);
@@ -7729,6 +7766,9 @@ async function resolveDice() {
             });
         }
         gameState.signatureTexAllocationDone = true;
+		if (submissionIndices.length) {
+			flashSignaturePowerHint(activePlayerNum);
+		}
     }
 
     // Fable: decide whether to spend three Lucidity dice before normal resolution.
@@ -7817,6 +7857,7 @@ async function resolveDice() {
     if (hasSignaturePower(activePlayerNum, "siobhan") && !activeP.signatureSiobhanUsed && !gameState.signatureSiobhanBonusRoll) {
         const triggerFace = gameState.signatureSiobhanTriggerFace || (counts.TRANSFORM >= 4 ? "TRANSFORM" : (counts.SUBMISSION >= 4 ? "SUBMISSION" : null));
         if (triggerFace) {
+			flashSignaturePowerHint(activePlayerNum);
             activeP.signatureSiobhanUsed = true;
             gameState.signatureSiobhanBonusPending = true;
             gameState.signatureSiobhanTriggerFace = triggerFace;
@@ -7836,6 +7877,7 @@ async function resolveDice() {
     if (gameState.signatureFableSpend && hasSignaturePower(activePlayerNum, "fable")) {
         const before = Number(activeP.transform) || 0;
         activeP.transform = Math.max(0, before - 1);
+		flashSignaturePowerHint(activePlayerNum);
         counts.LUCIDITY = Math.max(0, counts.LUCIDITY - 3);
         log(`${activeP.name}'s Lucid Reversal spends three 💧 and reduces own Transform by ${before - activeP.transform}.`);
         gameState.signatureFableSpend = false;
@@ -7844,6 +7886,7 @@ async function resolveDice() {
     // Tex's Trance dice are blank, and reassigned Submission dice have already changed face.
     // Luci adds one extra Submission point when at least three Submission dice remain.
     if (hasSignaturePower(activePlayerNum, "luci") && counts.SUBMISSION >= 3) {
+		flashSignaturePowerHint(activePlayerNum);
         log(`${activeP.name}'s Submission Amplifier adds +1 Submission push.`);
     }
 
@@ -7914,6 +7957,9 @@ async function resolveDice() {
 	}
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
+			if (hasSignaturePower(activePlayerNum, "xander")) {
+				flashSignaturePowerHint(activePlayerNum);
+			}
             if (typeof increaseArousal === "function") {
                 const gained = increaseArousal(oppP, arousalEffect, oppId, activePlayerNum);
 				log(gained > 0 ? `${oppP.name}'s arousal increases +${gained} 🔥.` : `${oppP.name} is already at 5 🔥.`);
@@ -8022,6 +8068,7 @@ function pushSubmission(amount, sourcePlayer = null) {
     // Alex absorbs one point of the final incoming push per opposing turn.
     const pushesTowardTargetEnd = validSource && (targetId === 1 ? amount < 0 : amount > 0);
     if (validSource && pushesTowardTargetEnd && hasSignaturePower(targetId, "alex") && !gameState.signatureAlexAbsorbedThisTurn) {
+		flashSignaturePowerHint(targetId);
         const originalAmount = amount;
         amount -= Math.sign(amount);
         gameState.signatureAlexAbsorbedThisTurn = true;
@@ -8151,6 +8198,8 @@ function wipeMarket() {
     playSound("whoosh");
 
     if (wipeCost === 1) {
+		let playerId = gameState.activePlayer;
+		flashSignaturePowerHint(playerId);
         log(`${player.name}'s Market Manipulator reduces the wipe cost to 1 ⚡.`);
     }
 

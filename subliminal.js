@@ -96,7 +96,7 @@
     // 2) SETTINGS
     // ############################################################
     const CFG = {
-        rateStep: 0.06,          // rate gained per Setback
+        rateStep: 0.10,          // rate gained per Setback
         rateMax: 0.60,
         cooldownMs: 2500,        // never two subliminals closer together than this
         maxPerMinute: 12,

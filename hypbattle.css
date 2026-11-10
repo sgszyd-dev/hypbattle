@@ -2190,3 +2190,75 @@ body.game-ethereal-enabled { background-color: transparent; }
     }
 }
 
+
+/* ============================================================
+   SIGNATURE POWER ACTIVATION FLASH
+   Briefly highlights the signature power when it activates.
+   ============================================================ */
+
+.signature-power-hint {
+    position: relative;
+    overflow: hidden;
+}
+
+.signature-power-hint.signature-power-activating {
+    animation: signaturePowerActivate .9s ease-out;
+    border-color: var(--signature-power-flash-color, #9d4edd) !important;
+    box-shadow:
+        0 0 0 1px var(--signature-power-flash-color, #9d4edd),
+        0 0 12px var(--signature-power-flash-color, #9d4edd),
+        0 0 24px var(--signature-power-flash-color, #9d4edd);
+}
+
+.signature-power-hint.signature-power-activating::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        110deg,
+        transparent 20%,
+        rgba(255,255,255,.35) 48%,
+        transparent 70%
+    );
+    transform: translateX(-110%);
+    animation: signaturePowerSweep .8s ease-out;
+}
+
+.signature-power-hint.signature-power-activating .signature-power-title {
+    text-shadow:
+        0 0 5px var(--signature-power-flash-color, #9d4edd),
+        0 0 12px var(--signature-power-flash-color, #9d4edd);
+}
+
+@keyframes signaturePowerActivate {
+    0% {
+        filter: brightness(1);
+    }
+    25% {
+        filter: brightness(1.8);
+    }
+    55% {
+        filter: brightness(1.35);
+    }
+    100% {
+        filter: brightness(1);
+    }
+}
+
+@keyframes signaturePowerSweep {
+    0% {
+        transform: translateX(-110%);
+    }
+    100% {
+        transform: translateX(110%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .signature-power-hint.signature-power-activating,
+    .signature-power-hint.signature-power-activating::after {
+        animation-duration: 1ms !important;
+    }
+}
+
