@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261113.1"; // Update this label for each release.
+const GAME_VERSION = "20261114.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -224,7 +224,7 @@ const CHARACTER_MANIFEST = {
     "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
-	"Val": ["Fox", "Statue", "Puppet"], // Fox
+	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	};
 
 
@@ -321,6 +321,15 @@ let gameState = {
 };
 
 let onlineRoomId = "";
+
+// Read-only bridge for analytics.js. Game state remains private to this script.
+window.getHypBattleAnalyticsState = () => ({
+    gameMode: gameState.gameMode,
+    gameEnded: gameState.gameEnded,
+    endReason: gameState.endReason,
+    roomId: onlineRoomId,
+    phase: gameState.phase
+});
 let onlineLocalRole = 1; // 1 for Host (P1), 2 for Guest (P2)
 let isSyncingFromFirebase = false;
 let localForfeitPending = false;
@@ -3685,6 +3694,7 @@ async function forfeitOnlineGameAndExit() {
         // One atomic update ensures the opponent cannot receive a
         // game-ended result without the accompanying forfeit details.
         await window.dbUpdate(window.dbRef(window.db), updates);
+        if (window.hypAnalytics) await window.hypAnalytics.gameEnded("forfeit");
 
         // Return the quitting player to the main setup screen.
         window.location.reload();
@@ -3800,6 +3810,7 @@ function initializeGame() {
             listenToFirebase(onlineRoomId);
 			// Music: leave setup track and enter the board track (user has already clicked Start).
 			playMusic("game");
+            if (window.hypAnalytics) window.hypAnalytics.gameStarted("online", onlineRoomId);
 
         } else {
             // --- GUEST (PLAYER 2) ---
@@ -3819,6 +3830,7 @@ function initializeGame() {
 			Abilities.assignPowers();
 			if (window.Subliminal)
 				Subliminal.onGameStart();
+            if (window.hypAnalytics) window.hypAnalytics.gameStarted("online", onlineRoomId);
         }
         return;
     }
@@ -3896,6 +3908,7 @@ function initializeGame() {
 	
 	// Music: leave setup track and enter the board track (user has already clicked Start).
 	playMusic("game");
+    if (window.hypAnalytics) window.hypAnalytics.gameStarted(gameState.gameMode, null);
 }
 
 
@@ -9931,6 +9944,7 @@ function checkWinCondition() {
     }
 
        gameState.gameEnded = true;
+    if (window.hypAnalytics) window.hypAnalytics.gameEnded(gameState.endReason || "completed");
     // If this runs while applying our own Firebase echo, wait until that
     // apply finishes. Otherwise the gameEnded write is dropped.
     const pushEndedState = () => {
