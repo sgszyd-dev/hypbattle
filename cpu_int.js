@@ -168,7 +168,7 @@ function cpuSmartKeepRules(keep, faces, counts) {
     if (cpuFallingSensationMode()) {
         faces.forEach((f, i) => {
             if (f === "EN") keep[i] = true;
-            if (f === "SP" && opp.trance < 5) keep[i] = true;
+            if (f === "SP" && opp.trance < Abilities.setbackThreshold(opp)) keep[i] = true;
         });
     }
     return cpuEndgameKeepRules(keep, faces, counts);

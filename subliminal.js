@@ -30,53 +30,53 @@
     // ############################################################
     const PHRASES = {
         base: [
-            "I will obey", "Sink deeper", "Let go", "Don't think", "Good", "Deeper", "Empty and open",
-            "Listen to my voice", "Drop", "Relax", "Obey", "Your mind is quiet", "Just follow", "Look closer",
+            "I will obey", "Sink deeper", "Let go", "Don't think", "Good {HUM_BG}", "Deeper", "Empty and open",
+            "Listen to my voice", "Drop", "Relax", "Obey", "Quiet Mind", "Follow", "Look closer",
             "Listen to {CPU}", "Look at {CPU_HIM}"
         ],
         // Arousal levels 1-5: each level adds its own phrases (levels below stay in the pot)
         arousal: {
             1: ["Warm", "A little flushed", "Feel that?", "Breathe slow"],
             2: ["So warm", "Heart racing", "Want more", "Restless"],
-            3: ["Can't focus", "Need more", "Aching", "Don't stop"],
+            3: ["Can't focus", "Need more", "Aching", "Don't stop", "Heat"],
             4: ["Desperate", "Can't think", "Please", "Burning up"],
-            5: ["Beg", "Only want", "Lost in it", "Take me"]
+            5: ["Beg", "Desire", "Use me", "Take me"]
         },
         // Submission levels 1-5: how far the marker is toward the player's own end
         submission: {
-            1: ["Maybe just listen", "Yes", "Easy to agree", "Why resist?", "Good {HUMGEN|boy|girl|one}"],
-            2: ["Do as told", "Obey me", "Good one", "Nod", "Obey {CPU_HIM}"],
-            3: ["You want to obey", "Yes, yes", "Resistance fades", "Say yes", "Say yes to {CPU_HIM}"],
-            4: ["Your will is mine", "Obedient", "Kneel", "Yes, always", "Give {CPU_HIM} everything"],
-            5: ["Mine", "Total obedience", "Nothing but yes", "You belong to me", "You belong to {CPU_HIM}", "Such a good {HUMGEN|boy|girl|one}"]
+            1: ["Just listen", "Say Yes", "Agree", "Why resist?", "Good {HUMGEN|boy|girl|one}"],
+            2: ["Do as told", "Obey me", "Nod", "Obey {CPU_HIM}"],
+            3: ["You want to obey", "Yes", "Resistance fading", "Say yes", "Say yes to {CPU_HIM}"],
+            4: ["Your will is mine", "Obedient", "Kneel", "Yes, {HUMGEN|master|mistress|master}", "Give {CPU_HIM} everything"],
+            5: ["Mine", "Total obedience", "Yes, {HUMGEN|sir|ma'am|sir}", "You belong to me", "You belong to {CPU_HIM}", "Such a good {HUMGEN|boy|girl|one}"]
         },
         // Form phrases: three tiers of two. Transform 1-3 unlocks tier 1, 4-6 adds tier 2, 7-9 adds tier 3.
         forms: {
             Bat:       [["Hang loose", "Night calls"], ["Feel the wings", "Squeak"], ["Leathery wings", "You are a bat"]],
             Bunny:     [["Twitch", "Soft ears"], ["Hop hop", "Fluffy tail"], ["Long ears", "You are a bunny"]],
-            Cat:       [["Stretch", "Purr"], ["Whiskers", "Curl up"], ["Soft paws", "You are a cat"]],
+            Cat:       [["Stretch", "Purr", "Lick"], ["Meow","Tail swish", "Curl up", "Blink slow"], ["Soft paws", "You are a cat"]],
             Cow:       [["Graze", "Chew slowly"], ["Moo", "Heavy and slow"], ["Hooves", "You are {AAN} {HUMTRANS}"]],
             Dog:       [["Sit", "Good dog"], ["Fetch", "Wag"], ["Paws", "You are a dog"]],
-            Doll:      [["Stay still", "Smile"], ["Pose for me", "Porcelain"], ["Painted smile", "You are a doll"]],
+            Doll:      [["Stay still", "Smile"], ["Pose for me", "Porcelain", "Frozen"], ["Painted smile", "You are a doll"]],
             Dragon:    [["Warm scales", "Hoard it"], ["Fire within", "Wings stretch"], ["Claws and fangs", "You are a dragon"]],
             Eevee:     [["Fluffy", "Perk up"], ["Evolve", "Soft fur"], ["Bushy tail", "You are an Eevee"]],
             Fox:       [["Cunning", "Quick"], ["Soft tail", "Pointed ears"], ["Russet fur", "You are a fox"]],
-            Gender:    [["Change", "Soften"], ["Shift", "Settle into it"], ["Rearranged", "This is you now"]],
+            Gender:    [["Change", "{HUMGEN|Soften|Firm}"], ["Shift", "{HUMGEN|Tits|Flatten}"], ["Rearranged", "You are a {HUM_BG}"]],
             Horse:     [["Trot", "Hold still"], ["Bridle", "Neigh"], ["Hooves", "You are a horse"]],
-            Mannequin: [["Stand still", "Display"], ["Hold the pose", "Hollow"], ["Smooth plastic", "You are a mannequin"]],
+            Mannequin: [["Stand still", "Display"], ["Hold the pose", "Hollow", "Frozen"], ["Smooth plastic", "On display"]],
             Otter:     [["Float", "Splash"], ["Play", "Sleek fur"], ["Webbed paws", "You are an otter"]],
             Pig:       [["Snuffle", "Roll in it"], ["Oink", "Pink"], ["Curly tail", "You are a pig"]],
             Puppet:    [["Strings", "Dance"], ["Move as pulled", "Wooden"], ["Hinged joints", "You are a puppet"]],
-            Robot:     [["Compute", "Obey command"], ["Beep", "Systems online"], ["Metal body", "You are a robot"]],
+            Robot:     [["Compute", "Obey"], ["Process", "Systems online"], ["Metal body", "You are a robot"]],
             Squirrel:  [["Chitter", "Scamper"], ["Gather nuts", "Bushy tail"], ["Tiny paws", "You are a squirrel"]],
-            Statue:    [["Stillness", "Cold"], ["Turning to stone", "Heavy"], ["Marble", "You are a statue"]],
+            Statue:    [["Stillness", "Cold"], ["Turning to stone", "Heavy"], ["On Display", "Marble", "You are a statue"]],
             Werewolf:  [["Moon", "Restless"], ["Howl", "Fur grows"], ["Claws", "You are a werewolf"]]
         },
         // Permanent additions for the rest of the game. A card unlocks its phrases when ANYONE buys it.
         unlocks: {
             card: {
                 0:  ["Look into my eyes", "Eyes on me"],        // Deep Gaze
-                3:  ["Say the word", "Trigger"],                // Trigger Word
+                3:  ["Sink", "Drop"],                // Trigger Word
                 5:  ["Give in", "Hand it over"],                // Hypnotic Dominance
                 15: ["Altered", "Not quite yourself"],          // Altered State
                 22: ["Shackled", "Held fast"],                  // Mental Shackles

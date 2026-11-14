@@ -1021,6 +1021,13 @@ const CPU_VICTORY_TAUNTS = {
 			"That’s the sound of you losing to someone who knows what she is doing. Admire the efficiency.",
 			"Victory is mine. You’re going to stay as a {HUMTRANS} while I decide which of my prototypes to test on you first.",
 			"I told you competition was my love language. Consider yourself thoroughly spoken to… and thoroughly transformed."
+		],
+		Val: [
+			"Look into my eyes… there. That’s the moment your will slipped. Stay right there while I enjoy the win, little mouse.",
+		    "I win the duel. Your resistance folded so prettily. A fox always lands on top when the game gets interesting.",
+		    "Power struggle over. You’re the one who dropped first. Don’t worry… I’ll make the defeat feel deliberate.",
+		    "You fought well, but cunning beats brute force. Now be a good subject and hold that position for me.",
+		    "Victory tastes better when it’s earned through a proper hypnotic exchange. You’re mine until I say otherwise."
 		]
     }
 };
@@ -1287,6 +1294,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"Well played. I’ll admit defeat this once. Just don’t expect me to start calling you ‘{HUMGEN|master|mistress}’ without the proper apostrophe.",
 			"You beat me. I’m impressed. And slightly nauseated. Mostly nauseated. Hand me my dignity back when you’re done stepping on it.",
 			"Alright, you win. I’ll be over here recalibrating my expectations of the universe. {AAN} {CPUTRANS} of all things. Ugh."
+		],
+		Val: [
+			"You actually outmaneuvered me. Impressive. I’ll drop for you… this time. Don’t get used to the vixen yielding.",
+			"Fine. You win the struggle. My eyes are heavy and my pride is somewhere on the floor. Take what you’ve earned.",
+			"I lost the duel. The fox got outfoxed. Use the opening while it lasts—switches remember every debt.",
+			"You’ve got me. I’ll submit… for now. Just know a cunning opponent never stays down for long.",
+			"Alright, you dropped me. Enjoy the view of a switch on her knees. The next round won’t be this generous."
 		]
     }
 };
@@ -2117,6 +2131,71 @@ const CHALLENGE_RIVAL_TAUNTS = {
       "One stage remaining. Watch me turn even this into a competitive advantage.",
       "Nearly done. You’ve altered the chassis. The driver is still me—and still better at this than you.",
       "Final stage incoming. I’ll wear whatever you’ve made me into and still correct your grammar while I win."
+    ]
+  },
+  Val: {
+	  TransformPlayer: [
+      "Another step. Feel your will softening while your body rewrites itself? I do love a subject who changes on command.",
+      "Keep transforming. A good power struggle includes watching you become something more… useful.",
+      "Your old shape is losing the argument. Stay focused on my eyes while the rest of you shifts.",
+      "I can see the change settling in. Cunning design, don’t you think? Keep going.",
+      "Another stage. You’re becoming exactly what this duel needed. Don’t fight the drop… or the transformation."
+    ],
+    AIGetsTransformed: [
+      "My body is shifting and I hate how distracting it is. The duel isn’t over just because you’ve changed the playing field.",
+      "You’re altering me mid-struggle. Clever. Annoying. I’ll still find a way to turn it against you.",
+      "These changes are sly. I’ll adapt faster than you expect—foxes are good at that.",
+      "I can feel the transformation taking hold. Don’t mistake temporary vulnerability for surrender.",
+      "You’ve rewritten part of me. The mind behind the new shape is still sharp… and still going to win this in the end."
+    ],
+    PlayerIsObedient: [
+      "Perfect drop. That’s how a proper subject looks after losing a hypnotic exchange. Stay exactly like that.",
+      "You’re obeying without the usual fight. I could get used to this version of you.",
+      "Good. Willpower folded, body ready. A switch knows when to take the gift of compliance.",
+      "Look at that stillness. You’ve learned the value of yielding. Hold it while I decide the next command.",
+      "Obedience suits you. Keep those eyes soft and that body open—I’m not done playing with you yet."
+    ],
+    AIIsObedient: [
+      "I’ll follow… for the moment. A temporary yield isn’t the same as losing the larger game.",
+      "You’ve got me cooperating. Enjoy the rare sight of the fox sitting still. It won’t last.",
+      "Fine. I’ll drop as ordered. Just know switches keep score, and this one is already planning the reversal.",
+      "Temporary obedience noted. The second the suggestion lifts, the power struggle continues.",
+      "I’m yielding. Reluctantly. Elegantly. And with every intention of flipping you later."
+    ],
+    BigRollAI: [
+      "Beautiful number. That opens the door for a much deeper suggestion. Eyes on me.",
+      "Luck and cunning in the same roll. Hold still while I press the advantage properly.",
+      "A result like that deserves a thorough demonstration of who controls the trance.",
+      "Perfect timing. I’m going to translate this directly into how far under you go.",
+      "The dice favor the fox tonight. You’re about to learn what a decisive win feels like from the inside out."
+    ],
+    PlayerAt5Transform: [
+      "Halfway rewritten and your resistance is already thinning. I can work with this version of you.",
+      "Five stages in. The old you is losing ground and the new one is so much more responsive.",
+      "Half transformed. Look at how easily the suggestions land now. Keep changing for me.",
+      "Midway through and you’re already softer around the edges. A cunning design indeed.",
+      "Halfway there. I can see the finished shape and it’s going to be so satisfying -- for me."
+    ],
+    PlayerAt8Transform: [
+      "Almost finished. You’re almost the perfect balance of changed and still fighting. Delicious.",
+      "Nearly complete. That last scrap of willpower is fluttering. One more push and it’s mine.",
+      "So close. The transformation is doing half my work for me. Stay focused on my voice.",
+      "Almost done. I can already picture how prettily you’ll drop once the final stage settles.",
+      "So deep. Your body is ready. Your mind is next. Don’t look away."
+    ],
+    AIAt5Transform: [
+      "Halfway altered and I refuse to make this easy for you. I’ll win in the end. I always do.",
+      "Five stages of this and my focus is sharper, not duller. Try harder.",
+      "My body is changing and I hate the distraction. It won’t stop me from winning.",
+      "Halfway there. I can feel the differences and I’m already adapting around them to make you pay.",
+      "This form is temporary. My interest in winning the next exchange is not."
+    ],
+    AIAt9Transform: [
+      "One step left. Fine. Let it finish. A changed fox is still a fox—and still dangerous.",
+      "Almost complete. I’ll wear whatever shape you’ve forced and still find a way to turn this duel.",
+      "So close. I’ll accept the body. I will not accept losing the game.",
+      "One stage remaining. Watch me use even this against you when the moment comes.",
+      "Final stage incoming. You’ve altered the vessel. The will inside it is still very much in charge."
     ]
   }
 };

@@ -291,6 +291,18 @@ const HELP_CONTENT = {
                     <em>Lucid Reversal</em><br>
                     If her final roll has three or more 💧 and she has any Transform, Fable may spend three 💧 to reduce her own Transform by 1; the rest of her 💧 resolve normally.
                 </div>
+				<div class="help-box signature-power-box">
+                    <img class="signature-portrait" src="images/avatars/Ivy/Ivy_head.jpg" alt="Ivy">
+                    <strong>Ivy</strong><br>
+                    <em>Suggested Transference</em><br>
+                    Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost.
+                </div>
+				<div class="help-box signature-power-box">
+                    <img class="signature-portrait" src="images/avatars/Val/Val_head.jpg" alt="Val">
+                    <strong>Val</strong><br>
+                    <em>Turn the Tables</em><br>
+                    Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3).
+                </div>
             </div>
         </div>
     `,
@@ -399,6 +411,7 @@ function showHelpTab(tab) {
     const content = document.getElementById('help-content');
     if (!content) return;
     content.innerHTML = HELP_CONTENT[tab] || HELP_CONTENT.quick;
+	if (tab === 'characters') { const grid = content.querySelector('.help-grid'); if (grid) grid.insertAdjacentHTML('beforeend', Abilities.helpBoxes()); }
     document.querySelectorAll('#help-tabs .help-tab').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });

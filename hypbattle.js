@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261109.1"; // Update this label for each release.
+const GAME_VERSION = "20261113.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -6,6 +6,11 @@ const MOBILE_AMBIENCE_QUERY = "(max-width: 700px), (pointer: coarse)";
 let gameSpiralBackgroundEnabled = true;
 
 // --- DEBUG CONFIGURATION ---
+// CPU submission-squeeze escape v2. Set false to restore pre-fix dice/keep/Tex behaviour.
+const CPU_PIN_ESCAPE_V2 = true;
+// CPU respects human Turn the Tables (once-per-game flip). Soft-caps offensive submission while unused.
+// Defensive soft ceiling +2; Virtuoso/Master soft ceiling +3. Set false to ignore Tables.
+const CPU_TABLES_RESPECT_V1 = true;
 const cardDebugOn = false;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
@@ -16,7 +21,9 @@ const debugStart = {
     cpuBuyFirst: null,              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
-	cpuTransform: null
+	cpuTransform: null,
+	p1Power: "turntables",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
+	cpuPower: "echo"				// same for CPU
 };
 
 
@@ -93,7 +100,8 @@ const CHARACTERS = [
     { name: "Hyeri", 	 gender: "female" },
     { name: "Mark",       gender: "male" },
     { name: "Fable",     gender: "female"},
-	{ name: "Ivy",		 gender: "female"}
+	{ name: "Ivy",		 gender: "female"},
+	{ name: "Val", 		gender: "female"}
 ];
 const NAMES = CHARACTERS.map(c => c.name);
 function getGender(name) {
@@ -112,6 +120,7 @@ function getGender(name) {
 // {HIS}	his or her
 // {HIS_CAP}	His or Her
 // {HIMSELF}	himself or herself
+// {BG} boy or girl
 // {CPU}	CPU character's name
 // {HUMAN}	Human player's name
 // {HUMGEN|He holds his ground.|She holds her ground.}
@@ -133,9 +142,9 @@ function processGenderTokens(text) {
 	const cpuTrans = getTransformationConv(cpu);
 
     const pronouns = {
-        male:   { he: "he",   him: "him",  his: "his",  self: "himself" },
-        female: { he: "she",  him: "her",  his: "her",  self: "herself" },
-        neutral:{ he: "they", him: "them", his: "their", self: "themself" }
+        male:   { he: "he",   him: "him",  his: "his",  self: "himself", bg: "boy"},
+        female: { he: "she",  him: "her",  his: "her",  self: "herself", bg: "girl" },
+        neutral:{ he: "they", him: "them", his: "their", self: "themself", bg: "kid" }
     };
 
     let result = String(text);
@@ -160,11 +169,13 @@ function processGenderTokens(text) {
         HUM_HIM: pronouns[humanGender]?.him ?? pronouns.neutral.him,
         HUM_HIS: pronouns[humanGender]?.his ?? pronouns.neutral.his,
         HUM_SELF: pronouns[humanGender]?.self ?? pronouns.neutral.self,
+		HUM_BG: pronouns[humanGender]?.bg ?? pronouns.neutral.bg,
 
         CPU_HE: pronouns[cpuGender]?.he ?? pronouns.neutral.he,
         CPU_HIM: pronouns[cpuGender]?.him ?? pronouns.neutral.him,
         CPU_HIS: pronouns[cpuGender]?.his ?? pronouns.neutral.his,
         CPU_SELF: pronouns[cpuGender]?.self ?? pronouns.neutral.self,
+		CPU_BG: pronouns[cpuGender]?.bg ?? pronouns.neutral.bg,
 
         HUMAN: human?.name ?? "Player",
         CPU: cpu?.name ?? "CPU",
@@ -174,13 +185,13 @@ function processGenderTokens(text) {
     };
 
     result = result.replace(
-        /\{(HUM_HE|HUM_HIM|HUM_HIS|HUM_SELF|CPU_HE|CPU_HIM|CPU_HIS|CPU_SELF|HUMAN|CPU|HUMTRANS|CPUTRANS)\}/g,
+        /\{(HUM_HE|HUM_HIM|HUM_HIS|HUM_SELF|HUM_BG|CPU_HE|CPU_HIM|CPU_HIS|CPU_SELF|CPU_BG|HUMAN|CPU|HUMTRANS|CPUTRANS)\}/g,
         (match, token) => replacements[token]
     );
 
     // Capitalized pronouns, e.g. {HUM_HE_CAP} -> He / She / They.
     result = result.replace(
-        /\{(HUM|CPU)_(HE|HIM|HIS|SELF)_CAP\}/g,
+        /\{(HUM|CPU)_(HE|HIM|HIS|SELF|BG)_CAP\}/g,
         (match, side, type) => {
             const key = `${side}_${type}`;
             const value = replacements[key];
@@ -212,7 +223,8 @@ const CHARACTER_MANIFEST = {
     "Hyeri": ["Bunny","Squirrel","Cat","Dragon"], // Squirrel
     "Mark": ["Robot","Puppet","Statue","Gender"], // Gender
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
-	"Ivy": ["Demon", "Statue", "Dog", "Cat"] // Demon
+	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
+	"Val": ["Fox", "Statue", "Puppet"], // Fox
 	};
 
 
@@ -387,6 +399,10 @@ window.onload = () => {
     populate("cpu-name", NAMES, true);
 	// Player 1 starts as a random character instead of always the first one in the list
     document.getElementById("p1-name").value = NAMES[Math.floor(Math.random() * NAMES.length)];
+	
+	// Enhance with headshot dropdowns (native select stays for logic)
+    enhanceCharacterNameSelect("p1-name");
+    enhanceCharacterNameSelect("cpu-name");
 
 
     if (typeof generateDeck === 'function') generateDeck();
@@ -428,8 +444,15 @@ function updateRandomCpuLabel() {
     const opt = document.querySelector('#cpu-name option[value="Random"]');
     if (!opt) return;
     const form = document.getElementById("p1-transform-type")?.value;
-    opt.textContent = (form && form !== "Random") ? `🎲 Random (${transformIcon(form)} ${form})` : "🎲 Random";
+	// 🎲 
+    opt.textContent = (form && form !== "Random")
+        ? `Random (${transformIcon(form)} ${form})`
+        : "Random";
+    // Keep the custom UI label in sync
+    const sel = document.getElementById("cpu-name");
+    if (sel && sel._cns) refreshCustomNameSelect(sel);
 }
+
 function describeTransformChoice(form) { return form; }
 function setupEscapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -529,11 +552,14 @@ const CLASSIC_CHALLENGE_RIVALS = [
 // The transformation each character is assigned when they are a rival in The Seven.
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
-    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon"
+    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon", Val:"Fox"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
 const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [34, 35, 53];
+
+// New Powers: Toll, Cornered, Deep Well, Surrender to Heat
+
 const SIGNATURE_POWERS = {
     Roz: { key:"roz", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
     Luci: { key:"luci", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
@@ -545,7 +571,8 @@ const SIGNATURE_POWERS = {
     Tex: { key:"tex", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
     Zixuan: { key:"zixuan", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
     Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance."},
-	Ivy: {key:"ivy", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."}
+	Ivy: {key:"ivy", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."},
+	Val: {key: "turntables", title: "Turn the Tables", description:"Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3)."}
 };
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
 function normalizedCharacterName(name) {
@@ -564,19 +591,233 @@ function characterFilename(name) {
         .replace(/[\u0300-\u036f]/g, "")
         .trim();
 }
+
+// ============================================================
+// CUSTOM CHARACTER NAME SELECT (headshot + name)
+// Native <select> stays in the DOM for .value / .disabled / change.
+// ============================================================
+
+/** Prefer a dedicated tiny thumb; fall back to baseline portrait. */
+function characterNameThumbSrc(name) {
+    if (!name || name === "Random") return null; // Random uses emoji fallback
+    const safe = characterFilename(name);
+    // When you add tiny thumbs, put them at: images/avatars/Alex/Alex_head_.jpg
+    // For now baseline is fine; CSS sizes it down.
+    return `images/avatars/${safe}/${safe}_head28.jpg`;
+}
+
+function characterNameThumbFallbackSrc(name) {
+    if (!name || name === "Random") return null;
+    const safe = characterFilename(name);
+    return `images/avatars/${safe}/${safe}_head.jpg`;
+}
+
+function cnsThumbHtml(name, labelText) {
+    if (!name || name === "Random") {
+        return `<span class="cns-thumb-fallback" aria-hidden="true">🎲</span>`;
+    }
+    const primary = characterNameThumbSrc(name);
+    const fallback = characterNameThumbFallbackSrc(name);
+    const alt = setupEscapeHtml(String(labelText || name).split(" ")[0]);
+    // Try _head.jpg first; on error swap to baseline; if that fails show initials.
+    return `<img class="cns-thumb" src="${primary}" alt="" data-fallback="${fallback || ""}" data-name="${alt}" onerror="cnsThumbError(this)">`;
+}
+
+function cnsThumbError(img) {
+    const fallback = img.dataset.fallback;
+    if (fallback && img.src.indexOf(fallback) === -1) {
+        img.dataset.fallback = "";
+        img.src = fallback;
+        return;
+    }
+    // Final fallback: initials circle
+    const name = img.dataset.name || "?";
+    const initials = name.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?";
+    const span = document.createElement("span");
+    span.className = "cns-thumb-fallback";
+    span.setAttribute("aria-hidden", "true");
+    span.textContent = initials;
+    img.replaceWith(span);
+}
+
+function closeAllCustomNameSelects(exceptWrapper) {
+    document.querySelectorAll(".custom-name-select.is-open").forEach(wrap => {
+        if (wrap === exceptWrapper) return;
+        wrap.classList.remove("is-open");
+        const trigger = wrap.querySelector(".custom-name-select-trigger");
+        if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+}
+
+function refreshCustomNameSelect(selectEl) {
+    if (!selectEl || !selectEl._cns) return;
+    const { wrapper, trigger, menu } = selectEl._cns;
+    const value = selectEl.value;
+    const selectedOpt = selectEl.selectedOptions[0] || selectEl.querySelector(`option[value="${CSS.escape(value)}"]`);
+    const label = selectedOpt ? selectedOpt.textContent : value;
+
+    trigger.innerHTML = `${cnsThumbHtml(value, label)}<span class="cns-label">${setupEscapeHtml(label)}</span><span class="cns-chevron" aria-hidden="true">▾</span>`;
+
+    // Rebuild menu from current <option> list (keeps Random label in sync)
+    const frag = document.createDocumentFragment();
+    Array.from(selectEl.options).forEach(opt => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "custom-name-select-option" + (opt.value === value ? " is-selected" : "");
+        btn.dataset.value = opt.value;
+        btn.setAttribute("role", "option");
+        btn.setAttribute("aria-selected", opt.value === value ? "true" : "false");
+        btn.innerHTML = `${cnsThumbHtml(opt.value, opt.textContent)}<span class="cns-label">${setupEscapeHtml(opt.textContent)}</span>`;
+        btn.addEventListener("click", e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (selectEl.disabled) return;
+            if (selectEl.value !== opt.value) {
+                selectEl.value = opt.value;
+                selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+            closeAllCustomNameSelects();
+            refreshCustomNameSelect(selectEl);
+        });
+        frag.appendChild(btn);
+    });
+    menu.replaceChildren(frag);
+
+    wrapper.classList.toggle("is-disabled", !!selectEl.disabled);
+    trigger.disabled = !!selectEl.disabled;
+}
+
+function enhanceCharacterNameSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select || select._cns) return select;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "custom-name-select";
+    wrapper.dataset.for = selectId;
+
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.classList.add("custom-name-select-native");
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "custom-name-select-trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.id = selectId + "-trigger";
+
+    const menu = document.createElement("div");
+    menu.className = "custom-name-select-menu";
+    menu.setAttribute("role", "listbox");
+    menu.id = selectId + "-menu";
+    trigger.setAttribute("aria-controls", menu.id);
+
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(menu);
+
+    select._cns = { wrapper, trigger, menu };
+
+    trigger.addEventListener("click", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (select.disabled) return;
+        const willOpen = !wrapper.classList.contains("is-open");
+        closeAllCustomNameSelects(willOpen ? wrapper : null);
+        wrapper.classList.toggle("is-open", willOpen);
+        trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        if (willOpen) {
+            const selected = menu.querySelector(".is-selected");
+            if (selected) selected.focus();
+        }
+    });
+
+    // Keyboard: open with Enter/Space/ArrowDown; Escape closes
+    trigger.addEventListener("keydown", e => {
+        if (select.disabled) return;
+        if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (!wrapper.classList.contains("is-open")) {
+                closeAllCustomNameSelects(wrapper);
+                wrapper.classList.add("is-open");
+                trigger.setAttribute("aria-expanded", "true");
+            }
+            const selected = menu.querySelector(".is-selected") || menu.querySelector(".custom-name-select-option");
+            if (selected) selected.focus();
+        }
+    });
+
+    menu.addEventListener("keydown", e => {
+        const items = Array.from(menu.querySelectorAll(".custom-name-select-option"));
+        const idx = items.indexOf(document.activeElement);
+        if (e.key === "Escape") {
+            e.preventDefault();
+            closeAllCustomNameSelects();
+            trigger.focus();
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            items[Math.min(items.length - 1, idx + 1)]?.focus();
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            items[Math.max(0, idx - 1)]?.focus();
+        } else if (e.key === "Home") {
+            e.preventDefault();
+            items[0]?.focus();
+        } else if (e.key === "End") {
+            e.preventDefault();
+            items[items.length - 1]?.focus();
+        }
+    });
+
+    // Keep UI in sync when something sets select.value programmatically
+    const valueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    Object.defineProperty(select, "value", {
+        configurable: true,
+        enumerable: true,
+        get() { return valueDesc.get.call(this); },
+        set(v) {
+            valueDesc.set.call(this, v);
+            refreshCustomNameSelect(this);
+        }
+    });
+
+    const disabledDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "disabled");
+    Object.defineProperty(select, "disabled", {
+        configurable: true,
+        enumerable: true,
+        get() { return disabledDesc.get.call(this); },
+        set(v) {
+            disabledDesc.set.call(this, v);
+            refreshCustomNameSelect(this);
+        }
+    });
+
+    select.addEventListener("change", () => refreshCustomNameSelect(select));
+
+    refreshCustomNameSelect(select);
+    return select;
+}
+
+// One-time document listeners
+if (!window._cnsGlobalBound) {
+    window._cnsGlobalBound = true;
+    document.addEventListener("click", () => closeAllCustomNameSelects());
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape") closeAllCustomNameSelects();
+    });
+}
+
 // A special ability is active when the character has one and it was left switched on in setup
 // (pObj.specialAbility; anything other than an explicit false counts as on).
 function hasSignaturePower(playerId, characterNameOrKey) {
     if (!gameState || ![1,2].includes(Number(playerId))) return false;
     const pObj = Number(playerId) === 1 ? gameState.p1 : gameState.p2;
-    const entry = Object.entries(SIGNATURE_POWERS).find(([name, power]) => name === characterNameOrKey || power.key === characterNameOrKey);
-    if (!entry || !pObj) return false;
-    if (pObj.specialAbility === false) return false;
-    return normalizedCharacterName(pObj.name) === normalizedCharacterName(entry[0]);
+    if (!pObj || pObj.specialAbility === false) return false;
+    return Abilities.hasPower(pObj, characterNameOrKey);      // looks at pObj.powerKey, so powers no longer depend on the character's name
 }
+
 function getSignaturePowerForName(name) {
     const key = String(name || "").trim().split(" ")[0];
-    return SIGNATURE_POWERS[key] || null;
+    return SIGNATURE_POWERS[key] || Abilities.infoForCharacter(name) || null;
 }
 function getMarketWipeCost(playerId = gameState?.activePlayer) {
     return hasSignaturePower(Number(playerId), "zixuan") ? 1 : 2;
@@ -611,7 +852,11 @@ function chooseHyeriSignatureFace(playerId, availableFaces) {
     const preferred = [];
     if (opp.transform >= 7) preferred.push("👁️ TRANSFORM");
     if ((playerId === 1 ? gameState.submission <= -2 : gameState.submission >= 2)) preferred.push("⛓️ SUBMISSION");
-    if (opp.trance >= 3 && opp.trance < 5) preferred.push("🌀 SPIRAL");
+	{
+		const T = Abilities.setbackThreshold(opp);
+		if (opp.trance >= T - 2 && opp.trance < T)
+			preferred.push("🌀 SPIRAL"); 
+	}
     if (opp.arousal >= 3 && opp.arousal < 5) preferred.push("🔥 AROUSAL");
     preferred.push("⚡ ENERGY", "💧 LUCIDITY", "👁️ TRANSFORM", "⛓️ SUBMISSION", "🔥 AROUSAL", "🌀 SPIRAL");
     return preferred.find(face => availableFaces.includes(face)) || availableFaces[0];
@@ -658,7 +903,7 @@ function renderSignaturePowerHint(playerId, parent, id) {
     }
     const pObj = playerId === 1 ? gameState?.p1 : gameState?.p2;
     if (!pObj?.name) { hint.style.display = "none"; return; }
-    const power = getSignaturePowerForName(pObj.name);
+    const power = Abilities.infoFor(Abilities.keyFor(pObj)) || getSignaturePowerForName(pObj.name);
     if (!power) { hint.style.display = "none"; return; }
     // Only show an ability on the board when it is switched on.
     hint.style.display = pObj.specialAbility === false ? "none" : "block";
@@ -3547,6 +3792,7 @@ function initializeGame() {
             else gameState.p1.energy = 1;
 
             refillMarket();
+			Abilities.assignPowers();
 			if (window.Subliminal)
 				Subliminal.onGameStart();
             startTurn(); 
@@ -3570,6 +3816,7 @@ function initializeGame() {
                 updates["games/" + onlineRoomId + "/gameState/p1/transformTarget"] = localTarget; // Guest sets the target transformation for Player 1
                 window.dbUpdate(window.dbRef(window.db), updates);
             }
+			Abilities.assignPowers();
 			if (window.Subliminal)
 				Subliminal.onGameStart();
         }
@@ -3641,6 +3888,7 @@ function initializeGame() {
     refillMarket(); 
 	applyDebugStart();
     if (gameState.gameMode === "solo") recStart(); else gameRec = null;
+	Abilities.assignPowers();
 	if (window.Subliminal)
 		Subliminal.onGameStart();
     startTurn();
@@ -4140,6 +4388,12 @@ function cpuChooseDiceToKeep() {
         }
         cpuBrain.rerollsUsed = (cpuBrain.rerollsUsed || 0) + 1;
         const plan = cpuTierKeepPlan(difficulty, gameState.rerollsLeft);
+        // Pin escape v2: force-keep every Submission die when squeezed (tier path used to skip this).
+        if (typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && pinned) {
+            gameState.dice.forEach((die, i) => {
+                if (die.face && die.face.includes("SUBMISSION")) plan[i] = true;
+            });
+        }
         gameState.dice.forEach((die, i) => { die.kept = plan[i]; });
         return;
     }
@@ -4241,19 +4495,19 @@ function cpuShouldUseFadingReality(tCount) {
 function cpuShouldUseAbsoluteFocus(keptCount) {
     const card = getCardRef(2, 20);
     if (!card || !card.charges || card.charges <= 0) return false;
-    if (cpuIsAdaptive()) return cpuExtraRerollGain() >= 0.3;
     if (!cpuLegacyHasFreeDice()) return false;                      // everything would stay locked
+    if (cpuIsAdaptive()) return cpuExtraRerollGain() >= 0.3;
     if (cpuIsTier()) keptCount = cpuTierKeepPlan(getCpuDifficulty(), 1).filter(Boolean).length;
     return getCpuDifficulty() === "random" ? Math.random() > 0.8 : keptCount < 4;
 }
 
-// FIX ME!!!
 function cpuShouldUseHypnoticSuggestion(keptCount) {
     const p = gameState.p2;
     if (!hasCard(2, 16) || p.energy < 1 || gameState.rerollsLeft > 0) return false;
     if (!gameState.dice.length || gameState.dice[0].face === "-") return false;
+    // A paid reroll is useless if every die would stay locked (Master used to skip this check).
+    if (!cpuLegacyHasFreeDice()) return false;
     if (cpuIsAdaptive()) return cpuExtraRerollGain() >= 0.22;
-    if (!cpuLegacyHasFreeDice()) return false;                      // everything would stay locked: a reroll changes nothing
     if (cpuIsTier()) keptCount = cpuTierKeepPlan(getCpuDifficulty(), 1).filter(Boolean).length;
 
     switch (getCpuDifficulty()) {
@@ -4276,6 +4530,61 @@ function isCpuPinnedInSubmission() {
     const PINNED_THRESHOLD = 3; 
     return gameState.submission >= PINNED_THRESHOLD;
 }
+
+// ---------- Turn the Tables respect (CPU_TABLES_RESPECT_V1) ----------
+// Human once-per-game flip: deep positive marker becomes deep negative on the CPU.
+function humanHasUnusedTables() {
+    if (typeof CPU_TABLES_RESPECT_V1 === "undefined" || !CPU_TABLES_RESPECT_V1) return false;
+    if (!gameState || !gameState.p1) return false;
+    const h = gameState.p1;
+    if (h.specialAbility === false) return false;
+    if (h.tablesUsed) return false;
+    try {
+        if (typeof Abilities !== "undefined" && typeof Abilities.hasPower === "function") {
+            return !!Abilities.hasPower(h, "turntables");
+        }
+    } catch (e) {}
+    // Fallback if Abilities is not loaded yet: powerKey / legacy name
+    const key = h.powerKey || (typeof SIGNATURE_POWERS !== "undefined" && SIGNATURE_POWERS[h.name] && SIGNATURE_POWERS[h.name].key);
+    return key === "turntables";
+}
+
+// Soft ceiling while Tables is live: Defensive +2, Virtuoso/Master +3, others +3 as a safe default.
+function cpuTablesSoftCeiling() {
+    if (!humanHasUnusedTables()) return null;
+    const d = typeof getCpuDifficulty === "function" ? getCpuDifficulty() : "";
+    if (d === "defensive") return 2;
+    if (d === "transformer" || d === "adaptive") return 3;
+    return 3;
+}
+
+// True when we should avoid pushing the marker deeper (offensive SU).
+function cpuShouldAvoidSubmissionPush() {
+    if (!humanHasUnusedTables()) return false;
+    const p = gameState.p2, opp = gameState.p1;
+    if (!p || !opp) return true;
+    // Gate 1: transform runway — still early for the CPU
+    if ((Number(p.transform) || 0) <= 2) return false;
+    // Gate 2: transform lead — opponent is much deeper
+    if ((Number(opp.transform) || 0) - (Number(p.transform) || 0) >= 4) return false;
+    // Gate 3: dedicated submission engine (cards + Luci amplifier)
+    const SU_ENGINE = [36, 15, 46, 24, 23, 22, 10, 39, 11, 18, 8, 52, 34];
+    let engine = 0;
+    (p.inventory || []).forEach(c => { if (c && SU_ENGINE.includes(c.id)) engine++; });
+    if (typeof hasSignaturePower === "function" && hasSignaturePower(2, "luci")) engine += 2;
+    if (engine >= 3) return false;
+    // Late-game race: both deep — allow pressure
+    if ((Number(p.transform) || 0) >= 7 && (Number(opp.transform) || 0) >= 7) return false;
+    return true;
+}
+
+// Marker is at or above the soft ceiling — stop offensive deepening.
+function cpuAtTablesSoftCap() {
+    const cap = cpuTablesSoftCeiling();
+    if (cap == null) return false;
+    return (Number(gameState.submission) || 0) >= cap;
+}
+
 
 
 
@@ -4524,10 +4833,19 @@ function cpuFaceWeights() {
         w.EN += 0.25;
     }
 
-    if (opp.trance + 2 >= 5) w.SP += 0.35;
+    if (opp.trance + 2 >= Abilities.setbackThreshold(opp)) w.SP += 0.35;
 
     const slip = Math.max(0, gameState.submission);
     if (slip >= 2) w.SU += 0.4 * (slip - 1);
+    // Pin escape v2: when squeezed, Submission outweighs Transform so the lead face becomes SU.
+    if (typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && isCpuPinnedInSubmission()) {
+        w.SU = Math.max(w.SU, w.TR + 0.35);
+    }
+    // Tables respect: while human can flip, do not overvalue offensive Submission.
+    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()) {
+        w.SU *= 0.35;
+        if (typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap()) w.SU = -50;
+    }
 
     // Stop valuing 🔥 once it can't do anything. The 🔥 lock itself is capped
 	//in cpuKeepArousalUpTo / the Master loop.
@@ -4626,11 +4944,45 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     const evTR = cpuThresholdEV(counts.TR, n - counts.TR, rerollsAvail, bonusTR) * w.TR;
     const evSU = cpuThresholdEV(counts.SU, n - counts.SU, rerollsAvail, bonusSU) * w.SU;
     const lead = evTR >= evSU ? "TR" : "SU", sec = lead === "TR" ? "SU" : "TR";
-    if (counts[lead] > 0) keepFace(lead);
-    // pinned: keep Submission dice to build a push back, but not a lone ⛓️ when we already hold a finished triple (it would lock every die)
-    if (pinned && (counts.SU >= 2 || counts[lead] < 3)) keepFace("SU");
-    if (slip >= 2 && counts.SU >= 2) keepFace("SU");   // marker is sliding: build the push back
-    if (counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) keepFace(sec);
+    if (typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && pinned) {
+        // Pin escape v2: chase a Submission triple first. Keep every ⛓️; free non-essential faces.
+        keepFace("SU");
+        if (counts.SU < 3) {
+            faces.forEach((f, i) => {
+                if (f === "SU" || (f === "LU" && keep[i])) return;
+                if (f === "TR" && counts.TR >= 3) { keep[i] = true; return; }
+                keep[i] = false;
+            });
+            keepFace("SU");
+            return { keep, hunting: false, pinEscape: true };
+        }
+        // Already have 3+ SU: keep the triple and still allow a finished TR triple.
+        if (counts.TR >= 3) keepFace("TR");
+    } else if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+            && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap()) {
+        // Tables respect: at soft ceiling — do not finish/keep SU triples that only dig the marker deeper.
+        // Prefer Transform / other faces. Partial SU is left free to reroll away.
+        if (counts.TR > 0) keepFace("TR");
+        if (counts.SU >= 3) {
+            // already rolled a triple: still resolve it (can't un-roll), but don't add more SU
+            keepFace("SU");
+        }
+        if (sec !== "SU" && counts[sec] >= 2) keepFace(sec);
+    } else {
+        if (counts[lead] > 0) keepFace(lead);
+        // pinned: keep Submission dice to build a push back, but not a lone ⛓️ when we already hold a finished triple (it would lock every die)
+        if (pinned && (counts.SU >= 2 || counts[lead] < 3)) keepFace("SU");
+        if (slip >= 2 && counts.SU >= 2) keepFace("SU");   // marker is sliding: build the push back
+        // Tables respect: below soft ceiling but still avoiding — keep SU only if not already over-invested
+        if (!(typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush())) {
+            if (counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3)) keepFace(sec);
+        } else {
+            // avoiding: allow SU only as secondary if TR is lead and we're still under ceiling
+            if (sec === "SU" && counts.SU >= 2 && counts.TR >= 2) { /* skip pure SU chase */ }
+            else if (counts[sec] >= 2 && (counts[lead] < 3 || counts[sec] >= 3) && sec !== "SU") keepFace(sec);
+            else if (lead === "TR" && counts.TR >= 2) keepFace("TR");
+        }
+    }
 
     // 4) Arousal and the linear faces (Energy, Spiral): keep them while enough dice stay free to chase a triple
     let keptNow = keep.filter(Boolean).length;
@@ -5108,7 +5460,12 @@ function cpuAdaptiveEnergyActions() {
     const reserve = hasCard(2, 16) ? 3 : 0;            // keep a few ⚡ for Hypnotic Suggestion rerolls
     for (let g = 0; g < 12 && !gameState.gameEnded; g++) {
         if (p.energy >= 5 && opp.transform + Math.floor(p.energy / 5) >= 10) { buyAction("transform", 2); cpuSay("Lethal: cashing Energy into Transform."); continue; }
-        if ((isCpuPinnedInSubmission() && p.energy >= 6) || (gameState.submission >= 2 && p.energy >= 9)) { buyAction("submission", 2); continue; }
+        if (isCpuPinnedInSubmission() && p.energy >= 6) { buyAction("submission", 2); continue; }
+        if (gameState.submission >= 2 && p.energy >= 9
+            && !(typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+                 && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap())) {
+            buyAction("submission", 2); continue;
+        }
         if (p.energy - 3 >= reserve && (p.arousal === 3 || p.arousal === 5 || (p.arousal === 4 && p.energy - 6 >= reserve))) { buyAction("arousal", 2); continue; }
         if (p.energy - 5 >= reserve && p.energy >= 5 && (opp.transform >= 5 || p.energy >= 10)) { buyAction("transform", 2); continue; }
         break;
@@ -5130,6 +5487,13 @@ function cpuAdaptiveSetbackChoice(victim) {
 	if (cpuSmartTier() >= 2 && cpuEndgameInfo().active && cpuEndgameInfo().toOpp <= 3) return "submission";   // +2 ⛓️ is at or over their edge: it becomes a Transform
 	
     if (gameState.submission >= 2) return "submission";             // sliding toward our end: push it back toward neutral
+    // Tables respect: while human can flip, prefer Arousal/Transform over digging the marker deeper.
+    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+        && (Number(gameState.submission) || 0) >= 1) {
+        const blocked = hasCard(1, 50) || hasCard(1, 32) || victim.shieldActive;
+        if (!blocked && victim.arousal < 5) return "arousal";
+        return "submission"; // arousal blocked — fall through is ok; still return submission only if no better option
+    }
     if (gameState.submission <= -3) return "submission";            // marker already near the human's end: push toward overflow
     const blocked = hasCard(1, 50) || hasCard(1, 32) || victim.shieldActive;   // Mutual Heat / Guided Heat / Rapid Pulse
     const crossesBand = [1, 2, 3, 4].includes(victim.arousal);      // +2 Arousal takes away a reroll
@@ -5238,7 +5602,12 @@ function cpuTierProblems(level) {
     const cfg = CPU_TIERS[level], p = gameState.p2;
     const late = cpuBrain.troubleBlind ? 1 : 0;      // a distracted turn: notices trouble one step later
     const step = (v, t) => (v >= t + late ? v - (t + late) + 1 : 0);
-    return { sub: step(Math.max(0, gameState.submission), cfg.danger.sub), arousal: step(p.arousal, cfg.danger.arousal),
+    // Pin escape v2: treat submission danger from the pin threshold (3), not the looser legacy values.
+    let subDanger = cfg.danger.sub;
+    if (typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2) {
+        subDanger = Math.min(subDanger, 3);
+    }
+    return { sub: step(Math.max(0, gameState.submission), subDanger), arousal: step(p.arousal, cfg.danger.arousal),
              trance: step(p.trance, cfg.danger.trance), vuln: cpuBrain.troubleBlind ? 0 : (p.vulnerability || 0) };
 }
 
@@ -5250,10 +5619,13 @@ function cpuReleaseUselessKeeps(keep, rerollsAvail) {
     const faces = dice.map(d => cpuFaceKey(d.face));
     const r = Math.max(1, rerollsAvail || 1);
     const lucidityNeed = (p.vulnerability || 0) + p.arousal * (hasCard(1, 48) ? 2 : 1) + p.trance;
+    const pinEscape = typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && isCpuPinnedInSubmission();
     for (let pass = 0; pass < 5; pass++) {
         let changed = false;
         const free = keep.filter(k => !k).length;
         ["TR", "SU", "AR"].forEach(k => {
+            // Pin escape v2: never drop Submission while squeezed — we need every ⛓️ toward a triple.
+            if (pinEscape && k === "SU") return;
             const need = k === "AR" ? 2 : 3;
             const c = keep.reduce((sum, kp, i) => sum + (kp && faces[i] === k ? 1 : 0), 0);
             if (c === 0 || c >= need) return;
@@ -5282,6 +5654,7 @@ function cpuTierKeepPlan(level, r) {
     const keep = new Array(n).fill(false);
     const keepFace = k => faces.forEach((f, i) => { if (f === k) keep[i] = true; });
     const has = id => hasCard(2, id);
+    const pinEscape = typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && isCpuPinnedInSubmission();
 
     // 1) trouble first: Lucidity for Arousal / Trance / Vulnerability, ⛓️ when Submission is sliding toward us
     let need = prob.vuln;
@@ -5289,15 +5662,42 @@ function cpuTierKeepPlan(level, r) {
     if (prob.trance > 0) need += Math.max(1, p.trance - cfg.target.trance);
     if (has(9) && counts.LU > 0) need = Math.max(0, need - 1);
     if (need > 0) { let k = Math.min(counts.LU, need); faces.forEach((f, i) => { if (f === "LU" && k > 0) { keep[i] = true; k--; } }); }
-    if (prob.sub > 0) keepFace("SU");
+    if (prob.sub > 0 || pinEscape) keepFace("SU");
+
+    // Pin escape v2: when squeezed and short of a Submission triple, do not lock competing faces —
+    // leave dice free so rerolls can finish 3+ ⛓️. Exception: already-finished Transform triple is fine.
+    if (pinEscape && counts.SU < 3) {
+        // Keep only SU (+ any LU already marked for real trouble). Release everything else for the chase.
+        faces.forEach((f, i) => {
+            if (f === "SU" || (f === "LU" && keep[i])) return;
+            // Allow a finished Transform triple only if we already have one AND we're not behind enough that
+            // obeying would lose — still free partial TR/EN/AR/SP for the SU chase.
+            if (f === "TR" && counts.TR >= 3) { keep[i] = true; return; }
+            keep[i] = false;
+        });
+        keepFace("SU");
+        return cpuApplySignatureKeepPlan(cpuReleaseUselessKeeps(keep, r));
+    }
+
+    // Tables respect: at soft ceiling, suppress offensive SU keeps (still allow finished triple that already exists).
+    const tablesAvoid = typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+        && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap();
+    if (tablesAvoid) {
+        // Force-clear SU keeps unless already a resolved triple on the board
+        if (counts.SU < 3) {
+            faces.forEach((f, i) => { if (f === "SU") keep[i] = false; });
+        }
+    }
 
     // 2) what each level likes to chase
     if (level === "aggressive") {
-        keepFace("TR"); keepFace("SU"); keepFace("EN");
+        keepFace("TR");
+        if (!(typeof tablesAvoid !== "undefined" && tablesAvoid) || counts.SU >= 3) keepFace("SU");
+        keepFace("EN");
         if (opp.trance >= 3) keepFace("SP");
     } else if (level === "defensive") {
         if (counts.TR >= 2 || opp.transform >= 6) keepFace("TR");
-        if (counts.SU >= 2 && opp.transform >= 5) keepFace("SU");
+        if (!(typeof tablesAvoid !== "undefined" && tablesAvoid) && counts.SU >= 2 && opp.transform >= 5) keepFace("SU");
         keepFace("EN");
         if (opp.trance >= 3) keepFace("SP");
         if (opp.arousal >= 3) cpuKeepArousalUpTo(keep, faces);
@@ -5319,6 +5719,7 @@ function cpuTierKeepPlan(level, r) {
         let kEN = bestK;
         faces.forEach((f, i) => { if (f === "EN" && !keep[i] && kEN > 0) { keep[i] = true; kEN--; } });
         if (counts.SU >= 3) keepFace("SU");        // a finished triple is free value; otherwise ⛓️ is only for defending (above)
+        // tablesAvoid already stripped partial SU above; finished triple still kept
     } else {   // v23low: energy theme. Other faces only when they finish a triple or feed a card we own
         keepFace("EN");
         const tSyn = has(2) || has(41) || has(22) || has(56), sSyn = has(36) || has(24) || has(23);
@@ -5326,7 +5727,7 @@ function cpuTierKeepPlan(level, r) {
         if (counts.TR >= 3 || (tSyn && counts.TR >= 2)) keepFace("TR");
         if (counts.SU >= 3 || (sSyn && counts.SU >= 2)) keepFace("SU");
         if (aSyn && counts.AR >= 2) cpuKeepArousalUpTo(keep, faces);
-        if (pSyn || opp.trance + counts.SP >= 5) keepFace("SP");
+        if (pSyn || opp.trance + counts.SP >= Abilities.setbackThreshold(opp)) keepFace("SP");
     }
     cpuApplySignatureKeepPlan(keep);
 
@@ -5344,7 +5745,14 @@ function cpuTierKeepPlan(level, r) {
     return cpuApplySignatureKeepPlan(cpuReleaseUselessKeeps(keep, r));
 }
 
-function cpuLegacyHasFreeDice() {              // would a reroll change anything? (all levels except Master)
+function cpuLegacyHasFreeDice() {              // would a reroll change anything?
+    if (cpuIsAdaptive()) {
+        try {
+            return cpuAdaptiveKeepPlan(1).keep.some(k => !k);
+        } catch (e) {
+            return gameState.dice.some(d => !d.kept);
+        }
+    }
     if (cpuIsTier()) {
         const capped = CPU_TIERS[getCpuDifficulty()].maxRerolls;
         if (capped && (cpuBrain.rerollsUsed || 0) >= capped && cpuBrain.capStop !== false) return false;   // this level has stopped rerolling
@@ -5857,6 +6265,8 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     // 4. Transfer energy and card
     buyer.energy -= cost;
     seller.energy += cost;
+	Abilities.onCardPurchased(buyerNum, targetCard);
+
 
     const [stolenCard] = seller.inventory.splice(opponentCardIndex, 1);
     buyer.inventory.push(stolenCard);
@@ -5940,6 +6350,11 @@ function cpuShouldBuyTransformWithEnergy() {
 function cpuShouldBuySubmissionWithEnergy() {
     const p = gameState.p2; const difficulty = getCpuDifficulty();
     if (p.energy < 6) return false;
+    // Tables respect: do not spend energy deepening the marker while the human can flip it.
+    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+        && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap()) return false;
+    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+        && (Number(gameState.submission) || 0) >= 1) return false;
 	// Priority 1: If pinned, ALL AI levels dump remaining energy into Submission
     if (isCpuPinnedInSubmission()) {
         return true;
@@ -6213,6 +6628,74 @@ async function playFinalTransformationCinematic(loserId) {
     }
 }
 
+
+// ============================================================
+// SUBLIMINAL TRANCE-DEPTH BADGE
+// Corner badge on each board portrait when Subliminals are on.
+// Depth = how many times that player has suffered a Trance setback.
+// ============================================================
+function playerSetbackDepth(playerId) {
+    if (!gameState) return 0;
+    const p = Number(playerId) === 1 ? gameState.p1 : gameState.p2;
+    return Math.max(0, Number(p?.setbacksSuffered) || 0);
+}
+
+function updateSubliminalDepthBadge(playerId) {
+    const id = Number(playerId) === 1 ? "p1-image" : "p2-image";
+    const container = document.getElementById(id);
+    if (!container) return;
+
+    const show = !!(window.Subliminal && typeof Subliminal.isEnabled === "function" && Subliminal.isEnabled())
+        && !!gameState && !gameState.gameEnded
+        && (gameState.gameMode === "solo" || gameState.gameMode === "online");
+    const depth = playerSetbackDepth(playerId);
+
+    let badge = container.querySelector(".sub-depth-badge");
+    if (!show || depth <= 0) {
+        if (badge) badge.remove();
+        return;
+    }
+
+    const level = Math.min(6, depth);
+    if (!badge) {
+        badge = document.createElement("div");
+        badge.className = "sub-depth-badge";
+        badge.setAttribute("aria-hidden", "true");
+        container.appendChild(badge);
+    }
+    badge.dataset.level = String(level);
+    badge.title = depth === 1
+        ? "Trance depth: 1 setback (subliminals)"
+        : `Trance depth: ${depth} setbacks (subliminals)`;
+    badge.innerHTML = `<span class="sub-depth-spiral">🌀</span><span class="sub-depth-count">${depth > 6 ? "6+" : depth}</span>`;
+}
+
+function updateAllSubliminalDepthBadges() {
+    updateSubliminalDepthBadge(1);
+    updateSubliminalDepthBadge(2);
+}
+
+// Keep badges in sync when the Options checkbox is toggled.
+(function bindSubliminalBadgeToggle() {
+    function wrap() {
+        if (!window.Subliminal || typeof Subliminal.setEnabled !== "function" || Subliminal._depthBadgeWrapped) return;
+        const original = Subliminal.setEnabled.bind(Subliminal);
+        Subliminal.setEnabled = function (on) {
+            original(on);
+            try { updateAllSubliminalDepthBadges(); } catch (e) {}
+        };
+        Subliminal._depthBadgeWrapped = true;
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", wrap, { once: true });
+    } else {
+        wrap();
+    }
+    // Subliminal may finish init slightly later
+    window.setTimeout(wrap, 0);
+    window.setTimeout(wrap, 500);
+})();
+
 function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
     if (!container) return;
     const existing = container.querySelector("img");
@@ -6239,13 +6722,24 @@ function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
             container.appendChild(img);
             void img.offsetWidth;
             img.style.opacity = "1";
-            window.setTimeout(() => { if (container.dataset.portraitToken === token) { img.style.cssText = ""; container.replaceChildren(img); } }, 700);
+            window.setTimeout(() => {
+                if (container.dataset.portraitToken === token) {
+                    img.style.cssText = "";
+                    container.replaceChildren(img);
+                    if (container.id === "p1-image" || container.id === "p2-image") {
+                        updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
+                    }
+                }
+            }, 700);
             return;
         }
         container.replaceChildren(img);
         if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
             img.classList.add("art-stage-transition");
             window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
+        }
+        if (container.id === "p1-image" || container.id === "p2-image") {
+            updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
         }
     };
     img.onload = commit;
@@ -6377,6 +6871,9 @@ function updateUI() {
         }
         lastDisplayedTransform[p] = Number(pObj.transform) || 0;
     });
+
+    // Trance-depth badges (subliminals on only)
+    updateAllSubliminalDepthBadges();
 
     const p1LastRoll = gameState.p1?.lastRoll || [];
     const p2LastRoll = gameState.p2?.lastRoll || [];
@@ -6626,6 +7123,8 @@ function renderDiceAndActions(isHumanTurn) {
     
     let resolveDisabled = !isHumanTurn || diceAnimating.size > 0 || isInitRoll || gameState.phase !== "rolling";
     ag.innerHTML += `<button onclick="resolveDice()" id="btn-resolve" ${resolveDisabled ? 'disabled' : ''} style="${resolveDisabled ? '' : 'background: ' + activeColor + ';'}">Resolve Dice</button>`;
+	// Meditate, Echo, Turn the Tables, and the "Called" label
+	ag.innerHTML += Abilities.actionButtonsHtml(isHumanTurn, isInitRoll);
 }
 
 function renderMarket() {
@@ -6980,7 +7479,8 @@ function increaseTrance(targetObj, amount, sourcePlayerId) {
     targetObj.trance += amount;
     if (targetObj.trance <= before) return false;
     if (sourcePlayerId && sourcePlayerId !== targetId && hasCard(targetId, 21)) cardResolvedThisTurn.add(`${targetId}:21`);
-    const triggersSetback = before < 5 && targetObj.trance >= 5;
+    const setbackAt = Abilities.setbackThreshold(targetObj);
+    const triggersSetback = before < setbackAt && targetObj.trance >= setbackAt;
     if (triggersSetback) log(`${targetObj.name}'s 🌀 deepens +${amount} 🌀.`);
 
     checkTranceSetback(targetObj, sourcePlayerId);
@@ -7015,29 +7515,37 @@ function cpuShouldTransformOnSetback() {
     }
 }
 
+// What changed: the threshold and strength come from Abilities (Deep Well);
+// the labels and logs show the real number;
+// activePlayerId 0 means "nobody chooses" (Surrender to Heat online) and 
+// uses the automatic effect; and the automatic
+// effect now pushes toward the VICTIM (it used to assume the victim was Player 1).
 function checkTranceSetback(oppP, activePlayerId) {
-    while (oppP.trance >= 5) {
-        oppP.trance -= 5;
+    const setbackAt = Abilities.setbackThreshold(oppP);
+    const mult = Abilities.setbackMultiplier(oppP);
+    const amt = 2 * mult;                                            // 2 normally, 4 for Deep Well
+    while (oppP.trance >= setbackAt) {
+        oppP.trance -= setbackAt;
         const victimId = oppP === gameState.p1 ? 1 : 2;
-		oppP.setbacksSuffered = (oppP.setbacksSuffered || 0) + 1;      // lives in gameState, so it syncs to the other player online
+        oppP.setbacksSuffered = (oppP.setbacksSuffered || 0) + 1;      // lives in gameState, so it syncs to the other player online
         if (window.Subliminal)
-			Subliminal.onTranceSetback(victimId);
+            Subliminal.onTranceSetback(victimId);
         if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
             oppP.trance += 1;
-			flashSignaturePowerHint(activePlayerId);
+            flashSignaturePowerHint(activePlayerId);
             log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after the setback.`);
         }
         const canManipulate = activePlayerId && hasCard(activePlayerId, 17);
-        const humanChooses = activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online";
+        const humanChooses = activePlayerId && (activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online");
 
         if (humanChooses) {
             const oppName = oppP.name;
             const setbackLogPosition = Array.isArray(gameState.log) ? gameState.log.length : 0;
             const opts = [
-                { label: "Push Submission 2", onClick: () => { logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more submissive (+2 ⛓️).`, setbackLogPosition); pushSubmission(activePlayerId === 1 ? 2 : -2, activePlayerId); } },
-                { label: `${oppName} Arousal +2`, onClick: () => {
-                    logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more aroused (+2 🔥).`, setbackLogPosition);
-                    increaseArousal(gameState["p" + victimId], 2, victimId, activePlayerId);
+                { label: `Push Submission ${amt}`, onClick: () => { logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`, setbackLogPosition); pushSubmission(activePlayerId === 1 ? amt : -amt, activePlayerId); } },
+                { label: `${oppName} Arousal +${amt}`, onClick: () => {
+                    logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more aroused (+${amt} 🔥).`, setbackLogPosition);
+                    increaseArousal(gameState["p" + victimId], amt, victimId, activePlayerId);
                 } }
             ];
             if (canManipulate) opts.push({ label: `Physical Manipulation: Transform ${oppName} +1`, onClick: () => {
@@ -7049,14 +7557,15 @@ function checkTranceSetback(oppP, activePlayerId) {
             log(`SETBACK: ${oppP.name} is deep in 🌀 and is made to transform (+1 👁️).`);
             applyTransform(victimId, 1, activePlayerId);
         } else if (cpuIsAdaptive() && activePlayerId === 2 && cpuAdaptiveSetbackChoice(oppP) === "arousal") {
-            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more aroused (+2 🔥).`);
-            increaseArousal(oppP, 2, victimId, activePlayerId);
+            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more aroused (+${amt} 🔥).`);
+            increaseArousal(oppP, amt, victimId, activePlayerId);
         } else {
-            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more submissive (+2 ⛓️).`);
-            pushSubmission(-2, 2);
+            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`);
+            pushSubmission(victimId === 1 ? -amt : amt, victimId === 1 ? 2 : 1);      // toward the victim's end
         }
     }
 }
+
 
 function increaseArousal(target, amount, recipientId, sourceId) {
     const pObj = typeof target === "object" ? target : gameState["p" + target];
@@ -7389,6 +7898,7 @@ function startTurn() {
 
     gameState.p1.boughtCardThisTurn = false; gameState.p2.boughtCardThisTurn = false; gameState.freeBuyActive = false; gameState.vulnGrantedThisTurn = false;
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+	if (!signatureSiobhanBonusTurn) Abilities.onTurnStart(gameState.activePlayer);      // Cornered's +1 ⚡
 	activeP.ivyExchangeUsedThisTurn = false;
     activeP.shieldActive = false; activeP.simmeringUsed = false;
     activeP.burningUpUsed = false; activeP.burningUpUses = 0;
@@ -7413,7 +7923,7 @@ function startTurn() {
     if (hasCard(gameState.activePlayer, 55)) cardResolvedThisTurn.add(`${gameState.activePlayer}:55`);
     if (hasCard(gameState.activePlayer, 57)) cardResolvedThisTurn.add(`${gameState.activePlayer}:57`);
     
-    if (activeP.arousal <= 2) gameState.rerollsLeft = 2; else if (activeP.arousal <= 4) gameState.rerollsLeft = 1; else gameState.rerollsLeft = 0;
+    gameState.rerollsLeft = Abilities.baseRerolls(activeP);         // Surrender to Heat ignores Arousal
     const mentalAwakeningActive = hasCard(gameState.activePlayer, 43) && !signatureSiobhanBonusTurn;
     if (mentalAwakeningActive) gameState.rerollsLeft += 1;
     if (signatureSiobhanBonusTurn) gameState.rerollsLeft = 0;
@@ -7422,7 +7932,7 @@ function startTurn() {
 	const activePObj = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
 	const anchorBonus = (activePObj.inventory || []).filter(c => c && Number(c.id) === 7).length;
     // Predatory Momentum is exactly six dice; Trance Anchor does not modify it.
-    let diceCount = signatureSiobhanBonusTurn ? 6 : 6 + anchorBonus;
+	let diceCount = signatureSiobhanBonusTurn ? 6 : 6 + anchorBonus + Abilities.extraDice(activeP);   // Cornered's extra die
     if (!signatureSiobhanBonusTurn && activeP.vulnerability > 0) {
         diceCount = Math.max(3, diceCount - activeP.vulnerability);
 		if (diceCount < 3) diceCount = 3;
@@ -7518,6 +8028,8 @@ function maybeGrantRozBonusReroll() {
 }
 
 function rollDiceAction() {
+	// have to have this here for "Called Shot"
+	if (Abilities.beforeRoll()) return;
     // A new roll selects this player's turn card; otherwise browsing stays where the player left it.
     const historyGroupsAtRoll = getTurnHistoryGroups();
     if (historyGroupsAtRoll.length) selectedHistoryIndex = historyGroupsAtRoll.length - 1;
@@ -7530,6 +8042,12 @@ function rollDiceAction() {
     if (!isInitRoll && gameState.rerollsLeft <= 0) return;
     gameState.dice.forEach(die => { if (die && die.signatureRozLocked) die.kept = true; });
     const roller = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
+    const willRoll = gameState.dice.some(d => d && !d.kept);
+    // Nothing unlocked: do not burn a reroll (or a paid Hypnotic Suggestion). Clear leftovers so the CPU interval cannot spin.
+    if (!isInitRoll && !willRoll) {
+        gameState.rerollsLeft = 0;
+        return;
+    }
     const animatedIndices = [];
     gameState.dice.forEach((die, index) => { if (!die.kept) animatedIndices.push(index); });
     gameState.dice = gameState.dice.map((d, index) => d.kept ? d : { face: rollFaceForDie(gameState.activePlayer, index), kept: false });
@@ -7748,21 +8266,39 @@ async function resolveDice() {
             const arGain = k => (k >= 2 ? k - 1 : 0) + (stoking && k >= 2 ? 1 : 0);
             const existingAR = gameState.dice.filter(d => d.face === "🔥 AROUSAL").length;
             const needed = Math.max(0, 5 - (opp.arousal || 0));
+            const pinEscape = typeof CPU_PIN_ESCAPE_V2 !== "undefined" && CPU_PIN_ESCAPE_V2 && isCpuPinnedInSubmission();
+            const tablesDump = typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
+                && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap() && !pinEscape;
+            // Pin escape v2: when squeezed, keep enough ⛓️ to resolve a Submission push (need 3+)
+            // before converting any surplus into Arousal or Trance.
+            let mustKeepAsSub = 0;
+            if (pinEscape) {
+                mustKeepAsSub = Math.min(submissionIndices.length, Math.max(3, submissionIndices.length));
+                // If we already have 3+, only reserve 3 for the escape and may convert the rest.
+                if (submissionIndices.length >= 3) mustKeepAsSub = 3;
+                // Fewer than 3: keep all of them as Submission (better than converting into nothing useful for the pin).
+                else mustKeepAsSub = submissionIndices.length;
+            } else if (tablesDump) {
+                // Tables respect: at soft ceiling, do not resolve a Submission triple — convert everything away.
+                mustKeepAsSub = 0;
+            }
             // Lots of ⛓️ dice: push Arousal first, converting only as many as it takes to reach 5 (all of them if that still falls short).
             // A single 🔥 does nothing, so it needs at least two 🔥 dice in total.
             let toArousal = 0;
-            if (needed > 0 && !opp.shieldActive && existingAR + submissionIndices.length >= 2) {
-                toArousal = submissionIndices.length;
-                for (let k = existingAR; k <= existingAR + submissionIndices.length; k++) {
+            const convertible = Math.max(0, submissionIndices.length - mustKeepAsSub);
+            if (needed > 0 && !opp.shieldActive && existingAR + convertible >= 2) {
+                toArousal = convertible;
+                for (let k = existingAR; k <= existingAR + convertible; k++) {
                     if (arGain(k) >= needed) { toArousal = Math.max(0, k - existingAR); break; }
                 }
             }
             submissionIndices.forEach((index, n) => {
                 let face = "⛓️ SUBMISSION";
-                if (n < toArousal) face = "🔥 AROUSAL";
-                else if (opp.trance < 5 && !opp.shieldActive) face = "🌀 SPIRAL";          // the rest build toward a Trance setback
+                if (n >= mustKeepAsSub && (n - mustKeepAsSub) < toArousal) face = "🔥 AROUSAL";
+                else if (n >= mustKeepAsSub + toArousal && opp.trance < Abilities.setbackThreshold(opp) && !opp.shieldActive) face = "🌀 SPIRAL";
                 gameState.dice[index].face = face;
                 if (face !== "⛓️ SUBMISSION") log(`CPU Tex reassigned Submission die ${n + 1} to ${face.includes("SPIRAL") ? "Trance" : "Arousal"}.`);
+                else if (pinEscape && n < mustKeepAsSub) log(`CPU Tex kept Submission die ${n + 1} to escape the squeeze.`);
             });
         }
         gameState.signatureTexAllocationDone = true;
@@ -7811,7 +8347,8 @@ async function resolveDice() {
     activeP.vulnerability = activeP.vulnerability || 0;
     activeP.energy = activeP.energy || 0;
 
-    if (hasCard(activePlayerNum, 55)) {
+	// transformation ritual must not charge you for a meditation turn (there is no roll)
+    if (hasCard(activePlayerNum, 55) && !gameState.meditating) {
         // "Kept" means the dice remaining at the end of the roll sequence, not only dice locked against rerolls.
         const finalRollHasTransform = gameState.signatureSiobhanTriggerFace
             ? gameState.signatureSiobhanTriggerFace === "TRANSFORM"
@@ -7882,6 +8419,8 @@ async function resolveDice() {
         log(`${activeP.name}'s Lucid Reversal spends three 💧 and reduces own Transform by ${before - activeP.transform}.`);
         gameState.signatureFableSpend = false;
     }
+	
+	Abilities.applyCalledShot(activeP, activePlayerNum, counts);
 
     // Tex's Trance dice are blank, and reassigned Submission dice have already changed face.
     // Luci adds one extra Submission point when at least three Submission dice remain.
@@ -8610,6 +9149,7 @@ function buyCard(index) {
 
     p.energy -= cost;
     p.boughtCardThisTurn = true;
+	Abilities.onCardPurchased(playerId, card);
 
     if (gameState.freeBuyActive) {
         gameState.freeBuyActive = false;
@@ -8698,6 +9238,11 @@ function endTurn() {
         queueCardTrigger(gameState.activePlayer, 27, "Gained 1 Energy at end of turn");
         log("Endless Staircase granted 1 Energy.");
     }
+	
+	Abilities.onTurnEnd(gameState.activePlayer);          // Surrender to Heat's Trance (a Setback here
+														// opens a dialog, which the
+                                                          // existing "wait for the choice, then
+														 // finishEndTurn()" code already handles)
 
     if (hasCard(gameState.activePlayer, 31)) {
         cardResolvedThisTurn.add(`${gameState.activePlayer}:31`);
@@ -8804,7 +9349,8 @@ function executeCPUTurn() {
         cpuBrain.troubleBlind = Math.random() < (sl.trouble || 0);
         cpuBrain.denyBlind = Math.random() < (sl.deny || 0);
     }
-    rollDiceAction();
+	// The CPU may meditate instead of rolling, and picks its Called Shot face
+    if (Abilities.cpuStartOfTurn()) { updateUI(); } else { rollDiceAction(); }
     updateUI();
 
     let idx12 = gameState.p2.inventory.findIndex(c => c.id === 12);
@@ -8901,7 +9447,10 @@ function executeCPUTurn() {
                         updateUI();
                     }
                 }
-
+				
+				// Echo for the CPU
+				Abilities.cpuTryEcho();
+				
                 cpuEnsureRitualKeep();
                 if (cpuIsAdaptive()) cpuBrainRecordRoll();
                 resolveDice();
@@ -8911,6 +9460,9 @@ function executeCPUTurn() {
 				if (hasSignaturePower(2, "ivy")) {
 					ivyCpuTryExchange();
 				}
+				
+				// CPU Turn the Tables
+				Abilities.cpuShopPowers();
 
 				if (cpuDebugBuyFirst()) {
 					endTurn();
@@ -9163,6 +9715,7 @@ function syncFinalBoardPortrait(playerId) {
         container.textContent = `Image Req: ${safe}`;
     };
     img.src = path;
+    updateSubliminalDepthBadge(playerId);
 }
 
 function winnerIdFromState() {

@@ -118,6 +118,9 @@ const HELPER_TIP_RULES = [
     } },
     // --- buttons ---
     { sel: "#btn-roll", build: () => ["Roll / Reroll", "The first click rolls all your dice. Click dice to <b>lock</b> the ones you like, then <b>Reroll</b> the rest. Your rerolls are limited: see the Rerolls counter."] },
+	{ sel: "button[onclick^='Abilities.meditate']", build: () => ["Meditate", "Skip your roll this turn: gain 3 ⚡ and lower your Trance and Arousal by 1. Then go straight to the shop. You cannot meditate two turns in a row."] },
+    { sel: "button[onclick^='Abilities.openEcho']", build: () => ["Echo", "Pay 1 ⚡ to copy one die's face onto another die. Once per turn, after you have rolled."] },
+    { sel: "button[onclick^='Abilities.turnTables']", build: () => ["Turn the Tables", "Once per game, in your shop phase: flip the Submission marker to the other side (+3 becomes -3)."] },
     { sel: "#btn-resolve", build: () => ["Resolve Dice", "Stop rolling and apply your dice: Transform, Submission, Trance, Arousal, Energy and Lucidity all take effect. Then you can shop and End Turn."] },
     { sel: "#btn-wipe-market", build: () => {
         const cost = typeof getMarketWipeCost === "function" ? getMarketWipeCost(gameState.activePlayer) : 2;
@@ -153,7 +156,7 @@ const HELPER_TIP_RULES = [
     { sel: "#choice-dialog button", build: el => {
         const t = el.textContent.trim();
         if (/^Push Submission/i.test(t)) return ["Push Submission 2", "Moves the Submission marker 2 points toward their end. A push past their end becomes Transform points, so this is strongest when the marker is already close to their end."];
-        if (/Arousal \+2$/i.test(t)) return ["Arousal +2", "Raises their Arousal by 2 (it cannot go above 5). Higher Arousal gives them fewer rerolls: 3–4 🔥 = 1 reroll, 5 = 0."];
+        if (/Arousal \+\d$/i.test(t)) return ["Arousal +2", "Raises their Arousal by 2 (it cannot go above 5). Higher Arousal gives them fewer rerolls: 3–4 🔥 = 1 reroll, 5 = 0."];
         if (/^Physical Manipulation/i.test(t)) return ["Physical Manipulation", "Transforms them by 1 level right now."];
         return null;
     } },
