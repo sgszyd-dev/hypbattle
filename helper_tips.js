@@ -13,8 +13,19 @@ let helperTipsEnabled = true;                              // on by default; the
 const HELPER_TIP_DELAY_MS = 1000;                          // how long to hover before a tip appears
 const HELPER_TOAST_KEY = "hypduel_helper_tips_toast_seen";
 const HELPER_TIPS_KEY = "hypduel_helper_tips";
-let helperTipEl = null, helperTipAnchor = null, helperTipTimer = null, helperTipWatch = null, helperTipTouchTimer = null;
+let helperTipEl = null;
+let helperTipAnchor = null;
+let helperTipTimer = null;
+let helperTipWatch = null;
+
+let helperTipTouchTimer = null;
+let helperTipMobileMode = false;
+let helperTipLongPressTarget = null;
+let helperTipLongPressStartX = 0;
+let helperTipLongPressStartY = 0;
+let helperTipLongPressTriggered = false;
 let helperTipSuppressClick = false;
+
 
 function helperEsc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -24,12 +35,26 @@ function loadHelperTipsSetting() {
     document.body.classList.toggle("helper-tips-on", helperTipsEnabled);
     const box = document.getElementById("show-helper-tips-option");
     if (box) box.checked = helperTipsEnabled;
+	updateHelperTipInputMode();
 }
-function setHelperTipsEnabled(on) {                        // called by the Options checkbox
+// called by the options checkbox
+function setHelperTipsEnabled(on) {
     helperTipsEnabled = !!on;
-    try { safeStorage.set(HELPER_TIPS_KEY, String(helperTipsEnabled)); } catch (e) {}
-    document.body.classList.toggle("helper-tips-on", helperTipsEnabled);
-    if (!helperTipsEnabled) hideHelperTip();
+
+    try {
+        safeStorage.set(HELPER_TIPS_KEY, String(helperTipsEnabled));
+    } catch (e) {}
+
+    document.body.classList.toggle(
+        "helper-tips-on",
+        helperTipsEnabled
+    );
+
+    if (!helperTipsEnabled) {
+        hideHelperTip();
+        cancelHelperTipLongPress();
+        helperTipSuppressClick = false;
+    }
 }
 
 // ---------- small helpers for the tip texts ----------
@@ -48,7 +73,7 @@ const HELPER_DIE_TIPS = {
     TRANSFORM:  ["👁️ Transform", "Three matching 👁️ dice transform your opponent by 1 level, and each extra die adds 1 more. Reach level 10 to win."],
     SUBMISSION: ["⛓️ Submission", "Three matching ⛓️ dice push the Submission marker 1 point toward your opponent, and each extra die adds 1 more. A push past their end becomes Transform points."],
     AROUSAL:    ["🔥 Arousal", "Two or more 🔥 dice raise your opponent's Arousal (the number of dice minus one). High Arousal costs them rerolls."],
-    SPIRAL:     ["🌀 Spiral", "Each 🌀 die adds 1 Trance to your opponent. At 5 Trance they suffer a Setback."],
+	SPIRAL: ["🌀 Spiral", "Each 🌀 die adds 1 Trance to your opponent. At 5 Trance, you trigger The Deepening, breaking through their defenses."],
     ENERGY:     ["⚡ Energy", "Each ⚡ die gives you 1 Energy to spend on market cards or a Wipe."],
     LUCIDITY:   ["💧 Lucidity", "Each 💧 die lets you lower your own Trance, Arousal or Vulnerability."],
     BLANK:      ["⬜ Blank", "A blank face does nothing."]
@@ -61,20 +86,20 @@ const HELPER_HYERI_FACES = {
     TRANSFORM:  "six 👁️ dice transform your opponent by 4 levels.",
     SUBMISSION: "six ⛓️ dice push the Submission marker 4 points toward your opponent.",
     AROUSAL:    "six 🔥 dice add 5 Arousal to your opponent (it stops at 5).",
-    SPIRAL:     "six 🌀 dice add 6 Trance to your opponent, which causes a Setback.",
+	SPIRAL: 	"six 🌀 dice add 6 Trance to your opponent, which may trigger The Deepening.",
     ENERGY:     "six ⚡ dice give you 6 Energy.",
     LUCIDITY:   "six 💧 dice let you lower your own Trance, Arousal and Vulnerability a lot."
 };
 
 // ---------- card help: short definitions of the words a card might use ----------
 const HELPER_GLOSSARY = [
-    { re: /setback/i,                 term: "Setback",       def: "Happens when a player's Trance reaches 5. Whoever caused it chooses the effect, and the Trance drops by 5." },
+	{ re: /deepening/i, term: "The Deepening", def: "Happens when a player's Trance reaches 5. Their opponent has broken through their defenses and chooses the effect: +2 Submission or +2 Arousal (or a transformation effect when available). Trance then drops by 5." },
     { re: /vulnerab/i,                term: "Vulnerability", def: "Each point takes away one die on your next turn (never fewer than 3). 💧 dice clear it." },
     { re: /lucidity|💧/i,              term: "Lucidity 💧",    def: "💧 dice let you lower your own Trance, Arousal or Vulnerability." },
     { re: /shield/i,                  term: "Shield",        def: "Rapid Pulse's shield blocks Trance and Arousal increases against you until your next turn." },
     { re: /submission|⛓️/i,           term: "Submission ⛓️",  def: "The tug-of-war marker (–5 to +5). A push past an end becomes Transform points, and ending your turn on your own end costs you +1 Transform." },
     { re: /transform|👁️/i,           term: "Transform 👁️",   def: "A player's transformation level, from 0 to 10. At 10 they lose the duel." },
-    { re: /trance|🌀/i,               term: "Trance 🌀",      def: "Raised by 🌀 dice. At 5 it causes a Setback." },
+	{ re: /trance|🌀/i, term: "Trance 🌀", def: "Raised by 🌀 dice. At 5, it triggers The Deepening, giving the opponent an opening to influence you further." },
     { re: /arousal|🔥/i,              term: "Arousal 🔥",     def: "Raised by 🔥 dice. It sets your rerolls: 0–2 = 2 rerolls, 3–4 = 1, 5 = 0." },
     { re: /energy|⚡/i,               term: "Energy ⚡",      def: "The currency for market cards and for wiping the market." },
     { re: /reroll/i,                  term: "Reroll",        def: "Rolling your unlocked dice again. Click dice first to lock the ones you want to keep." },
@@ -130,7 +155,7 @@ const HELPER_TIP_RULES = [
     // --- stats (both players) ---
     { sel: "#p1-trance-label, #p1-trance, #p2-trance-label, #p2-trance", build: el => {
         const p = helperPlayer(el);
-        return ["Trance 🌀", `Every 🌀 die you roll adds 1 Trance to your opponent. At <b>5 Trance</b> a <b>Setback</b> happens: whoever caused it chooses to push the Submission marker 2 points toward the victim's end, or add 2 Arousal (or +1 Transform with Physical Manipulation). Trance then drops by 5. Spend 💧 dice to lower your own.<br><i>${helperEsc(p.name)}: ${p.trance} / 5</i>`];
+		return ["Trance 🌀", `Every 🌀 die you roll adds 1 Trance to your opponent. At <b>5 Trance</b>, you trigger <b>The Deepening</b>: your defenses have been broken through, and your opponent chooses to push the Submission marker 2 points toward your end, add 2 Arousal, or use Physical Manipulation for +1 Transform when available. Trance then drops by 5.<br><i>${helperEsc(p.name)}: ${p.trance} / 5</i>`];
     } },
     { sel: "#p1-arousal-label, #p1-arousal, #p2-arousal-label, #p2-arousal", build: el => {
         const p = helperPlayer(el);
@@ -146,13 +171,13 @@ const HELPER_TIP_RULES = [
         return ["Transformation", `How far along the transformation is, from 0 to 10. At <b>10</b> the duel is lost. It rises from 👁️ triples, from Submission pushed past the end of the track, and from certain cards.<br><i>${helperEsc(p.name)}: ${p.transform} / 10</i>`];
     } },
     // --- Lucidity dialog ---
-    { sel: "#lucidity-row-trance", build: () => ["Lower Trance", "Each 💧 lowers your Trance by 1. Keeping it low avoids a <b>Setback</b> at 5, where your opponent chooses a punishment."] },
+	{ sel: "#lucidity-row-trance", build: () => ["Lower Trance", "Each 💧 lowers your Trance by 1. Keeping it low prevents <em>The Deepening</em> at 5, when your opponent breaks through your defenses and chooses an effect."] },
     { sel: "#lucidity-row-arousal", build: () => ["Lower Arousal", "Each 💧 lowers your Arousal by 1 (2 💧 each if your opponent has Burning Intensity). Lower Arousal means more rerolls: 0–2 🔥 = 2, 3–4 = 1, 5 = 0."] },
     { sel: "#lucidity-row-vuln", build: () => ["Clear Vulnerability", "Each 💧 removes 1 Vulnerability, which would otherwise take a die away on your next turn."] },
     { sel: "#lucidity-points-left", build: () => ["Points Available", "Spend all your 💧 to confirm, as long as something can still be lowered. Rows that are already at 0 cannot take points."] },
-    // --- Setback dialog (the choice dialog whose title ends in "Setback!") ---
-    { sel: "#choice-dialog h4", build: el => /setback!?$/i.test(el.textContent.trim())
-        ? ["Setback", "A player's Trance reached 5. As the player who caused it, you choose the effect. Their Trance then drops by 5."] : null },
+    // --- The Deepening dialog ---
+	{ sel: "#choice-dialog h4", build: el => /deepening!?$/i.test(el.textContent.trim())
+		? ["The Deepening", "Your Trance reached its threshold. Your opponent has broken through your defenses and chooses the effect. Your Trance then drops by 5."] : null },
     { sel: "#choice-dialog button", build: el => {
         const t = el.textContent.trim();
         if (/^Push Submission/i.test(t)) return ["Push Submission 2", "Moves the Submission marker 2 points toward their end. A push past their end becomes Transform points, so this is strongest when the marker is already close to their end."];
@@ -172,7 +197,7 @@ const HELPER_TIP_RULES = [
         const t = el.textContent.trim();
         // Tex
         if (/^Keep ⛓️ Submission/i.test(t)) return ["Keep as Submission", "Leave this die as ⛓️. Three or more ⛓️ dice push the Submission marker."];
-        if (/^Convert to 🌀/i.test(t)) return ["Convert to Trance", "Turn this die into 🌀. Each 🌀 die adds 1 Trance to your opponent, and 5 Trance causes a Setback."];
+		if (/^Convert to 🌀/i.test(t)) return ["Convert to Trance", "Turn this die into 🌀. Each 🌀 die adds 1 Trance to your opponent, and reaching 5 Trance triggers The Deepening."];
         if (/^Convert to 🔥/i.test(t)) return ["Convert to Arousal", "Turn this die into 🔥. Two or more 🔥 dice raise your opponent's Arousal."];
         // Fable
         if (/^Spend 3/i.test(t)) return ["Spend 3 💧", "Uses three of your 💧 dice to lower your own Transform by 1. Any other 💧 dice still work as normal."];
@@ -237,6 +262,137 @@ function findHelperTip(target) {
     }
     return null;
 }
+
+// ============================================================
+// MOBILE CONTEXTUAL HELP — TAP AND HOLD
+// ============================================================
+
+function isHelperTipMobile() {
+    return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
+// Determine whether the touched item is an interactive control.
+// Interactive controls require a long press for help so a normal
+// tap can continue to perform the game's action.
+function isHelperTipInteractive(target) {
+    if (!target || !target.closest) return false;
+
+    return !!target.closest(
+        "button, a, input, select, textarea, " +
+        "[role='button'], [onclick], " +
+        "[data-card-id], .card, .market-card, .die, .dice-item"
+    );
+}
+
+function updateHelperTipInputMode() {
+    const mobile = isHelperTipMobile();
+
+    if (mobile === helperTipMobileMode) return;
+
+    helperTipMobileMode = mobile;
+
+    hideHelperTip();
+
+    document.body.classList.toggle("helper-tips-mobile", mobile);
+}
+
+// Start a long-press timer for interactive items.
+function startHelperTipLongPress(e) {
+    if (!helperTipsEnabled || !helperTipMobileMode) return;
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+
+    const found = findHelperTip(e.target);
+    if (!found) return;
+
+    // Non-interactive items use a normal tap instead.
+    if (!isHelperTipInteractive(e.target)) return;
+
+    clearTimeout(helperTipTouchTimer);
+
+    helperTipLongPressTarget = e.target;
+    helperTipLongPressStartX = e.clientX;
+    helperTipLongPressStartY = e.clientY;
+    helperTipLongPressTriggered = false;
+
+    helperTipTouchTimer = setTimeout(() => {
+        const current = findHelperTip(helperTipLongPressTarget);
+
+        if (!current) return;
+
+        helperTipLongPressTriggered = true;
+        helperTipSuppressClick = true;
+
+        showHelperTip(current);
+
+        // Prevent the browser from interpreting the hold as text selection.
+        document.body.style.userSelect = "none";
+        document.body.style.webkitUserSelect = "none";
+    }, 550);
+}
+
+// Cancel a long press if the finger moves or is lifted.
+function cancelHelperTipLongPress() {
+    clearTimeout(helperTipTouchTimer);
+    helperTipTouchTimer = null;
+
+    helperTipLongPressTarget = null;
+
+    document.body.style.userSelect = "";
+    document.body.style.webkitUserSelect = "";
+}
+
+// Handle movement so scrolling does not accidentally activate help.
+function moveHelperTipLongPress(e) {
+    if (!helperTipTouchTimer) return;
+
+    const dx = Math.abs(e.clientX - helperTipLongPressStartX);
+    const dy = Math.abs(e.clientY - helperTipLongPressStartY);
+
+    if (dx > 12 || dy > 12) {
+        cancelHelperTipLongPress();
+    }
+}
+
+// Mobile tap behavior for non-interactive items.
+function handleHelperTipMobileTap(e) {
+    if (!helperTipsEnabled || !helperTipMobileMode) return;
+
+    // The click generated after a successful long press must not
+    // activate the underlying game control.
+    if (helperTipSuppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        helperTipSuppressClick = false;
+        helperTipLongPressTriggered = false;
+        return;
+    }
+
+    // Tapping inside the popup should leave it open.
+    if (helperTipEl && helperTipEl.contains(e.target)) return;
+
+    const found = findHelperTip(e.target);
+
+    if (!found) {
+        hideHelperTip();
+        return;
+    }
+
+    // Interactive items only show help through a long press.
+    if (isHelperTipInteractive(e.target)) {
+        return;
+    }
+
+    // A normal tap on an informational item opens its help.
+    if (helperTipAnchor === found.el &&
+        helperTipEl?.classList.contains("show")) {
+        hideHelperTip();
+    } else {
+        showHelperTip(found);
+    }
+}
+
 function showHelperTip(found) {
     const tip = ensureHelperTipEl();
     tip.innerHTML = `<div class="helper-tip-title">${found.content[0]}</div><div class="helper-tip-text">${found.content[1]}</div>`;
@@ -276,42 +432,130 @@ function showHelperTipsToastOnce() {
 // ---------- events (delegated, so redrawn elements keep working) ----------
 function initHelperTips() {
     loadHelperTipsSetting();
+
+    // Detect touch-oriented devices.
+    updateHelperTipInputMode();
+
+    const helperMediaQuery = window.matchMedia(
+        "(hover: none) and (pointer: coarse)"
+    );
+
+    if (helperMediaQuery.addEventListener) {
+        helperMediaQuery.addEventListener(
+            "change",
+            updateHelperTipInputMode
+        );
+    } else if (helperMediaQuery.addListener) {
+        helperMediaQuery.addListener(updateHelperTipInputMode);
+    }
+
+    window.addEventListener("resize", updateHelperTipInputMode);
+
+    // --------------------------------------------------------
+    // DESKTOP: retain the original hover behavior.
+    // --------------------------------------------------------
+
     document.addEventListener("mouseover", e => {
-        if (!helperTipsEnabled) return;
+        if (!helperTipsEnabled || helperTipMobileMode) return;
+
         const found = findHelperTip(e.target);
-        if (!found) { if (helperTipAnchor) hideHelperTip(); return; }
+
+        if (!found) {
+            if (helperTipAnchor) hideHelperTip();
+            return;
+        }
+
         if (found.el === helperTipAnchor) return;
+
         hideHelperTip();
-        helperTipTimer = setTimeout(() => showHelperTip(found), HELPER_TIP_DELAY_MS);
-    });
-    document.addEventListener("mouseout", e => {
-        if (!helperTipsEnabled) return;
-        const to = e.relatedTarget;
-        if (helperTipAnchor && to instanceof Node && helperTipAnchor.contains(to)) return;
-        hideHelperTip();
-    });
-    document.addEventListener("focusin", e => { if (helperTipsEnabled) { const f = findHelperTip(e.target); if (f) showHelperTip(f); } });
-    document.addEventListener("focusout", hideHelperTip);
-    document.addEventListener("mousedown", hideHelperTip, true);
-    document.addEventListener("scroll", hideHelperTip, true);
-    document.addEventListener("keydown", e => { if (e.key === "Escape") hideHelperTip(); });
-    // touch screens have no hover: press and hold for half a second
-    document.addEventListener("touchstart", e => {
-        if (!helperTipsEnabled) return;
-        const found = findHelperTip(e.target);
-        if (!found) return;
-        clearTimeout(helperTipTouchTimer);
-        helperTipTouchTimer = setTimeout(() => {
-            helperTipSuppressClick = true;                  // don't also "click" the button that was held
+
+        helperTipTimer = setTimeout(() => {
             showHelperTip(found);
-            setTimeout(hideHelperTip, 4500);
-        }, 500);
-    }, { passive: true });
-    document.addEventListener("touchend", () => clearTimeout(helperTipTouchTimer), { passive: true });
-    document.addEventListener("touchmove", () => clearTimeout(helperTipTouchTimer), { passive: true });
-    document.addEventListener("click", e => {
-        if (helperTipSuppressClick) { helperTipSuppressClick = false; e.stopPropagation(); e.preventDefault(); }
+        }, HELPER_TIP_DELAY_MS);
+    });
+
+    document.addEventListener("mouseout", e => {
+        if (!helperTipsEnabled || helperTipMobileMode) return;
+
+        const to = e.relatedTarget;
+
+        if (helperTipAnchor &&
+            to instanceof Node &&
+            helperTipAnchor.contains(to)) {
+            return;
+        }
+
+        hideHelperTip();
+    });
+
+    // Desktop keyboard accessibility.
+    document.addEventListener("focusin", e => {
+        if (!helperTipsEnabled || helperTipMobileMode) return;
+
+        const found = findHelperTip(e.target);
+
+        if (found) showHelperTip(found);
+    });
+
+    document.addEventListener("focusout", () => {
+        if (!helperTipMobileMode) hideHelperTip();
+    });
+
+    // --------------------------------------------------------
+    // MOBILE: tap or press-and-hold contextual help.
+    // --------------------------------------------------------
+
+    document.addEventListener(
+        "pointerdown",
+        startHelperTipLongPress,
+        true
+    );
+
+    document.addEventListener(
+        "pointermove",
+        moveHelperTipLongPress,
+        true
+    );
+
+    document.addEventListener(
+        "pointerup",
+        cancelHelperTipLongPress,
+        true
+    );
+
+    document.addEventListener(
+        "pointercancel",
+        cancelHelperTipLongPress,
+        true
+    );
+
+    // Capture click so a long press can suppress the click
+    // before it reaches the game's event handlers.
+    document.addEventListener(
+        "click",
+        e => {
+            if (!helperTipMobileMode) return;
+
+            handleHelperTipMobileTap(e);
+        },
+        true
+    );
+
+    // Desktop outside-click dismissal.
+    document.addEventListener("mousedown", e => {
+        if (helperTipMobileMode) return;
+
+        if (helperTipEl && !helperTipEl.contains(e.target)) {
+            hideHelperTip();
+        }
     }, true);
+
+    // Scrolling and Escape dismiss the popup.
+    document.addEventListener("scroll", hideHelperTip, true);
+
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape") hideHelperTip();
+    });
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initHelperTips);
 else initHelperTips();

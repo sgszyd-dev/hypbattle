@@ -43,3 +43,8 @@
     transition: opacity .25s ease, transform .25s ease;
 }
 #helper-toast.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+
+.helper-tips-mobile #helper-tip {
+    pointer-events: auto;
+    max-width: min(290px, calc(100vw - 16px));
+}

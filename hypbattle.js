@@ -91,17 +91,18 @@ window.addEventListener("orientationchange", applyGameSpiralBackground, { passiv
 // Each character has a gender field ("male" / "female"). It is used for things like the Master / Mistress title.
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
-    { name: "Roz",       gender: "female" },
-    { name: "Xander",    gender: "male" },
-    { name: "Siobhán",   gender: "female" },
-    { name: "Tex",       gender: "male" },
-    { name: "Luci", 	gender: "female" },
-    { name: "Zixuan",    gender: "male" },
-    { name: "Hyeri", 	 gender: "female" },
-    { name: "Mark",       gender: "male" },
+	{ name: "Dare",      gender: "male"},
     { name: "Fable",     gender: "female"},
+	{ name: "Hyeri", 	 gender: "female" },
 	{ name: "Ivy",		 gender: "female"},
-	{ name: "Val", 		gender: "female"}
+    { name: "Luci", 	gender: "female" },
+    { name: "Mark",       gender: "male" },
+    { name: "Roz",       gender: "female" },
+	{ name: "Siobhán",   gender: "female" },
+    { name: "Tex",       gender: "male" },
+	{ name: "Val", 		gender: "female"},
+	{ name: "Xander",    gender: "male" },
+	{ name: "Zixuan",    gender: "male" }
 ];
 const NAMES = CHARACTERS.map(c => c.name);
 function getGender(name) {
@@ -209,7 +210,7 @@ function processGenderTokens(text) {
     return result;
 }
 
-const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Snake", "Squirrel", "Statue", "Werewolf"];
+const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Skunk", "Snake", "Squirrel", "Statue", "Werewolf"];
 
 
 const CHARACTER_MANIFEST = {
@@ -225,6 +226,7 @@ const CHARACTER_MANIFEST = {
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
+	"Dare": ["Snake","Skunk"], // Snake
 	};
 
 
@@ -435,7 +437,7 @@ function isOnlineSetup() { const m = document.getElementById("game-mode-option")
 // One icon per transformation, shown in the setup dropdowns (the option VALUE stays the plain form name).
 const TRANSFORM_ICONS = {
     Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
-	Robot: "🤖", Snake: "🐍", Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
+	Robot: "🤖", Snake: "🐍", Skunk: "🦨", Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
 };
 function transformIcon(form) { return TRANSFORM_ICONS[form] || "✨"; }
 function transformOptionLabel(form) { return `${transformIcon(form)} ${form}`; }
@@ -561,7 +563,8 @@ const CLASSIC_CHALLENGE_RIVALS = [
 // The transformation each character is assigned when they are a rival in The Seven.
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
-    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon", Val:"Fox"
+    Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon",
+	Dare: "Snake", Val:"Fox"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
@@ -579,8 +582,9 @@ const SIGNATURE_POWERS = {
     Xander: { key:"xander", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
     Tex: { key:"tex", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
     Zixuan: { key:"zixuan", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
-    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes an opponent's Trance setback, that opponent retains one Trance."},
+    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes The Deepening, the opponent retains one 🌀 Trance."},
 	Ivy: {key:"ivy", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."},
+	Dare: {key: "meditation", title: "Meditation", description: "Instead of rolling, you may Meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. Not two turns in a row and you can still shop."},
 	Val: {key: "turntables", title: "Turn the Tables", description:"Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3)."}
 };
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
@@ -5492,10 +5496,10 @@ function cpuAdaptiveWantsCalm() {
     if (p.arousal === 3 || p.arousal === 5) return true;
     if (p.arousal === 4) return p.energy >= 4;                      // two steps restore a reroll
     const reserve = hasCard(2, 16) ? 2 : 0;
-    return p.trance >= 4 && p.energy - 2 >= reserve;                // setback is one spiral away
+    return p.trance >= 4 && p.energy - 2 >= reserve;                // The Deepening is one spiral away
 }
 
-// What the CPU picks when it causes a Setback (no Physical Manipulation, or pinned)
+// What the CPU picks when it causes a The Deepening (no Physical Manipulation, or pinned)
 function cpuAdaptiveSetbackChoice(victim) {
 	if (cpuSmartTier() >= 2 && cpuEndgameInfo().active && cpuEndgameInfo().toOpp <= 3) return "submission";   // +2 ⛓️ is at or over their edge: it becomes a Transform
 	
@@ -6645,7 +6649,7 @@ async function playFinalTransformationCinematic(loserId) {
 // ============================================================
 // SUBLIMINAL TRANCE-DEPTH BADGE
 // Corner badge on each board portrait when Subliminals are on.
-// Depth = how many times that player has suffered a Trance setback.
+// Depth = how many times that player has experienced The Deepening.
 // ============================================================
 function playerSetbackDepth(playerId) {
     if (!gameState) return 0;
@@ -6678,8 +6682,8 @@ function updateSubliminalDepthBadge(playerId) {
     }
     badge.dataset.level = String(level);
     badge.title = depth === 1
-        ? "Trance depth: 1 setback (subliminals)"
-        : `Trance depth: ${depth} setbacks (subliminals)`;
+        ? "Trance depth: 1 Deepening (subliminals)"
+        : `Trance depth: ${depth} Deepenings (subliminals)`;
     badge.innerHTML = `<span class="sub-depth-spiral">🌀</span><span class="sub-depth-count">${depth > 6 ? "6+" : depth}</span>`;
 }
 
@@ -6969,14 +6973,31 @@ function updateUI() {
     if (p2Portrait) p2Portrait.classList.toggle("active-portrait-glow-p2", gameLive && !isP1);
 
     if (p2NameEl && gameState.p2) {
-        if (gameState.gameMode === "vs-cpu") {
-            p2NameEl.innerText = `${gameState.p2.name} (${getCpuDifficultyName()})`;
-        } else {
-            p2NameEl.innerText = playerDisplayName(gameState.p2) || "Player 2";
-        }
-        p2NameEl.classList.remove("active-player-glow");
-        if (!isP1) p2NameEl.classList.add("active-player-glow");
-    }
+		// Set the name first, preserving the existing Master/Mistress title.
+		p2NameEl.textContent = playerDisplayName(gameState.p2) || "Player 2";
+
+		// Remove any previous difficulty badge.
+		const oldBadge = p2NameEl.querySelector(".cpu-difficulty-badge");
+		if (oldBadge) oldBadge.remove();
+
+		// Show difficulty only when playing against the CPU.
+		if (gameState.gameMode === "solo") {
+			const difficulty = getCpuDifficulty();
+
+			// Master/Mistress is already displayed as part of the CPU's name.
+			if (difficulty !== "adaptive") {
+				const badge = document.createElement("span");
+				badge.className = `cpu-difficulty-badge cpu-difficulty-${difficulty}`;
+				badge.textContent = CPU_DIFFICULTY_NAMES[difficulty] || "Beginner";
+				badge.title = `CPU Difficulty: ${badge.textContent}`;
+
+				p2NameEl.appendChild(badge);
+			}
+		}
+
+		p2NameEl.classList.remove("active-player-glow");
+		if (!isP1) p2NameEl.classList.add("active-player-glow");
+	}
 
     const trackLabels = document.getElementById("track-labels");
     if (trackLabels && gameState.p1 && gameState.p2) {
@@ -7522,7 +7543,7 @@ function cpuShouldTransformOnSetback() {
         case "aggressive":
         case "v23low":
         case "transformer": return true;
-        case "adaptive": return gameState.submission < 2;   // when the marker is sliding, use the setback to push it back
+        case "adaptive": return gameState.submission < 2;   // when the marker is sliding, use the The Deepening to push it back
         case "defensive": return gameState.p1.transform >= 6;
         default: return gameState.p1.transform >= 4;
     }
@@ -7546,7 +7567,7 @@ function checkTranceSetback(oppP, activePlayerId) {
         if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
             oppP.trance += 1;
             flashSignaturePowerHint(activePlayerId);
-            log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after the setback.`);
+            log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after The Deepening.`);
         }
         const canManipulate = activePlayerId && hasCard(activePlayerId, 17);
         const humanChooses = activePlayerId && (activePlayerId === 1 || gameState.gameMode === "pvp" || gameState.gameMode === "online");
@@ -7555,25 +7576,25 @@ function checkTranceSetback(oppP, activePlayerId) {
             const oppName = oppP.name;
             const setbackLogPosition = Array.isArray(gameState.log) ? gameState.log.length : 0;
             const opts = [
-                { label: `Push Submission ${amt}`, onClick: () => { logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`, setbackLogPosition); pushSubmission(activePlayerId === 1 ? amt : -amt, activePlayerId); } },
+                { label: `Push Submission ${amt}`, onClick: () => { logAtHistoryPosition(`THE DEEPENING: ${oppName} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`, setbackLogPosition); pushSubmission(activePlayerId === 1 ? amt : -amt, activePlayerId); } },
                 { label: `${oppName} Arousal +${amt}`, onClick: () => {
-                    logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 becomes more aroused (+${amt} 🔥).`, setbackLogPosition);
+                    logAtHistoryPosition(`THE DEEPENING: ${oppName} is deep in 🌀 becomes more aroused (+${amt} 🔥).`, setbackLogPosition);
                     increaseArousal(gameState["p" + victimId], amt, victimId, activePlayerId);
                 } }
             ];
             if (canManipulate) opts.push({ label: `Physical Manipulation: Transform ${oppName} +1`, onClick: () => {
-                logAtHistoryPosition(`SETBACK: ${oppName} is deep in 🌀 and is made to transform (+1 👁️).`, setbackLogPosition);
+                logAtHistoryPosition(`THE DEEPENING: ${oppName} is deep in 🌀 and is made to transform (+1 👁️).`, setbackLogPosition);
                 applyTransform(victimId, 1, activePlayerId);
             } });
-            showChoiceDialog({ title: `${oppName} Setback!`, message: "Choose the effect:", options: opts });
+            showChoiceDialog({ title: `${oppName} The Deepening!`, message: "Choose the effect:", options: opts });
         } else if (canManipulate && cpuShouldTransformOnSetback()) {
-            log(`SETBACK: ${oppP.name} is deep in 🌀 and is made to transform (+1 👁️).`);
+            log(`THE DEEPENING: ${oppP.name} is deep in 🌀 and is made to transform (+1 👁️).`);
             applyTransform(victimId, 1, activePlayerId);
         } else if (cpuIsAdaptive() && activePlayerId === 2 && cpuAdaptiveSetbackChoice(oppP) === "arousal") {
-            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more aroused (+${amt} 🔥).`);
+            log(`THE DEEPENING: ${oppP.name} is deep in 🌀 becomes more aroused (+${amt} 🔥).`);
             increaseArousal(oppP, amt, victimId, activePlayerId);
         } else {
-            log(`SETBACK: ${oppP.name} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`);
+            log(`THE DEEPENING: ${oppP.name} is deep in 🌀 becomes more submissive (+${amt} ⛓️).`);
             pushSubmission(victimId === 1 ? -amt : amt, victimId === 1 ? 2 : 1);      // toward the victim's end
         }
     }
@@ -7641,9 +7662,15 @@ function applyTransform(targetPlayerId, amount, sourcePlayerId) {
                 ? sourcePlayerId
                 : (targetPlayerId === 1 ? 2 : 1);
             const reflectedName = reflectedTarget === 1 ? gameState.p1.name : gameState.p2.name;
-            log(`Transformation Sigil reflects 1 👁️ back at ${reflectedName}.`);
-            applyTransform(reflectedTarget, 1, 0);
-            queueCardTrigger(targetPlayerId, 59, "Reflected 1 transformation to the opponent");
+
+			log(`Transformation Sigil reflects 1 👁️ back at ${reflectedName}.`);
+			applyTransform(reflectedTarget, 1, 0);
+
+			// Explicitly record the reflected transformation in the chronicle and alert.
+			log(`${reflectedName} takes +1 👁️ from the reflected transformation.`);
+			showTurnAlert(`${reflectedName} takes +1 👁️ from Transformation Sigil.`, reflectedTarget);
+
+			queueCardTrigger(targetPlayerId, 59, "Reflected 1 transformation to the opponent");
         }
     }
     const beforeTransform = Number(target.transform) || 0;
@@ -7867,7 +7894,8 @@ function rollFaceForDie(playerId, dieIndex) {
     const special = (p.inventory || []).find(c => Number(c.id) === 56 && c.chosenFace);
     // Deeper Bargains replaces die slot 0 with a 3-in-6 chosen face / 3-in-6 blank die.
     let face;
-    if (special && dieIndex === 0 && !gameState.signatureSiobhanBonusRoll) {
+	// it had Siobhan bonus being given an exemption. remove that
+    if (special && dieIndex === 0) { //  !gameState.signatureSiobhanBonusRoll) {
         face = Math.random() < 0.5 ? special.chosenFace : "⬜ BLANK";
     } else {
         face = FACES[Math.floor(Math.random() * FACES.length)];
@@ -9252,7 +9280,7 @@ function endTurn() {
         log("Endless Staircase granted 1 Energy.");
     }
 	
-	Abilities.onTurnEnd(gameState.activePlayer);          // Surrender to Heat's Trance (a Setback here
+	Abilities.onTurnEnd(gameState.activePlayer);          // Surrender to Heat's Trance (The Deepening here
 														// opens a dialog, which the
                                                           // existing "wait for the choice, then
 														 // finishEndTurn()" code already handles)
@@ -9269,7 +9297,7 @@ function endTurn() {
 		}
 	}
 	
-	// A Falling Sensation Setback opens a choice dialog. Wait for it before the turn passes.
+	// A Falling Sensation-triggered Deepening opens a choice dialog. Wait for it before the turn passes.
     if (isChoicePending()) {
         finishEndTurnAfterChoice = true;
         syncToFirebase();

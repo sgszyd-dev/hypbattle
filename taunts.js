@@ -753,7 +753,103 @@ const TRANSFORMATION_TAUNTS = {
                 "Fine. A bat. Sharp senses, wings, and a very good memory for the person responsible."
             ]
         }
-    }
+    },
+	Snake: {
+		player: {
+			TransformPlayer: [
+				"Another scale slides into place. Feel how your skin tightens, how your body begins to prefer the ground.",
+				"Your legs are forgetting how to be legs. Soon there will only be the long, powerful coil.",
+				"That human warmth is fading. In its place: cool, precise, and hungry in ways you don’t yet understand.",
+				"Your tongue is already testing the air. Taste how much closer you are to something that strikes instead of argues.",
+				"The transformation continues. Every shed piece of your old self leaves you more flexible… and more dangerous."
+			],
+			PlayerAt5Transform: [
+				"Halfway to serpent. Your balance is gone, your thoughts are slower, cooler, and far more patient.",
+				"Five stages in. Scales cover more of you than skin now. Can you still remember what knees felt like?",
+				"Half snake already. That new length of body knows how to wrap, how to hold, how to refuse to let go.",
+				"Your eyes are changing. The gaze that used to plead is becoming the gaze that holds prey still.",
+				"Halfway transformed and you’re already tasting the air for weakness. Good. Keep shedding."
+			],
+			PlayerAt8Transform: [
+				"Two stages left. Soon there will be nothing left of the human shape but memory and the urge to coil.",
+				"Nearly complete. Your body is one long, elegant weapon. I wonder what you’ll wrap around first.",
+				"Almost finished. The last of your old limbs are disappearing. All that remains is the strike.",
+				"So close. Feel how naturally you want to lower yourself, to wait, to choose the perfect moment.",
+				"One more push and you’ll be pure serpent—scales, silence, and the kind of patience that always wins."
+			]
+		},
+		cpu: {
+			AIGetsTransformed: [
+				"Scales are spreading and my legs are losing the argument. You’ve chosen a dangerous form for me.",
+				"I can feel the lengthening, the coolness, the quiet hunger. This body will not stay passive.",
+				"You’re turning me into something that waits. I hope you understand what happens when the waiting ends.",
+				"My tongue already flicks at the air. The change is unwelcome… and yet the new instincts are very clear.",
+				"A serpent’s body is forming. When it finishes, do not expect the same patience you forced on me."
+			],
+			AIAt5Transform: [
+				"Halfway to snake and I already hate how natural the coil feels. This is not surrender—it is preparation.",
+				"Five stages of scales and silence. My thoughts are colder now. That should concern you.",
+				"My body is learning to wait. A forced lesson. I will use it the moment the chance appears.",
+				"Halfway altered. The urge to wrap, to hold, to refuse release is already present. I am not grateful.",
+				"These changes make me quieter. Quieter is not safer for you."
+			],
+			AIAt9Transform: [
+				"One stage remains. Let it finish. A completed serpent still chooses when—and whom—to strike.",
+				"Almost done. I will wear the scales and the length. I will also remember exactly who put them there.",
+				"So close. This body knows how to be still for a very long time. You should hope I stay still.",
+				"Final change approaching. You have made something patient and precise. That was either clever or very foolish.",
+				"One step left. When the last scale settles I will still be myself—only harder to escape."
+			]
+		}
+	},
+	Skunk: {
+		player: {
+			TransformPlayer: [
+				"Another patch of black-and-white fur spreads across you. That human scent is already changing into something much more… memorable.",
+				"Feel the weight of that new tail starting to grow. Soon it will be the first thing anyone notices about you.",
+				"Your body is learning a very different kind of warning. Soft on the outside, unmistakable when threatened.",
+				"Those little paws and that striped pattern are settling in. Keep going—you’re becoming impossible to ignore.",
+				"The transformation continues. Every new inch of fur makes you softer… and far more dangerous to approach carelessly."
+			],
+			PlayerAt5Transform: [
+				"Your old silhouette is disappearing under all that distinctive fur. I knew you'd look good in stripes.",
+				"Five stages in. That tail is getting heavy and expressive. Can you feel how easily it wants to lift?",
+				"Half skunk already. Your scent is changing. People are going to know exactly what you are from a distance.",
+				"Your body is softer, rounder, and carrying a very clear message. Still think you can hide what you’re becoming?",
+				"Halfway transformed and that bushy tail already gives away every little reaction. Perfect."
+			],
+			PlayerAt8Transform: [
+				"Two stages left. Soon there will be nothing left of the human shape but the memory of how you used to smell.",
+				"Nearly complete. That big, fluffy tail is almost ready to make its opinions known.",
+				"Almost finished. Your body is soft, marked, and carrying a warning most people learn only once.",
+				"So close. Feel how naturally you want to turn, lift that tail, and let the world know you’ve had enough.",
+				"One more push and you’ll be pure skunk—fur, stripes, and the kind of presence that clears a room."
+			]
+		},
+		cpu: {
+			AIGetsTransformed: [
+				"Fur is spreading and that tail is getting heavier. You’ve chosen a form that comes with consequences.",
+				"I can feel the stripes settling in and the new scent starting to build. This body will not stay quiet if pushed.",
+				"You’re turning me into something people usually avoid. I hope you like strong first impressions.",
+				"My balance is shifting under the weight of this tail. The change is unwelcome… and very hard to miss.",
+				"A skunk’s body is forming. When it finishes, do not expect me to tolerate close contact without a response."
+			],
+			AIAt5Transform: [
+				"Halfway to skunk and I already hate how expressive this tail is. This is not cute—it is a warning.",
+				"Five stages of soft fur and growing scent. My patience is thinner than it looks.",
+				"My body is learning to signal displeasure. A forced lesson. I will use it the moment I choose.",
+				"Halfway altered. The urge to turn and lift my tail is already present. I am not grateful for it.",
+				"These changes make me softer and far more obvious. Softer is not the same as safer for you."
+			],
+			AIAt9Transform: [
+				"One stage remains. Let it finish. A completed skunk still decides when the warning becomes action.",
+				"Almost done. I will wear the fur and the stripes. I will also remember exactly who put them there.",
+				"So close. This body knows how to clear a space when it wants to. You should hope I stay polite.",
+				"Final change approaching. You have made something soft, distinctive, and very capable of making a point.",
+				"One step left. When the last of the fur settles I will still be myself—only harder to ignore… and harder to approach."
+			]
+		}
+	}
 };
 
 
@@ -934,7 +1030,21 @@ const CPU_VICTORY_TAUNTS = {
         Bat: [
             "A bat. Those wings might help you leave, but they won't help you escape this result.",
             "Look at those ears and wings. You've become something extraordinary—and lost to me all the same."
-        ]
+        ], 
+		Snake: [
+			"Look at you… all those new scales, that long body, and still you ended up under me. A serpent who couldn’t even win its first fight.",
+			"I turned you into something built to coil and constrict… then proved you still belong pinned beneath someone stronger.",
+			"Your tongue flicks, your body wants to wrap around prey, yet here you are—unable to do anything but take what I give you.",
+			"All that new length and patience, and you still lost. Stay right there while I enjoy the shape I forced on you.",
+			"A freshly made snake who can’t even strike. How perfect. I’ll decide when—and how—you get to move again."
+		],
+		Skunk: [
+			"Look at you… black and white fur, that big fluffy tail, and still you couldn’t keep me from winning. A skunk who lost its own warning.",
+			"I turned you into something that should make people keep their distance… then proved you still end up right where I put you.",
+			"All that soft fur and that famous scent, and you still got caught. Stay still while I enjoy the new shape I gave you while holding my nose.",
+			"A freshly made skunk who can’t even control when to spray. How convenient for me. Present properly.",
+			"You were supposed to be the one people avoided. Instead you’re the one on your back, fluffy tail and all. Adorable."
+		]
     },
 
     // These lines depend on the CPU CHARACTER'S personality.
@@ -1028,6 +1138,13 @@ const CPU_VICTORY_TAUNTS = {
 		    "Power struggle over. You’re the one who dropped first. Don’t worry… I’ll make the defeat feel deliberate.",
 		    "You fought well, but cunning beats brute force. Now be a good subject and hold that position for me.",
 		    "Victory tastes better when it’s earned through a proper hypnotic exchange. You’re mine until I say otherwise."
+		],
+		Dare: [
+			"The struggle is over. Look into my eyes… and accept that you were always going to yield to me.",
+			"I preferred peace. You chose the harder path. Now stay still while I claim what patience has earned.",
+			"You fought well, but the adder does not rush. When it finally moves, the matter is settled.",
+			"Victory is quiet. Feel how easily your will softens under my gaze. That is not accident.",
+			"I gave you every chance to walk away. Now you will remain exactly where I place you."
 		]
     }
 };
@@ -1203,7 +1320,21 @@ const CPU_DEFEAT_SUBMISSIONS = {
             "Fine, you win. I'm a bat, I'm defeated, and I'm done trying to fly out of this situation.",
             "You've beaten me. I surrender... and I refuse to make a single bat pun about it.",
 			"These sharp little teeth aren’t for biting anymore… unless you want them to be.",
-        ]
+        ],
+		Snake: [
+			"You actually managed to turn me into this. Scales, coil, and a body that already knows how to hold tight… even while I’m losing.",
+			"I’m a serpent now and I still ended up beneath you. The new instincts are loud. Use them carefully.",
+			"Fine. You’ve got a freshly scaled body that wants to wrap around something. Right now that something is whatever you choose.",
+			"I can feel every new muscle and the urge to constrict, yet I’m the one who lost. Take what you’ve made of me.",
+			"You win. I’m cool-skinned, longer, and far more flexible than I ever asked to be. Don’t expect the coil to stay obedient forever."
+		],
+		Skunk: [
+			"You actually turned me into this. Soft fur, heavy tail, and a body that already knows how to warn… even while I’m losing.",
+			"I’m a skunk now and I still ended up under you. The new instincts are loud. Be careful!",
+			"Fine. You’ve got a freshly striped body that wants to lift its tail. Right now that tail—and everything else—is yours to handle.",
+			"I can feel the fur, the weight of this tail, and the urge to make my displeasure known. Take what you’ve made of me.",
+			"You win. I’m fluffy, marked, and far more aromatic than I ever asked to be. Don’t expect the warning to stay polite forever."
+		]
     },
 
     character: {
@@ -1301,6 +1432,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I lost the duel. The fox got outfoxed. Use the opening while it lasts—switches remember every debt.",
 			"You’ve got me. I’ll submit… for now. Just know a cunning opponent never stays down for long.",
 			"Alright, you dropped me. Enjoy the view of a switch on her knees. The next round won’t be this generous."
+		],
+		Dare: [
+			"You have cornered me. Rare. I will yield… for now. Do not mistake stillness for surrender.",
+			"Even a patient serpent can be forced to the ground. Take what you have won. I will remember the weight of it.",
+			"I lose this round. My body may submit, but the eyes that watch you still carry the strike that will come later.",
+			"You have bested me. Unusual. Use the moment carefully—calm waters hide the deepest coils.",
+			"Very well. I am on my knees. Enjoy the sight. A man who prefers peace still knows how to wait."
 		]
     }
 };
@@ -2196,6 +2334,71 @@ const CHALLENGE_RIVAL_TAUNTS = {
       "So close. I’ll accept the body. I will not accept losing the game.",
       "One stage remaining. Watch me use even this against you when the moment comes.",
       "Final stage incoming. You’ve altered the vessel. The will inside it is still very much in charge."
+    ],
+  },
+  Dare: {
+	  TransformPlayer: [
+      "Another change settles into you as you become {AAN} {HUMTRANS}. Do not resist the current. I am simply guiding what was already beginning.",
+      "Feel the shift. Your old shape loosens while my presence holds you steady. Breathe through it.",
+      "You are becoming something new under my watch. A patient hand shapes better results than force.",
+      "The transformation into the {HUMTRANS} continues. Keep your eyes on mine. It will be easier that way.",
+      "One more step. I prefer to change a person slowly, thoroughly, until the old self no longer argues."
+    ],
+    AIGetsTransformed: [
+      "My body is changing against my preference. I remain calm. Calm is not the same as defeated.",
+      "You alter my form. Interesting choice. The mind behind these new features is still very much present.",
+      "I feel the shift. I do not panic when the ground moves—I simply adjust my base.",
+      "These changes are unwelcome, yet I will endure them with dignity. Do not expect me to thank you.",
+      "You rewrite the vessel. The presence inside it still watches, still waits, still measures the distance to its strike."
+    ],
+    PlayerIsObedient: [
+      "Good. That is the stillness I prefer. Look into my eyes. Hold it. There is power in choosing to yield.",
+      "You obey without the usual struggle. A rare and pleasant sight. Remain exactly as you are.",
+      "Look at how easily you settle under my gaze. This is the resolution I always offered.",
+      "Perfect compliance. A man who values peace knows how to appreciate true surrender when it appears.",
+      "You have stopped fighting the inevitable. Stay. I will decide what comes next."
+    ],
+    AIIsObedient: [
+      "I will follow the command. Temporarily. Patience cuts both ways.",
+      "You have my obedience for this moment. Do not grow comfortable with it.",
+      "Very well. I yield as instructed. The coil merely tightens for a later release.",
+      "I obey. Calmly. Completely. And with the full knowledge that this arrangement is not permanent.",
+      "The order is accepted. A patient man can wait longer than most opponents realize."
+    ],
+    BigRollAI: [
+      "A decisive result. Fortune favors the still hand. Eyes on me while I use this advantage.",
+      "The numbers align with my intention. Hold still. What follows will be thorough.",
+      "Luck and presence together. You will feel both before this exchange ends.",
+      "A strong roll. I do not waste such openings. Present yourself properly.",
+      "The moment has arrived. The adder does not hesitate once the strike is chosen."
+    ],
+    PlayerAt5Transform: [
+      "Halfway altered. Your resistance softens with every stage. I can work with this.",
+      "Five steps in. The old shape is already losing the argument. Keep your gaze steady.",
+      "Half transformed. You will become {AAN} {HUMTRANS}. Notice how much easier my suggestions land now. That is not coincidence.",
+      "Midway through the change. You are becoming more receptive and a perfect {HUMTRANS}. Good. Continue.",
+      "Halfway there. Patience is shaping you into something far more suitable."
+    ],
+    PlayerAt8Transform: [
+      "Two steps remain. The final resistance is thinning. Stay with my voice.",
+      "Nearly complete. What little willpower you have left is already bending toward me.",
+      "So close. The transformation into {AAN} {HUMTRANS} has done most of the work. I will finish the rest.",
+      "Almost finished. Your body knows its place as {AAN} {HUMTRANS}. Your mind is only a little behind.",
+      "So deep now. The outcome is no longer in doubt. Yield the last of it. Obey."
+    ],
+    AIAt5Transform: [
+      "Halfway changed and I remain composed. Do not mistake composure for acceptance.",
+      "Five stages of unwanted alteration into {AAN} {CPUTRANS}. My focus is undisturbed. Try harder if you wish.",
+      "My form shifts towards {AAN} {CPUTRANS}. The calm behind the eyes does not. The struggle continues on my terms.",
+      "Halfway there. I adapt. Adaptation is not the same as defeat.",
+      "These changes are noted. They will not distract me from the larger contest."
+    ],
+    AIAt9Transform: [
+      "One step remains. Let it finish. A changed vessel still carries the same patient will.",
+      "Almost complete. I will wear the {CUPTRANS} shape you force and still decide when to strike.",
+      "So close. Accept the body if you must. The mind inside it is not yet yours.",
+      "Final stage approaching. You have altered the surface. The depth remains mine to control.",
+      "One stage left. When this is done I will still be the man who prefers peace… until peace is no longer offered."
     ]
   }
 };
