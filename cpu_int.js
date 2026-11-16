@@ -39,9 +39,19 @@ function cpuSmartTier() {
 }
 
 // ---------- who is the CPU, who is the human (only abilities that are switched ON count) ----------
-const CPU_POWER_KEYS = ["unyieldingresistance", "tripletrouble", "heatedopening", "predatorymomentum", "twisteddice", "submissionamplifier", "marketmanipulator", "perfectharmony", "lingeringtrance", "lucidreversal"];
-function cpuOwnPower()      { return CPU_POWER_KEYS.find(k => hasSignaturePower(2, k)) || null; }
-function cpuOpponentPower() { return CPU_POWER_KEYS.find(k => hasSignaturePower(1, k)) || null; }
+// "kaleidoscope" is last: a Kaleidoscope player matches their borrowed power first, then Kaleidoscope itself.
+const CPU_POWER_KEYS = ["unyieldingresistance", "tripletrouble", "heatedopening", "predatorymomentum", "twisteddice", "submissionamplifier", "marketmanipulator", "perfectharmony", "lingeringtrance", "lucidreversal", "suggestedtransference",
+                        "echo", "calledshot", "surrender", "deepwell", "toll", "layaway", "meditation", "cornered", "turntables", "kaleidoscope"];
+// A once-only power that has already been spent no longer counts: no card wants, plan bias or threat reading for it.
+function cpuPowerSpent(id, key) {
+    const p = Number(id) === 1 ? gameState.p1 : gameState.p2;
+    if (key === "turntables") return !!p.tablesUsed;
+    if (key === "predatorymomentum") return !!p.signatureSiobhanUsed;
+    return false;
+}
+function cpuPowersOf(id)    { return CPU_POWER_KEYS.filter(k => hasSignaturePower(id, k) && !cpuPowerSpent(id, k)); }      // every ACTIVE power the player has right now
+function cpuOwnPower()      { return cpuPowersOf(2)[0] || null; }
+function cpuOpponentPower() { return cpuPowersOf(1)[0] || null; }
 
 // ---------- card groups ----------
 const CPU_REROLL_CARDS = [43, 20, 16, 54];                       // Mental Awakening, Absolute Focus, Hypnotic Suggestion, Burning Up
@@ -50,6 +60,10 @@ const CPU_BIG_SUBMISSION_INSTANTS = [10, 39, 8, 18, 11];          // big instant
 const CPU_TRANCE_BOOST_CARDS = [0, 31, 14, 8, 18, 17];
 const CPU_ENERGY_CARDS = [45, 28, 29, 27, 19];
 const CPU_BIG_INSTANTS = [10, 39, 30, 8, 4];
+const CPU_TRIPLE_PAYOFF_CARDS = [2, 22, 23, 24];                  // Dream State, Mental Shackles, Submissive Flush, Somnambulism: they all pay on a triple
+const CPU_SELF_RECOVERY_CARDS = [33, 57, 12, 37];                 // Quiet Mind, Mental Fortitude, Rapid Pulse, Swinging Pendulum: lower or ignore my own 🌀/🔥
+const CPU_PASSIVE_CARDS = [31, 15, 34, 57];                       // work at end/start of turn without a roll: Falling Sensation, Altered State, Cognitive Override, Mental Fortitude
+const CPU_TRANSFORM_CARDS = [4, 25, 30, 51, 40];                  // Whispered Command, Pendulum Swing, Shattered Ego, Transitive Energy, Global Change
 
 // What the CPU does NOT want the HUMAN to get, by the human's ability.
 // (The CPU also gets a bonus for buying these itself, because that keeps them from the human.)
@@ -63,13 +77,30 @@ const CPU_DENY_VS_POWER = {
     marketmanipulator:  { cards: [...CPU_ENERGY_CARDS, 31],              pts: 30 },
     lingeringtrance:    { cards: CPU_TRANCE_BOOST_CARDS,                 pts: 30 },
     tripletrouble:     { cards: CPU_REROLL_CARDS,                       pts: 30 },
-    lucidreversal:   { cards: [7, 9, ...CPU_REROLL_CARDS],            pts: 20 }    // MY SUGGESTION: more dice and bigger 💧 make her 3-💧 reversal easier
+    lucidreversal:   { cards: [7, 9, ...CPU_REROLL_CARDS],            pts: 20 },   // MY SUGGESTION: more dice and bigger 💧 make her 3-💧 reversal easier
+    // --- the newer powers ---
+    echo:        { cards: [...CPU_TRIPLE_PAYOFF_CARDS, 45],             pts: 25 },   // Echo makes triples easy: keep the triple payoffs (and the energy to pay for it) away
+    calledshot:  { cards: [...CPU_REROLL_CARDS, 7],                     pts: 25 },   // more rerolls and dice = more hits on the called face
+    surrender:   { cards: [33, 57, 12],                                 pts: 25 },   // their own Arousal turns into their own Trance: don't hand them the cures
+    deepwell:    { cards: [33, 57, 12, 21],                             pts: 20 },   // trance cures and Switch Play keep them away from the doubled Setback
+    toll:        { cards: [45, 27, 19],                                 pts: 20 },   // they already earn from my purchases: keep their energy engines small
+    layaway:     { cards: [7, 17, 56, 10, 39, 1],                       pts: 15 },   // the expensive cards worth reserving
+    meditation:  { cards: [33, 57, 19, 45],                             pts: 20 },   // recovery and energy on top of their +3 ⚡ meditations
+    cornered:    { cards: [7, 59],                                      pts: 15 },   // an extra die and transformation protection make the comeback real
+    kaleidoscope:{ cards: [45, 27, 19],                                 pts: 15 }    // energy pays for their 3 ⚡ swaps
 };
 
 // What the CPU WANTS when it faces that human ability.
 const CPU_WANT_VS_POWER = {
     unyieldingresistance:  { cards: [...CPU_BIG_SUBMISSION_INSTANTS, 53], pts: 25 },       // push him back instead of getting pinned (53 = I Will Not Obey)
-    lucidreversal: { cards: [41],                                  pts: 20 }       // MY SUGGESTION: Powerful Transform = fewer dice = harder to roll 3 💧
+    lucidreversal: { cards: [41],                                  pts: 20 },      // MY SUGGESTION: Powerful Transform = fewer dice = harder to roll 3 💧
+    // --- the newer powers ---
+    calledshot: { cards: [41],                                      pts: 15 },      // fewer dice = harder to land a 3-of-a-kind call
+    surrender:  { cards: [6, 13, 48, 14, 0],                        pts: 25 },      // 🔥 and 🌀 pressure: their Arousal becomes their own Trance every turn
+    deepwell:   { cards: CPU_TRANCE_BOOST_CARDS,                    pts: 15 },      // they need 7 🌀 before a Setback, and it hits double when it lands
+    meditation: { cards: [15, 34, 31, 14, 6],                       pts: 20 },      // end-of-turn pressure still works on a turn they skip rolling
+    cornered:   { cards: [...CPU_TRANSFORM_CARDS, 41],              pts: 20 },      // finish them before the extra die matters (41 takes a die away)
+    turntables: { cards: [14, 0, 31, 4, 25, 30],                    pts: 15 }       // win with 🌀 and Transform instead of a ⛓️ lead that can be flipped
 };
 
 // What the CPU wants for its OWN ability.
@@ -79,7 +110,18 @@ const CPU_WANT_OWN_POWER = {
     lingeringtrance:    { cards: CPU_TRANCE_BOOST_CARDS,             pts: 30 },
     unyieldingresistance:    { cards: CPU_SUBMISSION_KEEPS,               pts: 30 },
     marketmanipulator:  { cards: CPU_ENERGY_CARDS,                   pts: 25 },
-    submissionamplifier:    { cards: CPU_SUBMISSION_KEEPS,               pts: 20 }
+    submissionamplifier:    { cards: CPU_SUBMISSION_KEEPS,               pts: 20 },
+    // --- the newer powers ---
+    echo:        { cards: [...CPU_TRIPLE_PAYOFF_CARDS, 45, 27],     pts: 25 },       // triples on demand, paid for in ⚡
+    calledshot:  { cards: [...CPU_REROLL_CARDS, 7],                 pts: 30 },       // rerolls and dice to land the call
+    surrender:   { cards: [...CPU_SELF_RECOVERY_CARDS, 4, 32],      pts: 25 },       // the 🔥 it ignores becomes 🌀 at end of turn: buy the cures (Guided Heat pays for 🔥)
+    deepwell:    { cards: [...CPU_SELF_RECOVERY_CARDS, 21],         pts: 25 },       // stay under 7 🌀
+    toll:        { cards: CPU_ENERGY_CARDS,                         pts: 15 },
+    layaway:     { cards: [29, 28, 45, 27],                         pts: 20 },       // cheaper purchases make the reserved card affordable
+    meditation:  { cards: [...CPU_PASSIVE_CARDS, 33],               pts: 20 },       // passive cards keep working on the turns it does not roll
+    cornered:    { cards: [59, 7, 45, 43, 20],                      pts: 20 },       // protection while behind, plus dice and energy for the comeback
+    turntables:  { cards: [10, 39, 11, 52],                         pts: 20 },       // big ⛓️ pushes after the flip (You Will Obey is lethal then)
+    kaleidoscope:{ cards: [45, 27, 28, 29],                         pts: 20 }        // energy pays for swaps
 };
 
 // Strategy pressure added to the CPU's plan scores for its own ability...
@@ -88,7 +130,11 @@ const CPU_POWER_PLAN_BIAS = {
     submissionamplifier:   { submission: 3 },
     lingeringtrance:   { trance: 3 },
     heatedopening: { arousal: 3 },
-    marketmanipulator: { energy: 2, trance: 1.5, submission: 1.5 }
+    marketmanipulator: { energy: 2, trance: 1.5, submission: 1.5 },
+    turntables:   { submission: 1 },                              // the flip turns a deep ⛓️ deficit into a lead
+    layaway:      { energy: 1 },
+    meditation:   { energy: 1 },
+    kaleidoscope: { energy: 1 }
 };
 // ...and to its reading of what the human is building, from the human's ability.
 const CPU_POWER_THREATS = {
@@ -110,14 +156,19 @@ function cpuApplySmartPlanBias(scores) {
         scores.trance += 1.5; scores.energy += 1.5;
         if (scores.submission >= 1.5) scores.submission += 1;
     }
-    const bias = CPU_POWER_PLAN_BIAS[cpuOwnPower()];
-    if (bias) Object.keys(bias).forEach(k => { scores[k] = (scores[k] || 0) + bias[k]; });
-    if (cpuOpponentPower() === "twisteddice") scores.submission += 3;             // attack Tex's submission
+    cpuPowersOf(2).forEach(key => {
+        const bias = CPU_POWER_PLAN_BIAS[key];
+        if (bias) Object.keys(bias).forEach(k => { scores[k] = (scores[k] || 0) + bias[k]; });
+    });
+    if (hasSignaturePower(1, "twisteddice")) scores.submission += 3;              // attack Tex's submission
+    if (hasSignaturePower(1, "surrender")) scores.arousal += 2.5;                 // Surrender turns their Arousal into their own Trance every turn
 }
 function cpuApplyPowerThreats(oppScores) {
     if (cpuSmartTier() < 2) return;
-    const t = CPU_POWER_THREATS[cpuOpponentPower()];
-    if (t) Object.keys(t).forEach(k => { oppScores[k] = (oppScores[k] || 0) + t[k]; });
+    cpuPowersOf(1).forEach(key => {
+        const t = CPU_POWER_THREATS[key];
+        if (t) Object.keys(t).forEach(k => { oppScores[k] = (oppScores[k] || 0) + t[k]; });
+    });
 }
 
 // ---------- Falling Sensation mode ----------
@@ -138,6 +189,7 @@ function cpuSynergyFaceWeights(w) {
     if (tier < 1) return w;
     const p = gameState.p2, has = id => hasCard(2, id);
     w.EN += tier >= 2 ? 0.15 : 0.10;                                       // above Normal: energy and buying cards are good
+    if (hasSignaturePower(2, "surrender") && (Number(p.arousal) || 0) >= 2) w.LU += 0.25;   // each 2 🔥 on me is 1 🌀 on me at end of turn
     if (tier < 2) return w;
 
     const subPlan = cpuBrain.plan === "submission" || (cpuBrain.planScores.submission || 0) >= 2;
@@ -187,8 +239,12 @@ function cpuLockSpecialDie(keep) {
 // ---------- card values ----------
 function cpuPowerDeny(card) {                // raw "keep this from the human" points for the human's ability
     if (cpuSmartTier() < 1) return 0;
-    const d = CPU_DENY_VS_POWER[cpuOpponentPower()];
-    return (d && d.cards.includes(Number(card.id))) ? d.pts : 0;
+    let pts = 0;                                                            // a Kaleidoscope human matches two entries: both count
+    cpuPowersOf(1).forEach(key => {
+        const d = CPU_DENY_VS_POWER[key];
+        if (d && d.cards.includes(Number(card.id))) pts += d.pts;
+    });
+    return pts;
 }
 function cpuNewIdentityBonus() {              // New Identity is for when we are losing the transform race
     const p2 = gameState.p2, p1 = gameState.p1;
@@ -210,24 +266,22 @@ function cpuSmartCardBonus(card, scoreFn) {
     const tier = cpuSmartTier();
     if (tier < 1) return 0;
     const id = Number(card.id), has = x => hasCard(2, x);
-    const oppKey = cpuOpponentPower(), ownKey = cpuOwnPower();
     let b = 0;
 
     b += cpuPowerDeny(card) * 0.6;                                          // buying it keeps it from them
-    const want = CPU_WANT_VS_POWER[oppKey];
-    if (want && want.cards.includes(id)) b += want.pts;
-    const own = CPU_WANT_OWN_POWER[ownKey];
-    if (own && own.cards.includes(id)) b += own.pts;
+    cpuPowersOf(1).forEach(key => { const want = CPU_WANT_VS_POWER[key]; if (want && want.cards.includes(id)) b += want.pts; });
+    cpuPowersOf(2).forEach(key => { const own = CPU_WANT_OWN_POWER[key]; if (own && own.cards.includes(id)) b += own.pts; });
+    if (hasSignaturePower(1, "toll")) b -= 6;                               // Toll: every card I buy pays them 1 ⚡, so marginal buys are worth less
     if (tier < 2) return b;
 
     const subPlan = cpuBrain.plan === "submission" || (cpuBrain.planScores.submission || 0) >= 2 || gameState.submission <= -1;
     if (id === 0 && subPlan) b += 20;                                       // Deep Gaze with a submission push
     if (id === 31 && subPlan) b += 25;                                      // Falling Sensation with a submission push
-    if (id === 31 && ownKey === "marketmanipulator") b += 45;                          // Zixuan: energy + Falling Sensation is the engine
-    if (ownKey === "marketmanipulator" && !has(31) && CPU_BIG_INSTANTS.includes(id)) b += 20;   // without it: big instant cards
+    if (id === 31 && hasSignaturePower(2, "marketmanipulator")) b += 45;                          // Zixuan: energy + Falling Sensation is the engine
+    if (hasSignaturePower(2, "marketmanipulator") && !has(31) && CPU_BIG_INSTANTS.includes(id)) b += 20;   // without it: big instant cards
     if (id === 38) b += cpuNewIdentityBonus();                              // losing: New Identity is a good card
     if (id === 5) b += Math.min(45, cpuStealValue(scoreFn) * 0.45);        // Hypnotic Dominance: worth what it can take
-    if (id === 3 && (ownKey === "perfectharmony") ) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
+    if (id === 3 && hasSignaturePower(2, "perfectharmony")) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
 	b += cpuEndgameCardBonus(card);
 	b += cpuForesightCardBonus(card) + cpuStyleCardBonus(card);
     return b;

@@ -32,9 +32,13 @@
         surrender: { tranceDivisor: 2 },                       // +1 Trance per 2 Arousal at the end of your turn
         toll:      { energy: 1 },
         layaway:   { reserveCost: 1, ownerTurns: 2, discount: 1 },
-        // Kaleidoscope can borrow any of these. To let it borrow a power from an original character, add that power's key here and
-        // call  Abilities.markUsed(player, "key")  at the moment the power is performed.
-        kaleidoscope: { swapCost: 3, pool: ["echo", "calledshot", "surrender", "deepwell", "toll", "layaway", "meditation", "cornered", "turntables"] }
+        // Kaleidoscope can borrow any of these. A legacy (original character) power counts as "used" when its board box flashes
+        // (see legacyFired); a new power calls markUsed() itself.
+        kaleidoscope: { swapCost: 3, pool: [
+            "echo", "calledshot", "surrender", "deepwell", "toll", "layaway", "meditation", "cornered", "turntables",
+            "tripletrouble", "submissionamplifier", "predatorymomentum", "lucidreversal", "perfectharmony", "unyieldingresistance",
+            "heatedopening", "twisteddice", "marketmanipulator", "lingeringtrance", "suggestedtransference"
+        ] }
     };
 
     // ############################################################
@@ -100,12 +104,17 @@
     function otherId(id) { return id === 1 ? 2 : 1; }
 
     // title and description for the UI (setup box, board hint, help tab)
+    // the original characters' powers live in SIGNATURE_POWERS (hypbattle.js); these are their board icons
+    const LEGACY_ICONS = {
+        tripletrouble: "🎲", submissionamplifier: "📣", predatorymomentum: "🐆", lucidreversal: "💧", perfectharmony: "☯️",
+        unyieldingresistance: "🛡️", heatedopening: "🔥", twisteddice: "🃏", marketmanipulator: "🏪", lingeringtrance: "🌫️", suggestedtransference: "🔀"
+    };
     function infoFor(key) {
         const r = REGISTRY[key];
         if (r) return { key: r.key, icon: r.icon || "", title: r.title, description: r.description };
         if (typeof SIGNATURE_POWERS !== "undefined") {
             const hit = Object.values(SIGNATURE_POWERS).find(p => p.key === key);
-            if (hit) return hit;
+            if (hit) return { key: hit.key, icon: LEGACY_ICONS[key] || "✨", title: hit.title, description: hit.description };
         }
         return null;
     }
@@ -198,6 +207,7 @@
         if (p.corneredFired) { p.corneredFired = false; markUsed(p, "cornered"); }            // Kaleidoscope: used up once it has fired this turn
         if (g.gameMode === "solo" && playerId === 2) cpuLayawayReserve(p);                  // reserve first, so this turn does not count against it
         layawayTurnEnded(playerId);
+        flushLegacyFired();
     }
 	// Surrender to Heat's Trance. Solo and hotseat: the OPPONENT chooses The Deepening effect (a dialog for a human opponent, the
     // normal CPU choice for the CPU). Online: the computer running the turn belongs to the owner, so the effect is automatic.
@@ -498,9 +508,26 @@
             || ((Number(p.energy) || 0) <= 1 && Math.random() < 0.35);
     }
     // called at the very start of the CPU's turn; true = it meditated (so the caller must NOT roll)
+    // how useful is this borrowed power to the CPU right now (0 to 10)? Only clearly dead powers are worth a 3 ⚡ swap.
+    function cpuKaleidoValue(p, key) {
+        const g = G(), T = setbackThreshold(p);
+        if (key === "cornered") return (Number(p.transform) || 0) >= 8 ? 9 : 2;
+        if (key === "meditation") {
+            const hurting = (Number(p.arousal) || 0) >= 3 || (Number(p.trance) || 0) >= Math.max(2, T - 2);
+            return hurting ? 8 : 2;
+        }
+        if (key === "layaway") return p.layaway ? 1 : 4;
+        return 5;
+    }
+    function cpuKaleidoSwapMaybe(p) {
+        if (!kaleidoSwapAvailable(p) || (Number(p.energy) || 0) < CFG.kaleidoscope.swapCost + 3) return;
+        if (cpuKaleidoValue(p, p.borrowedKey) > 2) return;
+        kaleidoSwapDo(p, 2);
+    }
     function cpuStartOfTurn() {
         const g = G(); if (!g || g.gameMode !== "solo") return false;
         const p = g.p2;
+        cpuKaleidoSwapMaybe(p);
         if (meditationAvailable(p) && cpuWantsMeditation(p)) { applyMeditation(p, 2); return true; }
         if (ptHas(p, "calledshot") && !p.calledFace) p.calledFace = cpuPickCalledFace(p);
         return false;
@@ -538,19 +565,27 @@
     // ---------- KALEIDOSCOPE ----------
     // p.borrowedKey = the power held right now; p.kUsed = powers already used in this cycle. hasPower() already treats the borrowed
     // power as the player's own, so every hook for every power just works.
+    // the power a player is actually playing with right now (a Kaleidoscope player plays their borrowed power)
+    function effectiveKey(p) { const k = keyFor(p); return k === "kaleidoscope" ? (p.borrowedKey || null) : k; }
+    // Both players never hold the same power: a draw skips whatever the opponent is playing with
     function kaleidoDraw(p, excludeKey) {
+        const g = G(), opp = g ? (p === g.p1 ? g.p2 : g.p1) : null;
+        const taken = opp ? effectiveKey(opp) : null;
         const pool = CFG.kaleidoscope.pool;
         p.kUsed = Array.isArray(p.kUsed) ? p.kUsed : [];
-        let candidates = pool.filter(k => !p.kUsed.includes(k) && k !== excludeKey);
+        let candidates = pool.filter(k => !p.kUsed.includes(k) && k !== excludeKey && k !== taken);
         if (!candidates.length) {                                   // everything has been used: recycle
             p.kUsed = [];
-            candidates = pool.filter(k => k !== excludeKey);
+            candidates = pool.filter(k => k !== excludeKey && k !== taken);
             if (excludeKey !== null && typeof log === "function") log(`${p.name}'s Kaleidoscope has used every power and starts a new cycle.`);
         }
         const k = candidates[Math.floor(Math.random() * candidates.length)];
         p.borrowedKey = k;
         if (k === "turntables") p.tablesUsed = false;               // a fresh draw of a once-per-game power is usable again
         if (k === "meditation") p.meditatedLast = false;
+        if (k === "predatorymomentum") p.signatureSiobhanUsed = false;
+        if (k === "perfectharmony") p.signatureHyeriUsedFaces = [];
+        p.kFired = null;
         return k;
     }
     // call this at the moment a borrowed power is performed (no-op for anyone else)
@@ -559,7 +594,7 @@
         p.kUsed = Array.isArray(p.kUsed) ? p.kUsed : [];
         p.kUsed.push(key);
         const next = kaleidoDraw(p, key);
-        const id = idOf(p), a = REGISTRY[key], b = REGISTRY[next];
+        const id = idOf(p), a = infoFor(key), b = infoFor(next);
         announce(id, `${p.name}'s Kaleidoscope: ${a.icon} ${a.title} used. New power: ${b.icon} ${b.title}.`);
         toastLine(id, "🔮 Kaleidoscope", `${a.icon} used, now ${b.icon} ${b.title}`);
     }
@@ -572,19 +607,40 @@
     function kaleidoSwap() {
         const p = me(), g = G();
         if (!p || !kaleidoSwapAvailable(p)) return;
+        kaleidoSwapDo(p, Number(g.activePlayer));
+    }
+    function kaleidoSwapDo(p, num) {
+        const g = G();
         const old = p.borrowedKey;
         p.energy = (Number(p.energy) || 0) - CFG.kaleidoscope.swapCost;
         const next = kaleidoDraw(p, old);                            // the old power goes back into the pile: it does NOT count as used
         p.kSwapped = true;
-        const a = REGISTRY[old], b = REGISTRY[next];
-        announce(Number(g.activePlayer), `${p.name}'s Kaleidoscope (${CFG.kaleidoscope.swapCost} ⚡): ${a.icon} ${a.title} swapped for ${b.icon} ${b.title}.`);
+        const a = infoFor(old), b = infoFor(next);
+        announce(num, `${p.name}'s Kaleidoscope (${CFG.kaleidoscope.swapCost} ⚡): ${a.icon} ${a.title} swapped for ${b.icon} ${b.title}.`);
         refresh();
+    }
+    // Original-character powers are not hooked one by one: hypbattle.js flashes the power's board box whenever it fires, and that flash
+    // lands here. The power is retired at the end of the turn (not mid-roll, which would switch it off half way through a resolve).
+    function legacyFired(playerId) {
+        const g = G(); if (!g) return;
+        const p = Number(playerId) === 1 ? g.p1 : g.p2;
+        if (!p || keyFor(p) !== "kaleidoscope" || !p.borrowedKey || REGISTRY[p.borrowedKey]) return;     // new powers call markUsed themselves
+        p.kFired = p.borrowedKey;
+    }
+    function flushLegacyFired() {
+        const g = G(); if (!g) return;
+        [g.p1, g.p2].forEach(o => {
+            const k = o.kFired; if (!k) return;
+            if (k === "predatorymomentum" && g.signatureSiobhanBonusPending) return;        // her bonus turn still needs the power
+            o.kFired = null;
+            if (o.borrowedKey === k) markUsed(o, k);
+        });
     }
     // the board hint for a Kaleidoscope player also shows the power they are holding
     function hintFor(pObj) {
         const key = keyFor(pObj), info = infoFor(key);
-        if (!info || key !== "kaleidoscope" || !pObj.borrowedKey || !REGISTRY[pObj.borrowedKey]) return info;
-        const b = REGISTRY[pObj.borrowedKey];
+        if (!info || key !== "kaleidoscope" || !pObj.borrowedKey || !infoFor(pObj.borrowedKey)) return info;
+        const b = infoFor(pObj.borrowedKey); if (!b) return info;
         return Object.assign({}, info, { description: `${info.description}<br><span class="kaleido-current">Holding: <b>${b.icon} ${b.title}</b>. ${b.description}</span>` });
     }
 
@@ -792,7 +848,7 @@
         // meditation rules, Called Shot display and CPU play, used-state
         meditatingNow, isUsed, afterRollStarts, renderCalledShotBadges, cpuCalledShotAdjustKeep, cpuNeedsCalledShotReroll,
         // phase 3: Layaway and Kaleidoscope
-        markUsed, hintFor, kaleidoSwap, openLayaway, buyLayaway, layawayTaken, holdsLayaway, renderLayawayZone,
+        markUsed, legacyFired, effectiveKey, hintFor, kaleidoSwap, openLayaway, buyLayaway, layawayTaken, holdsLayaway, renderLayawayZone,
         cpuLayawayShop, cpuHoldsLayaway
     };
 })();

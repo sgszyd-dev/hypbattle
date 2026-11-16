@@ -11,7 +11,7 @@ const CPU_PIN_ESCAPE_V2 = true;
 // CPU respects human Turn the Tables (once-per-game flip). Soft-caps offensive submission while unused.
 // Defensive soft ceiling +2; Virtuoso/Master soft ceiling +3. Set false to ignore Tables.
 const CPU_TABLES_RESPECT_V1 = true;
-const cardDebugOn = true;
+const cardDebugOn = false;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
@@ -949,6 +949,7 @@ function updateSignaturePowerHints() {
 // ============================================================
 
 function flashSignaturePowerHint(playerId) {
+    Abilities.legacyFired(playerId);          // Kaleidoscope: an original-character power just fired, so it will be retired at turn end
     const hint = document.getElementById(
         `p${Number(playerId)}-signature-power-hint`
     );
