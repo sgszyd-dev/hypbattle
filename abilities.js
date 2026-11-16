@@ -16,8 +16,8 @@
 //
 // PHASES
 //   Phase 1 (this file): Toll, Cornered, Deep Well, Surrender to Heat      <- implemented
-//   Phase 2: Echo, Called Shot, Meditation, Turn the Tables                 <- implemented (with simple CPU rules)
-//   Phase 3: Layaway, Kaleidoscope                                          (registry entries exist, behaviour not yet)
+//   Phase 2: Echo, Called Shot, *Meditation, *Turn the Tables                 <- implemented (with simple CPU rules)
+//   Phase 3: Layaway, Kaleidoscope                                          <- implemented
 // ============================================================
 
 (function () {
@@ -27,26 +27,30 @@
     // 1) NUMBERS YOU MAY WANT TO TUNE
     // ############################################################
     const CFG = {
-        deepWell:  { threshold: 7, multiplier: 2 },            // Trance needed for a Setback / how much harder it hits
+		deepWell: { threshold: 7, multiplier: 2 }, // Trance needed for a Setback / how much harder it hits
         cornered:  { transformAt: 8, extraDice: 1, energy: 1 },
         surrender: { tranceDivisor: 2 },                       // +1 Trance per 2 Arousal at the end of your turn
-        toll:      { energy: 1 }
+        toll:      { energy: 1 },
+        layaway:   { reserveCost: 1, ownerTurns: 2, discount: 1 },
+        // Kaleidoscope can borrow any of these. To let it borrow a power from an original character, add that power's key here and
+        // call  Abilities.markUsed(player, "key")  at the moment the power is performed.
+        kaleidoscope: { swapCost: 3, pool: ["echo", "calledshot", "surrender", "deepwell", "toll", "layaway", "meditation", "cornered", "turntables"] }
     };
 
     // ############################################################
     // 2) THE REGISTRY (player-facing text is used by the setup box, the board hint and the Characters help tab)
     // ############################################################
     const REGISTRY = {
-        echo:        { key: "echo",        title: "Echo",              phase: 2, description: "Once per turn, after your final roll, pay 1 ⚡ to copy one die's face onto another die." },
-        calledshot:  { key: "calledshot",  title: "Called Shot",       phase: 2, description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡." },
-        surrender:   { key: "surrender",   title: "Surrender to Heat", phase: 1, description: "Arousal never costs you rerolls. At the end of your turn you gain 1 Trance for every 2 Arousal, which can push you into a Setback." },
-        deepwell:    { key: "deepwell",    title: "Deep Well",         phase: 1, description: "You need 7 Trance for a Setback instead of 5, but when one lands its effect is doubled." },
-        toll:        { key: "toll",        title: "Toll",              phase: 1, description: "Whenever your opponent buys a card, you gain 1 ⚡." },
-        layaway:     { key: "layaway",     title: "Layaway",           phase: 3, description: "At the end of your turn, pay 1 ⚡ to reserve a market card. While you hold a reservation you can only buy that card. If you have not bought it within two turns, your opponent may buy it for 1 ⚡ less; if they do not, it is discarded." },
-        meditation:  { key: "meditation",  title: "Meditation",        phase: 2, description: "Instead of rolling, you may meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. Not two turns in a row. You can still shop." },
-        cornered:    { key: "cornered",    title: "Cornered",          phase: 1, description: "While you have 8 or more Transform, you roll one extra die and gain 1 ⚡ at the start of each of your turns." },
-        turntables:  { key: "turntables",  title: "Turn the Tables",   phase: 2, description: "Once per game, in your shop phase, mirror the Submission marker (+3 becomes -3)." },
-        kaleidoscope:{ key: "kaleidoscope",title: "Kaleidoscope",      phase: 3, description: "You always hold one borrowed special ability, drawn at random from the others. When you use it, you draw the next. Pay 3 ⚡ to swap it for a new draw." }
+        echo:        { key: "echo",        icon: "🔁", title: "Echo",              phase: 2, description: "Once per turn, after your final roll, pay 1 ⚡ to copy one die's face onto another die." },
+        calledshot:  { key: "calledshot",  icon: "🎯", title: "Called Shot",       phase: 2, description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡." },
+		surrender: { key: "surrender", icon: "🏳️", title: "Surrender to Heat", phase: 1, description: "Arousal never costs you rerolls. At the end of your turn you gain 1 Trance for every 2 Arousal, which can trigger The Deepening." },
+        deepwell:    { key: "deepwell",    icon: "🌊", title: "Deep Well",         phase: 1, description: "You need 7 Trance for a Setback instead of 5, but when one lands its effect is doubled." },
+        toll:        { key: "toll",        icon: "🪙", title: "Toll",              phase: 1, description: "Whenever your opponent buys a card, you gain 1 ⚡." },
+        layaway:     { key: "layaway",     icon: "🏷️", title: "Layaway",           phase: 3, description: "At the end of your turn, pay 1 ⚡ to reserve a market card. For your next 2 turns only you can buy it (and no other card). Then your opponent may buy it for 1 ⚡ less, or it is discarded." },
+        meditation:  { key: "meditation",  icon: "🧘", title: "Meditation",        phase: 2, description: "Instead of rolling, you may meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row." },
+        cornered:    { key: "cornered",    icon: "🧱", title: "Cornered",          phase: 1, description: "While you have 8 or more Transform, you roll one extra die and gain 1 ⚡ at the start of each of your turns." },
+        turntables:  { key: "turntables",  icon: "🪞", title: "Turn the Tables",   phase: 2, description: "Once per game, in your shop phase, mirror the Submission marker (+3 becomes -3)." },
+        kaleidoscope:{ key: "kaleidoscope",icon: "🔮", title: "Kaleidoscope",      phase: 3, description: "You hold one random borrowed power. Use it and you draw a new one (all get used before any repeat). Once per turn, pay 3 ⚡ to swap it for another." },
     };
 
     // New characters: "Their Name": "powerkey".   (Use the name exactly as it appears in CHARACTERS.)
@@ -72,7 +76,7 @@
         const mapped = Object.keys(CHARACTER_POWER_KEYS).find(n => plainName(n) === p);
         return mapped ? CHARACTER_POWER_KEYS[mapped] : legacyKeyForName(name);
     }
-    function normalizeKey(nameOrKey) {                          // callers pass a key ("zixuan") or, rarely, a name ("Siobhán")
+    function normalizeKey(nameOrKey) {                          // callers pass a key ("marketmanipulator") or, rarely, a name ("Siobhán")
         const s = String(nameOrKey || "");
         if (REGISTRY[s.toLowerCase()]) return s.toLowerCase();
         return legacyKeyForName(s) || s.toLowerCase();
@@ -98,7 +102,7 @@
     // title and description for the UI (setup box, board hint, help tab)
     function infoFor(key) {
         const r = REGISTRY[key];
-        if (r) return { key: r.key, title: r.title, description: r.description };
+        if (r) return { key: r.key, icon: r.icon || "", title: r.title, description: r.description };
         if (typeof SIGNATURE_POWERS !== "undefined") {
             const hit = Object.values(SIGNATURE_POWERS).find(p => p.key === key);
             if (hit) return hit;
@@ -124,13 +128,17 @@
         // per-game state for the powers that need it (phase 2 and 3 fill these in)
         [g.p1, g.p2].forEach(p => {
             p.borrowedKey = null; p.meditatedLast = false; p.meditatedThis = false; p.tablesUsed = false; p.echoUsedThisTurn = false; p.calledFace = null;
-            p.layaway = null;
+            p.layaway = null; p.kUsed = []; p.kSwapped = false; p.corneredFired = false;
         });
+        [g.p1, g.p2].forEach(p => { if (keyFor(p) === "kaleidoscope") kaleidoDraw(p, null); });      // Kaleidoscope starts with a random power
+        g.meditating = false; pendingCalledShotAlert = null;
     }
     // console helper:  Abilities.setPower(1, "deepwell")  swaps a power in a running game
     function setPower(playerNum, key) {
         const g = G(); if (!g) return;
-        (playerNum === 1 ? g.p1 : g.p2).powerKey = key;
+        const sp = playerNum === 1 ? g.p1 : g.p2;
+        sp.powerKey = key;
+        if (key === "kaleidoscope") { if (!sp.borrowedKey) kaleidoDraw(sp, null); } else sp.borrowedKey = null;
         if (typeof updateSignaturePowerHints === "function") updateSignaturePowerHints();
         if (typeof syncToFirebase === "function") syncToFirebase();
         if (typeof updateUI === "function") updateUI();
@@ -145,9 +153,12 @@
         const a = Number(pObj.arousal) || 0;
         return a <= 2 ? 2 : (a <= 4 ? 1 : 0);
     }
-    // Trance needed for a Setback, and how hard the Setback hits
+	// Trance needed for The Deepening, and how strongly its effect applies
     function setbackThreshold(pObj) { return ptHas(pObj, "deepwell") ? CFG.deepWell.threshold : 5; }
     function setbackMultiplier(pObj) { return ptHas(pObj, "deepwell") ? CFG.deepWell.multiplier : 1; }
+    // A meditation turn has NO rolls of any kind (powers or cards) and NO buying of cards.
+    function meditatingNow() { const g = G(); return !!(g && g.meditating); }
+    function isUsed(pObj) { return !!pObj && ptHas(pObj, "turntables") && !!pObj.tablesUsed; }   // once-per-game powers: shown greyed out
     // extra dice on top of the usual 6 (+ Trance Anchor)
     function extraDice(pObj) {
         let n = 0;
@@ -167,9 +178,10 @@
     function onTurnStart(playerId) {
         const g = G(); if (!g) return;
         const p = playerId === 1 ? g.p1 : g.p2;
-        p.echoUsedThisTurn = false; p.calledFace = null; p.meditatedThis = false; g.meditating = false;      // phase 2 per-turn flags
+        p.echoUsedThisTurn = false; p.calledFace = null; p.meditatedThis = false; p.kSwapped = false; g.meditating = false;      // phase 2 per-turn flags
         if (ptHas(p, "cornered") && (Number(p.transform) || 0) >= CFG.cornered.transformAt) {
             p.energy = (Number(p.energy) || 0) + CFG.cornered.energy;
+            p.corneredFired = true;
             announce(playerId, `${p.name}'s Cornered: +${CFG.cornered.energy} ⚡ and an extra die.`);
         }
     }
@@ -181,10 +193,13 @@
         p.meditatedLast = !!p.meditatedThis; p.meditatedThis = false;                                    // Meditation: not two turns in a row
         if (ptHas(p, "surrender")) {
             const gain = Math.floor((Number(p.arousal) || 0) / CFG.surrender.tranceDivisor);
-            if (gain > 0) selfTrance(p, playerId, gain);
+            if (gain > 0) { selfTrance(p, playerId, gain); markUsed(p, "surrender"); }
         }
+        if (p.corneredFired) { p.corneredFired = false; markUsed(p, "cornered"); }            // Kaleidoscope: used up once it has fired this turn
+        if (g.gameMode === "solo" && playerId === 2) cpuLayawayReserve(p);                  // reserve first, so this turn does not count against it
+        layawayTurnEnded(playerId);
     }
-    // Surrender to Heat's Trance. Solo and hotseat: the OPPONENT chooses the Setback effect (a dialog for a human opponent, the
+	// Surrender to Heat's Trance. Solo and hotseat: the OPPONENT chooses The Deepening effect (a dialog for a human opponent, the
     // normal CPU choice for the CPU). Online: the computer running the turn belongs to the owner, so the effect is automatic.
     function selfTrance(p, id, amount) {
         const g = G();
@@ -202,6 +217,7 @@
         if (ptHas(opp, "toll")) {
             opp.energy = (Number(opp.energy) || 0) + CFG.toll.energy;
             announce(otherId(buyerId), `${opp.name}'s Toll: +${CFG.toll.energy} ⚡ for ${card && card.name ? card.name : "the purchase"}.`);
+            markUsed(opp, "toll");
         }
     }
 
@@ -211,7 +227,7 @@
     // ############################################################
     const FACE_NAMES = { TRANSFORM: "Transform", SUBMISSION: "Submission", AROUSAL: "Arousal", SPIRAL: "Trance", ENERGY: "Energy", LUCIDITY: "Lucidity" };
     const FACE_ICONS = { TRANSFORM: "👁️", SUBMISSION: "⛓️", AROUSAL: "🔥", SPIRAL: "🌀", ENERGY: "⚡", LUCIDITY: "💧" };
-    function keyLabel(key) { return key && FACE_NAMES[key] ? FACE_ICONS[key] + " " + FACE_NAMES[key] : ""; }
+    function keyLabel(key) { return key && FACE_ICONS[key] ? FACE_ICONS[key] : ""; }          // symbol only (the tooltip carries the name)
     function faceKey(face) {                                    // "👁️ TRANSFORM" -> "TRANSFORM"; blanks and "-" -> null
         const f = String(face || "").toUpperCase();
         return Object.keys(FACE_NAMES).find(k => f.includes(k)) || (f.includes("TRANCE") ? "SPIRAL" : null);
@@ -224,11 +240,32 @@
         if (typeof updateUI === "function") updateUI();
     }
 
+    // ---------- the alert box (the card-trigger toast) ----------
+    function escHtml(v) { return String(v).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
+    function toastLine(playerId, title, detail) {
+        const g = G(), toast = document.getElementById("card-trigger-toast");
+        if (!g || !toast) return;
+        const p = Number(playerId) === 1 ? g.p1 : g.p2;
+        const color = Number(playerId) === 1 ? "var(--player)" : "var(--cpu)";
+        const line = `<div><span class="toast-player" style="color:${color}">${escHtml(p.name)}</span> · <strong>${escHtml(title)}</strong>: ${escHtml(detail)}</div>`;
+        const existing = toast.classList.contains("visible") ? toast.innerHTML : "";
+        toast.innerHTML = existing + line;
+        toast.classList.remove("visible"); void toast.offsetWidth; toast.classList.add("visible");
+        if (typeof cardTriggerToastTimer !== "undefined" && cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
+    }
+    // rollDiceAction() wipes the alert box when a roll starts, so the "Called Shot: X" line waits here and is shown right after the wipe
+    let pendingCalledShotAlert = null;
+    function afterRollStarts() {
+        if (!pendingCalledShotAlert) return;
+        const a = pendingCalledShotAlert; pendingCalledShotAlert = null;
+        toastLine(a.playerId, "🎯 Called Shot", a.text);
+    }
+
     // ---------- ECHO ----------
     // Once per turn, after rolling, pay 1 ⚡ to copy one die's face onto another die.
     function echoAvailable(p) {
         const g = G();
-        return !!(g && p && ptHas(p, "echo") && g.phase === "rolling" && g.dice.length >= 2 && g.dice[0].face !== "-"
+        return !!(g && p && ptHas(p, "echo") && g.phase === "rolling" && !g.meditating && g.dice.length >= 2 && g.dice[0].face !== "-"
             && !p.echoUsedThisTurn && (Number(p.energy) || 0) >= 1);
     }
     function doEcho(p, from, to) {
@@ -238,6 +275,7 @@
         p.echoUsedThisTurn = true;
         announce(Number(g.activePlayer), `${p.name}'s Echo (1 ⚡): die ${to + 1} copies die ${from + 1} (${faceLabel(g.dice[from].face)}).`);
         if (typeof playSound === "function") playSound("lock");
+        markUsed(p, "echo");
         refresh();
     }
     function openEcho() {                                       // two prompts: which die to copy, then which die to change
@@ -277,54 +315,154 @@
 
     // ---------- CALLED SHOT ----------
     // Name a face before the first roll. At resolve: shown 3+ times = that face's effect is +1; shown fewer than 2 = lose 1 ⚡.
+    // Faces are shown as SYMBOLS only (tooltips give the names).
+    function announceCalledShot(playerId, p, key) {
+        announce(playerId, `${p.name}'s Called Shot: ${keyLabel(key)}.`);        // log + flash the power box
+        pendingCalledShotAlert = { playerId, text: `called ${keyLabel(key)}` };    // alert box, shown as soon as the roll starts
+    }
     function beforeRoll() {                                     // called at the top of rollDiceAction(); true = a prompt was opened
         const g = G(); if (!g || !g.dice || !g.dice.length) return false;
         const p = activePlayerObj();
-        if (!ptHas(p, "calledshot") || g.dice[0].face !== "-" || g.signatureSiobhanBonusRoll || p.calledFace) return false;
+        if (!ptHas(p, "calledshot") || g.meditating || g.dice[0].face !== "-" || g.signatureSiobhanBonusRoll || p.calledFace) return false;
         if (Number(g.activePlayer) === 2 && g.gameMode === "solo") { p.calledFace = cpuPickCalledFace(p); return false; }
         if (typeof isLocalPlayerTurn === "function" && !isLocalPlayerTurn()) return false;
         if (typeof showChoiceDialog !== "function" || typeof FACES === "undefined") return false;
         showChoiceDialog({
             key: "called-shot", title: "Called Shot",
             message: "Name a face before you roll. If it shows 3 or more times its effect is +1. If it shows fewer than 2 times, you lose 1 ⚡.",
-            options: FACES.map(face => ({ label: faceLabel(face), onClick: () => {
+            options: FACES.map(face => ({ label: keyLabel(faceKey(face)), faceName: faceKey(face), onClick: () => {
                 p.calledFace = faceKey(face);
-                announce(Number(g.activePlayer), `${p.name}'s Called Shot: ${faceLabel(face)}.`);
+                announceCalledShot(Number(g.activePlayer), p, p.calledFace);
                 refresh();
                 setTimeout(() => rollDiceAction(), 0);
             } }))
         });
         return true;
     }
+
+    // ----- CPU: which face to call -----
+    // Beginner ("random") keeps the old simple pick. Every other level calls the face that serves its current plan, because it will
+    // then play to get at least 2 of them (see cpuCalledShotAdjustKeep).
+    function cpuIsNovice(p) { return (p.difficulty || "random") === "random"; }
+    function cpuSmartCalledFace(p) {
+        const g = G(), opp = g.p1;
+        const T = setbackThreshold(opp), myT = setbackThreshold(p);
+        const sub = Number(g.submission) || 0;                      // positive = toward the CPU's defeat
+        const plan = (typeof cpuBrain !== "undefined" && cpuBrain && cpuBrain.plan) || "none";
+        const heated = ptHas(p, "heatedopening");                          // Heated Opening: every 🔥 die counts
+        const sc = { TRANSFORM: 3, SUBMISSION: 2, AROUSAL: 1, SPIRAL: 1, ENERGY: 1.2, LUCIDITY: 0.4 };
+        const safe = (fn, dflt) => { try { return fn(); } catch (e) { return dflt; } };
+
+        // Submission: defend when the marker is on the CPU's side, push when it is on the opponent's side
+        const avoidPush = safe(() => typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush(), false);
+        if (sub >= 4) sc.SUBMISSION += 12; else if (sub >= 3) sc.SUBMISSION += 10; else if (sub >= 2) sc.SUBMISSION += 6;
+        if (sub <= -2 && !avoidPush) sc.SUBMISSION += 6;
+        if (plan === "submission" && !avoidPush) sc.SUBMISSION += 5;
+        // Trance: two 🌀 dice would take the opponent to their Deepening point
+        if (!opp.shieldActive && opp.trance < T && opp.trance + 2 >= T) sc.SPIRAL += 8;
+        // Arousal: only when that plan is running and the opponent can still be pushed (2 🔥 dice = +1, or +2 with Heated Opening)
+        const arLimit = heated ? 3 : 4;
+        if (!opp.shieldActive && opp.arousal <= arLimit && safe(() => cpuArousalDiceNeeded() > 0, true)) {
+            if (plan === "arousal") sc.AROUSAL += 6;
+        } else sc.AROUSAL -= 100;
+        // Transform: close to winning (or the Transform plan)
+        const myProgress = Number(opp.transform) || 0;              // the opponent's Transform is the CPU's progress
+        if (myProgress >= 8) sc.TRANSFORM += 9; else if (myProgress >= 7) sc.TRANSFORM += 7;
+        if (plan === "transform") sc.TRANSFORM += 4;
+        // Energy: saving for a card, or the Energy plan, or nearly broke
+        if (plan === "energy" || safe(() => typeof cpuShoppingTarget === "function" && !!cpuShoppingTarget(), false)
+            || ((Number(p.energy) || 0) < 3 && (p.inventory || []).length <= 1)) sc.ENERGY += 5;
+        // Lucidity: lowering its own Arousal / Trance, or (Lucid Reversal) its own Transform
+        if ((Number(p.arousal) || 0) >= 4) sc.LUCIDITY += 7;
+        if ((Number(p.trance) || 0) >= myT - 1 && (Number(p.trance) || 0) > 0) sc.LUCIDITY += 7;
+        if (ptHas(p, "lucidreversal") && (Number(p.transform) || 0) >= 7) sc.LUCIDITY += 6;
+        // a light tie-break from the CPU's general face weights
+        safe(() => { if (typeof cpuFaceWeights === "function") { const w = cpuFaceWeights();
+            const map = { TRANSFORM: w.TR, SUBMISSION: w.SU, AROUSAL: w.AR, SPIRAL: w.SP, ENERGY: w.EN };
+            Object.keys(map).forEach(k => { if (map[k] > -50) sc[k] += map[k] * 0.5; }); } }, null);
+        return Object.keys(sc).sort((a, b) => sc[b] - sc[a])[0];
+    }
     function cpuPickCalledFace(p) {
         const g = G();
         let key = "TRANSFORM";
         try {
-            if (typeof cpuFaceWeights === "function") {
-                const w = cpuFaceWeights();
-                const map = { TRANSFORM: w.TR, SUBMISSION: w.SU, AROUSAL: w.AR, SPIRAL: w.SP, ENERGY: w.EN };
-                key = Object.keys(map).filter(k => map[k] > -50).sort((a, b) => map[b] - map[a])[0] || key;
-            }
+            if (cpuIsNovice(p)) {
+                if (typeof cpuFaceWeights === "function") {
+                    const w = cpuFaceWeights();
+                    const map = { TRANSFORM: w.TR, SUBMISSION: w.SU, AROUSAL: w.AR, SPIRAL: w.SP, ENERGY: w.EN };
+                    key = Object.keys(map).filter(k => map[k] > -50).sort((a, b) => map[b] - map[a])[0] || key;
+                }
+            } else key = cpuSmartCalledFace(p);
         } catch (e) { /* keep the default */ }
-        announce(2, `${p.name}'s Called Shot: ${FACE_NAMES[key]}.`);
+        announceCalledShot(2, p, key);
         return key;
     }
+    // ----- CPU: play to get at least 2 of the called face -----
+    // Runs after the normal "which dice to keep" decision (every skill level except Beginner). It always locks the called face, and
+    // while there are fewer than 2 it frees other locked dice so they get rerolled, but it never breaks up a finished triple (or a
+    // Submission die while the CPU is pinned).
+    function cpuCalledShotActive(p) {
+        const g = G();
+        return !!(g && g.gameMode === "solo" && Number(g.activePlayer) === 2 && p === g.p2 && ptHas(p, "calledshot") && p.calledFace
+            && !cpuIsNovice(p) && g.phase === "rolling" && !g.signatureSiobhanBonusRoll && !g.meditating);
+    }
+    function calledFaceCount(p) { const g = G(); return g.dice.filter(d => faceKey(d.face) === p.calledFace).length; }
+    function cpuCalledShotAdjustKeep() {
+        const g = G(), p = g && g.p2;
+        if (!cpuCalledShotActive(p)) return;
+        const key = p.calledFace;
+        g.dice.forEach(d => { if (faceKey(d.face) === key) d.kept = true; });
+        if (calledFaceCount(p) >= 2) return;
+        const pinned = typeof isCpuPinnedInSubmission === "function" && isCpuPinnedInSubmission();
+        const counts = {}; g.dice.forEach(d => { const k = faceKey(d.face); if (k) counts[k] = (counts[k] || 0) + 1; });
+        g.dice.forEach(d => {
+            const k = faceKey(d.face);
+            if (k === key || !d.kept || d.signatureRozLocked) return;
+            if (k && counts[k] >= 3) return;                      // a finished triple stays
+            if (pinned && k === "SUBMISSION") return;
+            d.kept = false;
+        });
+    }
+    // true = the CPU should spend a free reroll (Absolute Focus charge) because it still has fewer than 2 of its called face
+    function cpuNeedsCalledShotReroll() {
+        const g = G(), p = g && g.p2;
+        return cpuCalledShotActive(p) && calledFaceCount(p) < 2;
+    }
+
     // at resolve: adds the +1 (as an extra die of that face) and charges the penalty. Call it after counts are built.
     function applyCalledShot(p, playerNum, counts) {
         const key = p && p.calledFace; if (!key || !ptHas(p, "calledshot")) return;
         const g = G();
+        const sym = keyLabel(key);
         const shown = g.dice.filter(d => faceKey(d.face) === key).length;
         if (shown >= 3 && counts[key] >= shown) {                          // not wiped out by Siobhan's bonus roll
             counts[key] += 1;
-            announce(playerNum, `Called Shot hits: ${FACE_NAMES[key]} showed ${shown} times, so its effect is +1.`);
+            announce(playerNum, `Called Shot hits: ${sym} showed ${shown} times, so its effect is +1.`);
+            toastLine(playerNum, "🎯 Called Shot", `hit! ${sym} showed ${shown} times: effect +1`);
         } else if (shown < 2) {
             const lost = Math.min(1, Number(p.energy) || 0);
             p.energy = (Number(p.energy) || 0) - lost;
-            announce(playerNum, `Called Shot misses: ${FACE_NAMES[key]} showed ${shown} time${shown === 1 ? "" : "s"}${lost ? ", lose 1 ⚡" : ""}.`);
+            announce(playerNum, `Called Shot misses: ${sym} showed ${shown} time${shown === 1 ? "" : "s"}${lost ? ", lose 1 ⚡" : ""}.`);
+            toastLine(playerNum, "🎯 Called Shot", `missed. ${sym} showed ${shown} time${shown === 1 ? "" : "s"}${lost ? ", -1 ⚡" : ""}`);
         } else {
-            log(`Called Shot: ${FACE_NAMES[key]} showed ${shown} times. No bonus and no penalty.`);
+            log(`Called Shot: ${sym} showed ${shown} times. No bonus and no penalty.`);
+            toastLine(playerNum, "🎯 Called Shot", `${sym} showed ${shown} times: no bonus, no penalty`);
         }
         p.calledFace = null;
+        markUsed(p, "calledshot");
+    }
+    // the "🎯 Called: X" badge above each player's Active Cards (called from updateUI)
+    function renderCalledShotBadges() {
+        const g = G(); if (!g) return;
+        [1, 2].forEach(id => {
+            const el = document.getElementById(`p${id}-called-shot`); if (!el) return;
+            const p = id === 1 ? g.p1 : g.p2;
+            const key = p && ptHas(p, "calledshot") && p.calledFace;
+            if (!key || !FACE_ICONS[key]) { el.style.display = "none"; el.innerHTML = ""; return; }
+            el.style.display = "block";
+            const html = `🎯 Called: <span class="called-face" data-face-name="${key}">${FACE_ICONS[key]}</span>`;
+            if (el.innerHTML !== html) el.innerHTML = html;
+        });
     }
 
     // ---------- MEDITATION ----------
@@ -339,10 +477,12 @@
         p.trance = Math.max(0, (Number(p.trance) || 0) - 1);
         p.arousal = Math.max(0, (Number(p.arousal) || 0) - 1);
         p.meditatedThis = true;
+        p.calledFace = null;
         g.meditating = true;                                              // so Transformation Ritual does not charge for the empty roll
         g.dice = g.dice.map(() => ({ face: "⬜ BLANK", kept: true }));
         g.rerollsLeft = 0;
-        announce(playerNum, `${p.name} meditates instead of rolling: +3 ⚡, -1 🌀, -1 🔥.`);
+        announce(playerNum, `${p.name} meditates instead of rolling: +3 ⚡, -1 🌀, -1 🔥. No rolls or card purchases this turn.`);
+        markUsed(p, "meditation");
     }
     function meditate() {                                               // the button
         const p = me();
@@ -379,6 +519,7 @@
         p.tablesUsed = true;
         announce(playerNum, `${p.name} uses Turn the Tables: the Submission marker flips from ${before > 0 ? "+" : ""}${before} to ${g.submission > 0 ? "+" : ""}${g.submission}!`);
         if (typeof showTurnAlert === "function") showTurnAlert("Turn the Tables!", playerNum);
+        markUsed(p, "turntables");
         refresh();
     }
     function turnTables() { const p = me(); if (p && tablesAvailable(p)) doTables(p, Number(G().activePlayer)); }
@@ -389,6 +530,229 @@
         if (tablesAvailable(p) && Number(g.submission) >= 3) doTables(p, 2);
     }
 
+
+    // ############################################################
+    // 6c) PHASE 3: LAYAWAY and KALEIDOSCOPE
+    // ############################################################
+
+    // ---------- KALEIDOSCOPE ----------
+    // p.borrowedKey = the power held right now; p.kUsed = powers already used in this cycle. hasPower() already treats the borrowed
+    // power as the player's own, so every hook for every power just works.
+    function kaleidoDraw(p, excludeKey) {
+        const pool = CFG.kaleidoscope.pool;
+        p.kUsed = Array.isArray(p.kUsed) ? p.kUsed : [];
+        let candidates = pool.filter(k => !p.kUsed.includes(k) && k !== excludeKey);
+        if (!candidates.length) {                                   // everything has been used: recycle
+            p.kUsed = [];
+            candidates = pool.filter(k => k !== excludeKey);
+            if (excludeKey !== null && typeof log === "function") log(`${p.name}'s Kaleidoscope has used every power and starts a new cycle.`);
+        }
+        const k = candidates[Math.floor(Math.random() * candidates.length)];
+        p.borrowedKey = k;
+        if (k === "turntables") p.tablesUsed = false;               // a fresh draw of a once-per-game power is usable again
+        if (k === "meditation") p.meditatedLast = false;
+        return k;
+    }
+    // call this at the moment a borrowed power is performed (no-op for anyone else)
+    function markUsed(p, key) {
+        if (!p || keyFor(p) !== "kaleidoscope" || p.borrowedKey !== key) return;
+        p.kUsed = Array.isArray(p.kUsed) ? p.kUsed : [];
+        p.kUsed.push(key);
+        const next = kaleidoDraw(p, key);
+        const id = idOf(p), a = REGISTRY[key], b = REGISTRY[next];
+        announce(id, `${p.name}'s Kaleidoscope: ${a.icon} ${a.title} used. New power: ${b.icon} ${b.title}.`);
+        toastLine(id, "🔮 Kaleidoscope", `${a.icon} used, now ${b.icon} ${b.title}`);
+    }
+    function kaleidoSwapAvailable(p) {
+        const g = G();
+        return !!(g && p && p.specialAbility !== false && keyFor(p) === "kaleidoscope" && p.borrowedKey && !p.kSwapped && !p.calledFace
+            && (g.phase === "rolling" || g.phase === "shop") && (Number(p.energy) || 0) >= CFG.kaleidoscope.swapCost
+            && !(typeof isChoicePending === "function" && isChoicePending()));
+    }
+    function kaleidoSwap() {
+        const p = me(), g = G();
+        if (!p || !kaleidoSwapAvailable(p)) return;
+        const old = p.borrowedKey;
+        p.energy = (Number(p.energy) || 0) - CFG.kaleidoscope.swapCost;
+        const next = kaleidoDraw(p, old);                            // the old power goes back into the pile: it does NOT count as used
+        p.kSwapped = true;
+        const a = REGISTRY[old], b = REGISTRY[next];
+        announce(Number(g.activePlayer), `${p.name}'s Kaleidoscope (${CFG.kaleidoscope.swapCost} ⚡): ${a.icon} ${a.title} swapped for ${b.icon} ${b.title}.`);
+        refresh();
+    }
+    // the board hint for a Kaleidoscope player also shows the power they are holding
+    function hintFor(pObj) {
+        const key = keyFor(pObj), info = infoFor(key);
+        if (!info || key !== "kaleidoscope" || !pObj.borrowedKey || !REGISTRY[pObj.borrowedKey]) return info;
+        const b = REGISTRY[pObj.borrowedKey];
+        return Object.assign({}, info, { description: `${info.description}<br><span class="kaleido-current">Holding: <b>${b.icon} ${b.title}</b>. ${b.description}</span>` });
+    }
+
+    // ---------- LAYAWAY ----------
+    // p.layaway = { card, stage: "owner" | "open", turnsLeft, fresh }.  The card sits OUTSIDE the market (wipes cannot touch it).
+    //   stage "owner": only the owner can buy it (normal cost) and the owner can buy no other card. It lasts the owner's next 2 turns.
+    //   stage "open":  the opponent may buy it on their next turn for 1 ⚡ less. If they do not, it is discarded at the end of that turn.
+    function holdsLayaway(playerId) {
+        const g = G(); if (!g) return false;
+        const p = Number(playerId) === 1 ? g.p1 : g.p2;
+        return !!(p && p.layaway && p.layaway.stage === "owner");
+    }
+    function layawayAvailable(p) {
+        const g = G();
+        return !!(g && p && ptHas(p, "layaway") && g.phase === "shop" && !p.layaway && (Number(p.energy) || 0) >= CFG.layaway.reserveCost
+            && typeof market !== "undefined" && market.length > 0 && !(typeof isChoicePending === "function" && isChoicePending()));
+    }
+    function reserveLayaway(p, playerNum, marketIndex) {
+        const card = market[marketIndex]; if (!card || p.layaway) return false;
+        p.energy = (Number(p.energy) || 0) - CFG.layaway.reserveCost;
+        market.splice(marketIndex, 1);
+        if (typeof refillMarket === "function") refillMarket();
+        p.layaway = { card: JSON.parse(JSON.stringify(card)), stage: "owner", turnsLeft: CFG.layaway.ownerTurns, fresh: true };
+        announce(playerNum, `${p.name}'s Layaway (${CFG.layaway.reserveCost} ⚡): ${card.name} is reserved.`);
+        toastLine(playerNum, "🏷️ Layaway", `${card.name} reserved`);
+        markUsed(p, "layaway");
+        refresh();
+        return true;
+    }
+    function openLayaway() {
+        const p = me(), g = G();
+        if (!p || !layawayAvailable(p)) return;
+        const num = Number(g.activePlayer);
+        showChoiceDialog({
+            key: "layaway", title: "Layaway",
+            message: `Reserve one card for ${CFG.layaway.reserveCost} ⚡. Only you can buy it for your next ${CFG.layaway.ownerTurns} turns (and no other card), then your opponent may buy it for 1 ⚡ less.`,
+            options: market.map((card, i) => ({ label: `${card.name} (${getCardPurchaseCost(card, num)}⚡)`, onClick: () => reserveLayaway(p, num, i) }))
+                .concat([{ label: "Cancel", secondary: true, onClick: () => {} }])
+        });
+    }
+    // what would this buyer pay for this owner's reserved card, and may they buy it right now?
+    function layawayOffer(ownerId, buyerId) {
+        const g = G(); if (!g) return null;
+        const owner = ownerId === 1 ? g.p1 : g.p2, buyer = buyerId === 1 ? g.p1 : g.p2, L = owner.layaway;
+        if (!L) return null;
+        let cost = getCardPurchaseCost(L.card, buyerId);
+        if (L.stage === "open") cost = Math.max(0, cost - CFG.layaway.discount);
+        const eligible = L.stage === "owner" ? buyerId === ownerId : buyerId !== ownerId;
+        let why = "";
+        if (!eligible) why = L.stage === "owner" ? "Reserved" : "Open to the other player";
+        else if (L.stage === "owner" && L.fresh) why = "From your next turn";            // reserved at the end of a turn, so not buyable until then
+        else if (g.meditating) why = "Meditating";
+        else if (L.stage === "open" && holdsLayaway(buyerId)) why = "Holding a Layaway";
+        else if (typeof inventoryHasName === "function" && inventoryHasName(buyer, L.card.name)) why = "Already owned";
+        else if ((Number(buyer.energy) || 0) < cost) why = "Cannot afford";
+        return { card: L.card, cost, stage: L.stage, turnsLeft: L.turnsLeft, eligible, ok: eligible && !why, why };
+    }
+    function buyLayaway(ownerId) {                                       // the button on the Layaway slot
+        const g = G(); if (!g || g.phase !== "shop" || (typeof isLocalPlayerTurn === "function" && !isLocalPlayerTurn())) return false;
+        const buyerId = Number(g.activePlayer), offer = layawayOffer(ownerId, buyerId);
+        if (!offer || !offer.ok) { if (typeof playSound === "function") playSound("deny"); return false; }
+        const owner = ownerId === 1 ? g.p1 : g.p2;
+        return buyCard(-1, { layaway: owner.layaway, ownerId, cost: offer.cost });
+    }
+    function layawayTaken(ownerId) {                                    // called by buyCard() once the reserved card is bought
+        const g = G(); if (!g) return;
+        (Number(ownerId) === 1 ? g.p1 : g.p2).layaway = null;
+    }
+    // end of a player's turn: count down their own reservation, open it up, or discard an unclaimed open one
+    function layawayTurnEnded(playerId) {
+        const g = G(); if (!g) return;
+        [g.p1, g.p2].forEach(o => {
+            const L = o.layaway; if (!L) return;
+            const oid = idOf(o);
+            if (L.stage === "owner" && oid === playerId) {
+                if (L.fresh) { L.fresh = false; return; }                // the turn it was reserved does not count
+                L.turnsLeft -= 1;
+                if (L.turnsLeft <= 0) {
+                    L.stage = "open";
+                    announce(oid, `${o.name}'s Layaway runs out: ${L.card.name} is now open to ${(oid === 1 ? g.p2 : g.p1).name} for 1 ⚡ less.`);
+                }
+            } else if (L.stage === "open" && oid !== playerId) {
+                if (typeof discardCard === "function") discardCard(L.card);
+                o.layaway = null;
+                log(`${L.card.name} (Layaway) was not bought and is discarded.`);
+            }
+        });
+    }
+    // the Layaway slot under the market: one tile per reservation, visible to both players
+    function renderLayawayZone() {
+        const g = G(), zone = document.getElementById("layaway-zone"); if (!g || !zone) return;
+        const tiles = [];
+        [1, 2].forEach(ownerId => {
+            const owner = ownerId === 1 ? g.p1 : g.p2, L = owner.layaway; if (!L) return;
+            const buyerId = Number(g.activePlayer), offer = layawayOffer(ownerId, buyerId);
+            const mine = typeof isLocalPlayerTurn === "function" && isLocalPlayerTurn();
+            const status = L.stage === "owner"
+                ? `Reserved for ${escHtml(owner.name)}: ${L.fresh ? "from next turn, " : ""}${L.turnsLeft} turn${L.turnsLeft === 1 ? "" : "s"} left`
+                : `Open to ${escHtml((ownerId === 1 ? g.p2 : g.p1).name)} for ${CFG.layaway.discount} ⚡ less, this turn only`;
+            const c = L.card;
+            const label = offer && offer.eligible ? (offer.why ? offer.why : `Buy (${offer.cost}⚡)`) : (offer ? offer.why : "");
+            const enabled = !!(offer && offer.ok && mine && g.phase === "shop");
+            tiles.push(`<div class="layaway-tile layaway-${L.stage}">
+                <div class="layaway-head">🏷️ Layaway · ${status}</div>
+                <div class="card ${c.type === "Instant" ? "card-instant" : "card-keep"} layaway-card" data-card-id="${Number(c.id)}">
+                    <div class="card-header"><span>${escHtml(c.name)}</span> <span>${offer ? offer.cost : c.cost}⚡</span></div>
+                    <div class="card-type"><span class="card-type-chip">${escHtml(c.type)}</span></div>
+                    <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${c.desc}</div>
+                    ${offer && offer.eligible ? `<button ${enabled ? "" : "disabled"} onclick="Abilities.buyLayaway(${ownerId})">${escHtml(label)}</button>` : ""}
+                </div></div>`);
+        });
+        const html = tiles.join("");
+        if (zone.innerHTML !== html) zone.innerHTML = html;
+        zone.style.display = tiles.length ? "flex" : "none";
+    }
+    // ----- CPU -----
+    function cpuHoldsLayaway() { const g = G(); return !!(g && g.gameMode === "solo" && holdsLayaway(2)); }
+    function cpuLayawayCardScore(card) {
+        try { if (typeof cpuAdaptiveCardScore === "function") return Number(cpuAdaptiveCardScore(card)) || 0; } catch (e) {}
+        return (Number(card.cost) || 0) * 10;
+    }
+    function cpuLayawayThreshold() {
+        try { if (typeof cpuAdaptiveBuyThreshold === "function") return Number(cpuAdaptiveBuyThreshold()) || 50; } catch (e) {}
+        return 50;
+    }
+    function cpuCardOk(card) {
+        const g = G(), p = g.p2;
+        try {
+            if (typeof inventoryHasName === "function" && inventoryHasName(p, card.name)) return false;
+            if (typeof hasSignaturePower === "function" && hasSignaturePower(2, "unyieldingresistance") && typeof ALEX_DEFENSIVE_SUBMISSION_CARD_IDS !== "undefined" && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) return false;
+            if (typeof passesCardSpecificConditions === "function" && !passesCardSpecificConditions(card)) return false;
+        } catch (e) {}
+        return true;
+    }
+    // start of the CPU's shop phase: buy its own reserved card, or the human's open one when worth it
+    function cpuLayawayShop() {
+        const g = G(); if (!g || g.gameMode !== "solo" || g.meditating) return;
+        const cpu = g.p2;
+        if (cpu.layaway && cpu.layaway.stage === "owner") {
+            const o = layawayOffer(2, 2);
+            if (o && o.ok) buyLayaway2(2, o);
+        } else if (g.p1.layaway && g.p1.layaway.stage === "open" && !holdsLayaway(2)) {
+            const o = layawayOffer(1, 2);
+            if (o && o.ok && cpuCardOk(o.card) && (cpuLayawayCardScore(o.card) >= cpuLayawayThreshold() || o.card.cost >= 4)) buyLayaway2(1, o);
+        }
+    }
+    function buyLayaway2(ownerId, offer) {                               // CPU version: no "local turn" check
+        const g = G(), owner = ownerId === 1 ? g.p1 : g.p2;
+        return buyCard(-1, { layaway: owner.layaway, ownerId, cost: offer.cost });
+    }
+    // end of the CPU's turn: reserve a card it wants but cannot afford yet and should be able to afford soon
+    function cpuLayawayReserve(p) {
+        const g = G();
+        if (!g || !ptHas(p, "layaway") || p.layaway || (Number(p.energy) || 0) < CFG.layaway.reserveCost || !market.length) return;
+        const thr = cpuLayawayThreshold(), after = (Number(p.energy) || 0) - CFG.layaway.reserveCost;
+        let best = null;
+        market.forEach((card, i) => {
+            if (!card) return;
+            const cost = getCardPurchaseCost(card, 2);
+            if (cost <= (Number(p.energy) || 0)) return;               // it could have bought this one already
+            if (cost > after + 4) return;                              // too far away to be affordable within a turn or two
+            if (!cpuCardOk(card)) return;
+            const score = cpuLayawayCardScore(card);
+            if (score >= thr && (!best || score > best.score)) best = { i, score };
+        });
+        if (best) reserveLayaway(p, 2, best.i);
+    }
+
     // ---------- the buttons (added to the centre action row) ----------
     function actionButtonsHtml(isHumanTurn, isInitRoll) {
         const p = me();
@@ -397,8 +761,9 @@
         const btn = (onclick, text, bg, title) => `<button onclick="${onclick}" title="${title}" style="background:${bg}; color:#fff; font-weight:bold;">${text}</button>`;
         if (meditationAvailable(p)) html += btn("Abilities.meditate()", "🧘 Meditate", "#7c3aed", "Skip your roll: +3 energy, lower Trance and Arousal by 1");
         if (echoAvailable(p)) html += btn("Abilities.openEcho()", "🔁 Echo (1⚡)", "#0e7490", "Copy one die's face onto another die");
-        if (tablesAvailable(p)) html += btn("Abilities.turnTables()", "🔄 Turn the Tables", "#b45309", "Once per game: flip the Submission marker");
-        if (p.calledFace && G().phase === "rolling") html += `<span style="align-self:center; color:#fcd34d; font-weight:bold;">🎯 Called: ${keyLabel(p.calledFace)}</span>`;
+        if (tablesAvailable(p)) html += btn("Abilities.turnTables()", "🪞 Turn the Tables", "#b45309", "Once per game: flip the Submission marker");
+        if (layawayAvailable(p)) html += btn("Abilities.openLayaway()", `🏷️ Layaway (${CFG.layaway.reserveCost}⚡)`, "#0f766e", "Reserve a market card for yourself");
+        if (kaleidoSwapAvailable(p)) html += btn("Abilities.kaleidoSwap()", `🔮 Swap (${CFG.kaleidoscope.swapCost}⚡)`, "#a21caf", "Trade your borrowed power for another one (once per turn)");
         return html;
     }
 
@@ -423,6 +788,11 @@
         onTurnStart, onTurnEnd, onCardPurchased, helpBoxes,
         // phase 2
         beforeRoll, applyCalledShot, meditate, openEcho, turnTables, actionButtonsHtml,
-        cpuStartOfTurn, cpuTryEcho, cpuShopPowers
+        cpuStartOfTurn, cpuTryEcho, cpuShopPowers,
+        // meditation rules, Called Shot display and CPU play, used-state
+        meditatingNow, isUsed, afterRollStarts, renderCalledShotBadges, cpuCalledShotAdjustKeep, cpuNeedsCalledShotReroll,
+        // phase 3: Layaway and Kaleidoscope
+        markUsed, hintFor, kaleidoSwap, openLayaway, buyLayaway, layawayTaken, holdsLayaway, renderLayawayZone,
+        cpuLayawayShop, cpuHoldsLayaway
     };
 })();

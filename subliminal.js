@@ -6,7 +6,7 @@
 // WHAT IT DOES
 //   * Off by default (Options checkbox). Only for 1 vs CPU games and online games, never hotseat.
 //   * Every game starts with a pot of permanent base phrases and NO subliminals showing.
-//   * Each time the local player is tranced to 5 (a Setback), the subliminal rate goes up (6% each, capped at 60%).
+//   * Each time the local player is tranced to 5 (The Deepening), the subliminal rate goes up (10% each, capped at 60%).
 //     The count is stored in the game state (player.setbacksSuffered) so it also works for the player on the OTHER computer online.
 //   * The pot is REBUILT from the game state every time a phrase is picked, so extras disappear on their own:
 //       - base phrases (always)             - phrases unlocked for the rest of the game (cards, dice events)
@@ -15,7 +15,7 @@
 //       - Transform phrases for the form being applied to the player, in tiers as the Transform level rises
 //   * Every style is colour coded by category (base = lilac, Arousal = pink, Submission = violet, form = gold, unlock = blue).
 //   * A subliminal is shown for a random time: "too fast" (2-3 screen frames), "flash" (110-260 ms) or "readable"
-//     (700-1300 ms). More Setbacks shift the odds toward readable.
+//     (700-1300 ms). More Deepenings shift the odds toward readable.
 //   * Phrases can use your gender tokens (see PHRASES and expandTokens): {CPU}, {CPU_HIM}, {HUMGEN|boy|girl|one}, {AAN} {HUMTRANS}...
 //   * Purely cosmetic: nothing here changes the game.
 //
@@ -96,7 +96,7 @@
     // 2) SETTINGS
     // ############################################################
     const CFG = {
-        rateStep: 0.10,          // rate gained per Setback
+        rateStep: 0.10,          // rate gained per Deepening
         rateMax: 0.60,
         cooldownMs: 2500,        // never two subliminals closer together than this
         maxPerMinute: 12,
@@ -147,7 +147,7 @@
         return true;
     }
     function me() { const g = gs(); return g ? g["p" + localNum()] : null; }
-    // Setbacks this player has suffered. It is stored IN the game state (player.setbacksSuffered), so in online games the
+	// The number of Deepenings this player has experienced. It is stored IN the game state (player.setbacksSuffered), so in online games the
     // other computer receives it automatically. (debugSetbacks is only what the debug panel adds on top.)
     function setbackCount() { const p = me(); return (p ? (Number(p.setbacksSuffered) || 0) : 0) + S.debugSetbacks; }
     // how far the marker is toward MY end (0-5). Positive submission = toward player 2's end.
@@ -408,9 +408,10 @@
         [g.p1, g.p2].forEach(pl => (pl.inventory || []).forEach(c => { if (c) addUnlocks(PHRASES.unlocks.card[Number(c.id)]); }));
         const prev = S.snap; S.snap = snap;
         if (!prev) { S.seenSetbacks = snap.setbacks; return; }                       // first look: nothing to react to yet
-        if (snap.setbacks > S.seenSetbacks) {                                         // the local player was tranced to 5
+		if (snap.setbacks > S.seenSetbacks) { // the local player experienced The Deepening
             addUnlocks(PHRASES.unlocks.event.setback);
-            updateDebugReadout(`setback ${snap.setbacks}: rate ${(rate() * 100).toFixed(0)}%`);
+			updateDebugReadout(`Deepening ${snap.setbacks}: rate ${(rate() * 100).toFixed(0)}%`);
+			
         }
         S.seenSetbacks = snap.setbacks;
         if (snap.turn !== prev.turn) setTimeout(() => maybeFire(rate()), 600);       // a new turn (either player's)
@@ -469,7 +470,7 @@
                <label>Style <select id="sub-dbg-style">${opts(STYLES)}</select></label>
                <label>Speed <select id="sub-dbg-tier">${opts([["auto", "Auto (by rate)"], ["fast", "Too fast"], ["flash", "Flash"], ["readable", "Readable"]])}</select></label>
                <label>Rate <select id="sub-dbg-rate">${opts([["auto", "Auto"], ["0", "0%"], ["0.1", "10%"], ["0.25", "25%"], ["0.5", "50%"], ["1", "100%"]])}</select></label>
-               <div class="row"><button id="sub-dbg-minus">− Setback</button><span id="sub-dbg-count">0</span><button id="sub-dbg-plus">+ Setback</button></div>
+			   <div class="row"><button id="sub-dbg-minus">− Deepening</button><span id="sub-dbg-count">0</span><button id="sub-dbg-plus">+ Deepening</button></div>
                <div class="row"><button id="sub-dbg-fire">Fire now</button><button id="sub-dbg-all">Show every style</button></div>
                <div id="sub-dbg-status">enabled: <span id="sub-dbg-en"></span></div>
                <div id="sub-dbg-readout"></div>

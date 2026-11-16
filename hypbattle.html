@@ -513,13 +513,6 @@
             <div class="stat"><span class="stat-label energy-glow" id="p1-energy-label">Energy ⚡:</span> <span class="stat-value energy-glow" id="p1-energy">0</span></div>
             <div class="stat vuln-badge" id="p1-vuln-container" style="display:none;">Vulnerability 🪫: <span id="p1-vuln">0</span></div>
             
-            <div id="energy-actions-panel-1" style="display: none;">
-                <hr style="width: 100%; border: 1px solid #444;">
-                <h3>Energy Actions</h3>
-                <button onclick="buyAction('arousal', 1)" id="btn-buy-arousal-1">-1 Arousal (3⚡)</button>
-                <button onclick="buyAction('transform', 1)" id="btn-buy-transform-1">+1 Opponent Transform (5⚡)</button>
-                <button onclick="buyAction('submission', 1)" id="btn-buy-submission-1">Push Sub 2 (6⚡)</button>
-            </div>
             
             <div id="p1-last-keep-section" style="display: none;">
                 <hr style="width: 100%; border: 1px solid #444;">
@@ -527,6 +520,7 @@
                 <div class="cpu-last-roll" id="p1-last-roll">--</div>
             </div>
 
+            <div id="p1-called-shot" class="called-shot-badge" style="display:none;"></div>
             <hr style="width: 100%; border: 1px solid #444;">
             <h3>Active Cards</h3>
             <div id="p1-inventory" class="inventory"></div>
@@ -549,6 +543,7 @@
                 <button onclick="wipeMarket()" id="btn-wipe-market" style="width: auto; padding: 5px 10px; font-size: 0.8em;">Wipe Row (2⚡)</button>
             </div>
             <div class="market-row" id="market-container"></div>
+            <div id="layaway-zone" class="layaway-zone" style="display:none;"></div>
             <div id="phase-cue" class="phase-cue" role="status" aria-live="polite">
                 <span id="phase-cue-text">Keep or reroll</span>
             </div>
@@ -602,18 +597,12 @@
             <div class="stat"><span class="stat-label energy-glow" id="p2-energy-label">Energy ⚡:</span> <span class="stat-value energy-glow" id="p2-energy">0</span></div>
             <div class="stat vuln-badge" id="p2-vuln-container" style="display:none;">Vulnerability 🪫: <span id="p2-vuln">0</span></div>
             
-            <div id="energy-actions-panel-2" style="display: none;">
-                <hr style="width: 100%; border: 1px solid #444;">
-                <h3>Energy Actions</h3>
-                <button onclick="buyAction('arousal', 2)" id="btn-buy-arousal-2">-1 Arousal (3⚡)</button>
-                <button onclick="buyAction('transform', 2)" id="btn-buy-transform-2">+1 Opponent Transform (5⚡)</button>
-                <button onclick="buyAction('submission', 2)" id="btn-buy-submission-2">Push Sub 2 (6⚡)</button>
-            </div>
 
             <hr style="width: 100%; border: 1px solid #444;">
             <h3 style="text-align: center; border: none; margin-bottom: 0;">Last Roll</h3>
             <div class="cpu-last-roll" id="cpu-last-roll">--</div>
             
+            <div id="p2-called-shot" class="called-shot-badge" style="display:none;"></div>
             <hr style="width: 100%; border: 1px solid #444;">
             <h3>Active Cards</h3>
             <div id="p2-inventory" class="inventory"></div>

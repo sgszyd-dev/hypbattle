@@ -39,7 +39,7 @@ function cpuSmartTier() {
 }
 
 // ---------- who is the CPU, who is the human (only abilities that are switched ON count) ----------
-const CPU_POWER_KEYS = ["alex", "roz", "xander", "siobhan", "tex", "luci", "zixuan", "hyeri", "mark", "fable"];
+const CPU_POWER_KEYS = ["unyieldingresistance", "tripletrouble", "heatedopening", "predatorymomentum", "twisteddice", "submissionamplifier", "marketmanipulator", "perfectharmony", "lingeringtrance", "lucidreversal"];
 function cpuOwnPower()      { return CPU_POWER_KEYS.find(k => hasSignaturePower(2, k)) || null; }
 function cpuOpponentPower() { return CPU_POWER_KEYS.find(k => hasSignaturePower(1, k)) || null; }
 
@@ -54,50 +54,50 @@ const CPU_BIG_INSTANTS = [10, 39, 30, 8, 4];
 // What the CPU does NOT want the HUMAN to get, by the human's ability.
 // (The CPU also gets a bonus for buying these itself, because that keeps them from the human.)
 const CPU_DENY_VS_POWER = {
-    hyeri:   { cards: [...CPU_REROLL_CARDS, 7],               pts: 35 },   // rerolls and the extra die feed Perfect Harmony
-    xander:  { cards: [13, 48, 49, 56, 6],                    pts: 35 },   // arousal cards
-    luci:    { cards: CPU_SUBMISSION_KEEPS,                   pts: 30 },
-    siobhan: { cards: [...CPU_REROLL_CARDS, 56],              pts: 35 },
-    tex:     { cards: [13, 49, 48, 23, 0, 31, 14],            pts: 30 },   // arousal first, trance second
-    alex:    { cards: CPU_SUBMISSION_KEEPS,                   pts: 30 },
-    zixuan:  { cards: [...CPU_ENERGY_CARDS, 31],              pts: 30 },
-    mark:    { cards: CPU_TRANCE_BOOST_CARDS,                 pts: 30 },
-    roz:     { cards: CPU_REROLL_CARDS,                       pts: 30 },
-    fable:   { cards: [7, 9, ...CPU_REROLL_CARDS],            pts: 20 }    // MY SUGGESTION: more dice and bigger 💧 make her 3-💧 reversal easier
+    perfectharmony:   { cards: [...CPU_REROLL_CARDS, 7],               pts: 35 },   // rerolls and the extra die feed Perfect Harmony
+    heatedopening:  { cards: [13, 48, 49, 56, 6],                    pts: 35 },   // arousal cards
+    submissionamplifier:    { cards: CPU_SUBMISSION_KEEPS,                   pts: 30 },
+    predatorymomentum: { cards: [...CPU_REROLL_CARDS, 56],              pts: 35 },
+    twisteddice:     { cards: [13, 49, 48, 23, 0, 31, 14],            pts: 30 },   // arousal first, trance second
+    unyieldingresistance:    { cards: CPU_SUBMISSION_KEEPS,                   pts: 30 },
+    marketmanipulator:  { cards: [...CPU_ENERGY_CARDS, 31],              pts: 30 },
+    lingeringtrance:    { cards: CPU_TRANCE_BOOST_CARDS,                 pts: 30 },
+    tripletrouble:     { cards: CPU_REROLL_CARDS,                       pts: 30 },
+    lucidreversal:   { cards: [7, 9, ...CPU_REROLL_CARDS],            pts: 20 }    // MY SUGGESTION: more dice and bigger 💧 make her 3-💧 reversal easier
 };
 
 // What the CPU WANTS when it faces that human ability.
 const CPU_WANT_VS_POWER = {
-    alex:  { cards: [...CPU_BIG_SUBMISSION_INSTANTS, 53], pts: 25 },       // push him back instead of getting pinned (53 = I Will Not Obey)
-    fable: { cards: [41],                                  pts: 20 }       // MY SUGGESTION: Powerful Transform = fewer dice = harder to roll 3 💧
+    unyieldingresistance:  { cards: [...CPU_BIG_SUBMISSION_INSTANTS, 53], pts: 25 },       // push him back instead of getting pinned (53 = I Will Not Obey)
+    lucidreversal: { cards: [41],                                  pts: 20 }       // MY SUGGESTION: Powerful Transform = fewer dice = harder to roll 3 💧
 };
 
 // What the CPU wants for its OWN ability.
 const CPU_WANT_OWN_POWER = {
-    hyeri:   { cards: [...CPU_REROLL_CARDS, 7, 3],        pts: 30 },       // six different faces: Perfect Harmony + Trigger Word
-    siobhan: { cards: CPU_REROLL_CARDS,                   pts: 30 },
-    mark:    { cards: CPU_TRANCE_BOOST_CARDS,             pts: 30 },
-    alex:    { cards: CPU_SUBMISSION_KEEPS,               pts: 30 },
-    zixuan:  { cards: CPU_ENERGY_CARDS,                   pts: 25 },
-    luci:    { cards: CPU_SUBMISSION_KEEPS,               pts: 20 }
+    perfectharmony:   { cards: [...CPU_REROLL_CARDS, 7, 3],        pts: 30 },       // six different faces: Perfect Harmony + Trigger Word
+    predatorymomentum: { cards: CPU_REROLL_CARDS,                   pts: 30 },
+    lingeringtrance:    { cards: CPU_TRANCE_BOOST_CARDS,             pts: 30 },
+    unyieldingresistance:    { cards: CPU_SUBMISSION_KEEPS,               pts: 30 },
+    marketmanipulator:  { cards: CPU_ENERGY_CARDS,                   pts: 25 },
+    submissionamplifier:    { cards: CPU_SUBMISSION_KEEPS,               pts: 20 }
 };
 
 // Strategy pressure added to the CPU's plan scores for its own ability...
 const CPU_POWER_PLAN_BIAS = {
-    alex:   { submission: 3 },
-    luci:   { submission: 3 },
-    mark:   { trance: 3 },
-    xander: { arousal: 3 },
-    zixuan: { energy: 2, trance: 1.5, submission: 1.5 }
+    unyieldingresistance:   { submission: 3 },
+    submissionamplifier:   { submission: 3 },
+    lingeringtrance:   { trance: 3 },
+    heatedopening: { arousal: 3 },
+    marketmanipulator: { energy: 2, trance: 1.5, submission: 1.5 }
 };
 // ...and to its reading of what the human is building, from the human's ability.
 const CPU_POWER_THREATS = {
-    xander: { arousal: 3 },
-    tex:    { arousal: 3, trance: 1.5 },
-    mark:   { trance: 3 },
-    luci:   { submission: 3 },
-    alex:   { submission: 2 },
-    zixuan: { energy: 3 }
+    heatedopening: { arousal: 3 },
+    twisteddice:    { arousal: 3, trance: 1.5 },
+    lingeringtrance:   { trance: 3 },
+    submissionamplifier:   { submission: 3 },
+    unyieldingresistance:   { submission: 2 },
+    marketmanipulator: { energy: 3 }
 };
 
 function cpuApplySmartPlanBias(scores) {
@@ -112,7 +112,7 @@ function cpuApplySmartPlanBias(scores) {
     }
     const bias = CPU_POWER_PLAN_BIAS[cpuOwnPower()];
     if (bias) Object.keys(bias).forEach(k => { scores[k] = (scores[k] || 0) + bias[k]; });
-    if (cpuOpponentPower() === "tex") scores.submission += 3;             // attack Tex's submission
+    if (cpuOpponentPower() === "twisteddice") scores.submission += 3;             // attack Tex's submission
 }
 function cpuApplyPowerThreats(oppScores) {
     if (cpuSmartTier() < 2) return;
@@ -149,8 +149,8 @@ function cpuSynergyFaceWeights(w) {
     if (has(0) && subPlan) w.SP += 0.35;                                   // Deep Gaze: start going for 🌀 too
     if (cpuFallingSensationMode()) { w.SP += 0.5; w.EN += 0.5; w.TR = Math.max(0.3, w.TR - 0.2); }
     else if (has(31) && subPlan) { w.SP += 0.2; w.EN += 0.25; }
-    if (hasSignaturePower(2, "mark")) w.SP += 0.3;                         // Lingering Trance
-    if (hasSignaturePower(2, "zixuan") && has(31)) { w.SP += 0.2; w.SU += 0.2; }
+    if (hasSignaturePower(2, "lingeringtrance")) w.SP += 0.3;                         // Lingering Trance
+    if (hasSignaturePower(2, "marketmanipulator") && has(31)) { w.SP += 0.2; w.SU += 0.2; }
     cpuRescueFaceWeights(w); cpuForecastFaceWeights(w); cpuStyleFaceWeights(w); cpuShoppingFaceWeights(w);
     return cpuEndgameFaceWeights(w);
 }
@@ -160,7 +160,7 @@ function cpuSmartKeepRules(keep, faces, counts) {
     if (cpuSmartTier() < 2) return keep;
     const p = gameState.p2, opp = gameState.p1;
     // Fable: above 6 Transform, hunting three 💧 gets more important the closer she is to 10; below 7 she doesn't try on purpose
-    if (hasSignaturePower(2, "fable") && p.transform > 6) {
+    if (hasSignaturePower(2, "lucidreversal") && p.transform > 6) {
         const need = p.transform >= 8 ? 1 : 2;                             // 7: only a pair is worth locking; 8+: every 💧
         if (counts.LU >= need) faces.forEach((f, i) => { if (f === "LU") keep[i] = true; });
     }
@@ -223,11 +223,11 @@ function cpuSmartCardBonus(card, scoreFn) {
     const subPlan = cpuBrain.plan === "submission" || (cpuBrain.planScores.submission || 0) >= 2 || gameState.submission <= -1;
     if (id === 0 && subPlan) b += 20;                                       // Deep Gaze with a submission push
     if (id === 31 && subPlan) b += 25;                                      // Falling Sensation with a submission push
-    if (id === 31 && ownKey === "zixuan") b += 45;                          // Zixuan: energy + Falling Sensation is the engine
-    if (ownKey === "zixuan" && !has(31) && CPU_BIG_INSTANTS.includes(id)) b += 20;   // without it: big instant cards
+    if (id === 31 && ownKey === "marketmanipulator") b += 45;                          // Zixuan: energy + Falling Sensation is the engine
+    if (ownKey === "marketmanipulator" && !has(31) && CPU_BIG_INSTANTS.includes(id)) b += 20;   // without it: big instant cards
     if (id === 38) b += cpuNewIdentityBonus();                              // losing: New Identity is a good card
     if (id === 5) b += Math.min(45, cpuStealValue(scoreFn) * 0.45);        // Hypnotic Dominance: worth what it can take
-    if (id === 3 && (ownKey === "hyeri") ) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
+    if (id === 3 && (ownKey === "perfectharmony") ) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
 	b += cpuEndgameCardBonus(card);
 	b += cpuForesightCardBonus(card) + cpuStyleCardBonus(card);
     return b;
@@ -439,7 +439,7 @@ function ivyCanUseExchange(playerId) {
     const p = playerId === 1 ? gameState.p1 : gameState.p2;
 
     return (
-        hasSignaturePower(playerId, "ivy") &&
+        hasSignaturePower(playerId, "suggestedtransference") &&
         gameState.activePlayer === playerId &&
         gameState.phase === "shop" &&
         !p.ivyExchangeUsedThisTurn
@@ -808,7 +808,7 @@ function ivyCpuCardValue(card, plan) {
 // for an opponent's Keep card.
 function ivyCpuTryOpponentExchange(plan = ivyCpuCurrentPlan()) {
     if (!IVY_DEBUG_OPPONENT_EXCHANGE) return false;
-    if (!hasSignaturePower(2, "ivy")) return false;
+    if (!hasSignaturePower(2, "suggestedtransference")) return false;
     if (!ivyCanUseExchange(2)) return false;
 
     const ivy = gameState.p2;
@@ -903,7 +903,7 @@ function ivyCpuTryExchange() {
         exchangeUsed: p.ivyExchangeUsedThisTurn
     });
 */
-    if (!hasSignaturePower(2, "ivy")) {
+    if (!hasSignaturePower(2, "suggestedtransference")) {
         //ivyCpuDebug("STOPPED: Ivy's signature power was not detected.");
         return false;
     }
@@ -913,7 +913,7 @@ function ivyCpuTryExchange() {
         return false;
     }
 
-    if (!hasSignaturePower(2, "ivy")) return false;
+    if (!hasSignaturePower(2, "suggestedtransference")) return false;
     if (p.ivyExchangeUsedThisTurn) return false;
 
     const plan = ivyCpuCurrentPlan();
@@ -1057,7 +1057,7 @@ ivyCpuDebug("Eligible market Keep cards:",
 //   * gameState.submission runs -5 (the HUMAN's end) ... +5 (the CPU's end).
 //   * a ⛓️ or 👁️ roll of 3 gives effect 1, and every extra die adds 1 (4 dice = 2, 5 dice = 3).
 //   * a push past an end overflows into Transform. A marker sitting on a player's end at the end of THEIR turn = +1 Transform.
-//   * a Trance Setback lets the attacker choose "Push Submission 2", so 🌀 also pushes the marker.
+//   * a Trance Deepening lets the attacker choose "Push Submission 2", so 🌀 also pushes the marker.
 // ============================================================
 
 
@@ -1094,7 +1094,7 @@ function cpuSubPower(playerId) {
     const inv = (playerId === 1 ? gameState.p1.inventory : gameState.p2.inventory) || [];
     let s = 0;
     inv.forEach(c => { if (c) s += CPU_SUB_PUSH_WEIGHT[Number(c.id)] || 0; });
-    if (hasSignaturePower(playerId, "luci")) s += 1.5;
+    if (hasSignaturePower(playerId, "submissionamplifier")) s += 1.5;
 	if (playerId === 1 && cpuStyle().subPress) s += 2;        // they play a ⛓️ game: treat them as holding more pushing power
     return s;
 }
@@ -1120,7 +1120,7 @@ function cpuEndgameFaceWeights(w) {
         w.TR += 0.25 * urgency;                                              // a 👁️ triple is a Transform
         if (info.pinned) {
             w.SU += 0.3 * urgency + 0.2;                                     // every ⛓️ point past the edge is a Transform
-            if (opp.trance >= 3) w.SP += 0.3 * urgency;                      // a Setback pushes ⛓️ by 2
+            if (opp.trance >= 3) w.SP += 0.3 * urgency;                      // a Deepening pushes ⛓️ by 2
         }
         if (info.urgent) w.EN += 0.2;                                        // energy buys the finishing card
     }
@@ -1174,7 +1174,7 @@ function cpuEndgameCardBonus(card) {
     if (push && mode === "press") b += 8 * push;
     if (push && mode === "defend") b += 4 * push;
     if (mode === "defend" && (id === 53 || id === 35 || id === 34)) b += 25;   // I Will Not Obey / Mesmerizing Rhythm / Cognitive Override
-    if (info.active && info.pinned && id === 17) b += 20;                   // Physical Manipulation: every Setback becomes a Transform
+    if (info.active && info.pinned && id === 17) b += 20;                   // Physical Manipulation: every Deepening becomes a Transform
     return b;
 }
 // Keeping cards from the human (add to cpuDenyScore)
@@ -1233,7 +1233,7 @@ function cpuPressure() {
 function cpuRescueEligible(card) {
     const id = Number(card.id), s = gameState.submission;
     if (inventoryHasName(gameState.p2, card.name)) return false;
-    if (hasSignaturePower(2, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(id)) return false;
+    if (hasSignaturePower(2, "unyieldingresistance") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(id)) return false;
     if (id === 53 && s <= 0) return false;
     if (id === 61 && cpuPressure() < 3) return false;
     return true;
@@ -1304,8 +1304,8 @@ function cpuThreatForecast() {
     const budget = (hu.energy || 0) + 2;                             // ⚡ they can have next turn (their dice add about 2)
     const has = id => hasCard(1, id);
     const keepPush = (has(36) ? 1 : 0) + (has(15) ? 1 : 0) + (has(34) && s > 0 ? 1 : 0) + (has(46) ? 1 : 0)
-        + (has(22) ? 0.5 : 0) + (hasSignaturePower(1, "luci") ? 1 : 0);
-    const setbackPush = me.trance >= 3 ? 2 : 0;                      // a Setback lets them "Push Submission 2"
+        + (has(22) ? 0.5 : 0) + (hasSignaturePower(1, "submissionamplifier") ? 1 : 0);
+    const setbackPush = me.trance >= 3 ? 2 : 0;                      // a Deepening lets them "Push Submission 2"
     const physManip = (has(17) && me.trance >= 3) ? 1 : 0;           // Physical Manipulation turns it into a Transform
 
     const cards = market.filter(Boolean).map(c => ({
@@ -1396,7 +1396,7 @@ function cpuForecastFaceWeights(w) {
 // ############################################################
 // PART 3: SMART LUCIDITY
 // The old order was always: Vulnerability, then Arousal, then Trance, with nothing about what actually matters.
-// Now every possible split of the 💧 is scored (rerolls regained, Setback danger, Vulnerability) and the best one is used.
+// Now every possible split of the 💧 is scored (rerolls regained, Deepening danger, Vulnerability) and the best one is used.
 // ############################################################
 
 function cpuTranceThreat() {                       // how much 🌀 the human could add to us next turn
@@ -1404,7 +1404,7 @@ function cpuTranceThreat() {                       // how much 🌀 the human co
     let t = 1;
     [0, 31, 14, 8, 18].forEach(id => { if (hasCard(1, id)) t += 1; });
     if (st.trancer) t += 1.5;
-    if (hasSignaturePower(1, "mark") || hasSignaturePower(1, "tex")) t += 1;
+    if (hasSignaturePower(1, "lingeringtrance") || hasSignaturePower(1, "twisteddice")) t += 1;
     return t;
 }
 function cpuLucidityValue(p, v, a, t) {
@@ -1412,10 +1412,10 @@ function cpuLucidityValue(p, v, a, t) {
     let val = v * 1.6;                                                          // each Vulnerability point = one fewer die next turn
     const a0 = p.arousal || 0, a1 = a0 - a;
     val += (rerolls(a1) - rerolls(a0)) * 2.2 + a * 0.35;                       // crossing a reroll band is what matters
-    if (cpuStyle().arousal || hasSignaturePower(1, "xander") || hasSignaturePower(1, "tex")) val += a * 0.5;
+    if (cpuStyle().arousal || hasSignaturePower(1, "heatedopening") || hasSignaturePower(1, "twisteddice")) val += a * 0.5;
     const t0 = p.trance || 0, t1 = t0 - t, th = cpuTranceThreat();
     val += t * 0.45;
-    if (t0 + th >= 5 && t1 + th < 5) val += 2.5 * (1 + 0.3 * Math.max(0, gameState.submission - 1));   // a Setback is worse the closer we are to our end
+    if (t0 + th >= 5 && t1 + th < 5) val += 2.5 * (1 + 0.3 * Math.max(0, gameState.submission - 1));   // a Deepening is worse the closer we are to our end
     return val;
 }
 // Same contract as autoAllocateLucidity(points, playerObj, arousalCost): spends the points and returns {trance, arousal, vuln}

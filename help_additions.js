@@ -85,8 +85,19 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>Trance 🌀</h3>
-            <p>Each 🌀 deepens the opponent's Trance. Reaching 5 Trance causes a Setback for the opponent: You choose whether they are more submissive (+2) or more aroused (+2). Any Trance beyond 5 carries over, so a big push can trigger more than one Setback.</p>
+			<p>Each 🌀 deepens the opponent's Trance. When they reach 5 Trance, you trigger <strong>The Deepening</strong>: you've broken through their defenses and gained an opening to influence them further. You choose whether to increase their Submission by 2 or their Arousal by 2. Any Trance beyond 5 carries over, so a powerful push can trigger The Deepening more than once.</p>
         </div>
+		<div class="help-section">
+			<h3>The Deepening</h3>
+			<p>When a player's Trance reaches 5, their opponent triggers <em>The Deepening</em>. This means they've broken through the player's defenses and gained an opportunity to influence them further.</p>
+			<p>The opponent chooses one available effect:</p>
+			<ol>
+				<li><strong>Submission</strong>: Move the Submission marker 2 points toward the affected player.</li>
+				<li><strong>Arousal</strong>: Increase the affected player's Arousal by 2.</li>
+				<li><strong>Transformation</strong>: If Physical Manipulation is available, transform the affected player by 1.</li>
+			</ol>
+			<p>Afterward, the affected player's Trance decreases by 5. Any excess Trance carries over and can trigger another Deepening.</p>
+		</div>
         <div class="help-section">
             <h3>Arousal 🔥 & Rerolls</h3>
             <p>Two 🔥 dice produce 1 Arousal; each additional 🔥 adds one more. So 3 🔥 produce 2, 4 🔥 produce 3, etc. Arousal is capped at 5. Your Arousal level controls your base rerolls: 0–2 Arousal gives 2 rerolls, 3–4 gives 1, and 5 gives 0. A heated mind is a slower mind. Some cards add rerolls or other modifiers.</p>
@@ -167,6 +178,16 @@ const HELP_CONTENT = {
             <h3>Special Dice Manipulation</h3>
             <p>Simmering Arousal can change one die to 🔥 during the roll phase. The normal interface lets you lock dice you want to preserve; Simmering changes the first eligible non-🔥 die.</p>
         </div>
+		<div class="help-section">
+			<h3>Repeated Deepenings and special effects</h3>
+			<ol>
+				<li>Excess Trance carries over after each Deepening. A player can therefore experience multiple Deepenings from a single large Trance increase.</li>
+				<li>Certain abilities can modify the threshold or the effect's strength.</li>
+				<li>Mark's <em>Lingering Trance</em> ability lets an opponent retain 1 Trance after Mark triggers The Deepening.</li>
+				<li>Subliminal appearances become more likely as a player experiences additional Deepenings.</li>
+				<li>Some cards and effects can trigger The Deepening outside the normal dice-rolling sequence.</li>
+			</ol>
+		</div>
         <div class="help-section">
             <h3>Defensive Tools</h3>
             <p>Rapid Pulse can spend 2 Energy during the roll phase to shield you from incoming Trance and Arousal for a turn. Other cards provide rerolls, healing, extra dice, or ways to manipulate the market.</p>
@@ -198,8 +219,8 @@ const HELP_CONTENT = {
         </div>
         <div class="help-section">
             <h3>How They Build</h3>
-            <p>Every game begins clear: nothing appears at first. Each time you are tranced to 5 (a <strong>Setback</strong>), the chance of seeing a subliminal goes up, until it tops out at about 60%. The longer the duel goes on, the more often they come.</p>
-            <p>They also change in how long they stay. Some are <strong>too fast to read</strong> and are only a flicker, some <strong>flash</strong> by if you are watching closely, and some stay up <strong>long enough to read</strong>. Early on most are too fast, but each Setback makes the readable ones more common.</p>
+			<p>Every game begins clear: nothing appears at first. Each time a player experiences <strong>The Deepening</strong> (when their Trance reaches 5), the chance of seeing a subliminal increases, until it tops out at about 60%. The longer the duel goes on, the more often they come.</p>
+			<p>They also change in how long they stay. Some are <strong>too fast to read</strong> and are only a flicker, some <strong>flash</strong> by if you are watching closely, and some stay up <strong>long enough to read</strong>. Early on most are too fast, but each Deepening makes the readable ones more common.</p>
         </div>
         <div class="help-section">
             <h3>What They Say</h3>
@@ -209,7 +230,7 @@ const HELP_CONTENT = {
                 <div class="help-box"><strong style="color:#ff6fb1;">Pink: Arousal 🔥</strong><br>The higher your Arousal, the more of these join the pool, and the hotter they get. When your Arousal drops, they drop out again.</div>
                 <div class="help-box"><strong style="color:#a78bfa;">Violet: Submission ⛓️</strong><br>The closer the Submission marker is to <em>your</em> end, the more of these join the pool. Push the marker back toward the middle or toward your opponent and they fade away.</div>
                 <div class="help-box"><strong style="color:#ffd166;">Gold: Transformation 👁️</strong><br>Phrases about the form you are becoming. More of them appear as your Transform level climbs.</div>
-                <div class="help-box"><strong style="color:#7dd3fc;">Blue: unlocked</strong><br>Some events add phrases for the rest of the game: your first Setback, and certain cards coming into play. Deep Gaze, Trigger Word, Hypnotic Dominance, Altered State, Mental Shackles, Somnambulism, Falling Sensation, Deeper Trance and Bondage each bring their own, whichever player holds them.</div>
+				<div class="help-box"><strong style="color:#7dd3fc;">Blue: unlocked</strong><br>Some events add phrases for the rest of the game: your first Deepening, and certain cards coming into play. Deep Gaze, Trigger Word, Hypnotic Dominance, Altered State, Mental Shackles, Somnambulism, Falling Sensation, Deeper Trance and Bondage each bring their own, whichever player holds them.</div>
             </div>
         </div>
         <div class="help-section">
@@ -283,7 +304,7 @@ const HELP_CONTENT = {
                     <img class="signature-portrait" src="images/avatars/Mark/Mark_head.jpg" alt="Mark">
                     <strong>Mark</strong><br>
                     <em>Lingering Trance</em><br>
-                    When Mark causes an opponent's Trance Setback, that opponent keeps 1 🌀 instead of dropping to the usual remainder.
+                    When Mark causes The Deepening (and selects Trance,) the opponent retains 1 🌀 Trance instead of dropping to the usual remainder.
                 </div>
                 <div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Fable/Fable_head.jpg" alt="Fable">
@@ -296,6 +317,12 @@ const HELP_CONTENT = {
                     <strong>Ivy</strong><br>
                     <em>Suggested Transference</em><br>
                     Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost.
+                </div>
+				<div class="help-box signature-power-box">
+                    <img class="signature-portrait" src="images/avatars/Dare/Dare_head.jpg" alt="Dare">
+                    <strong>Dare</strong><br>
+                    <em>Meditation</em><br>
+                    Instead of rolling, Dare may Meditate: gain 3 ⚡ and lower his Trance and Arousal by 1. Not two turns in a row. Dare cannot roll anything or buy cards on that turn.
                 </div>
 				<div class="help-box signature-power-box">
                     <img class="signature-portrait" src="images/avatars/Val/Val_head.jpg" alt="Val">
@@ -455,7 +482,7 @@ function resetTutorialGameState() {
         submission: 0, activePlayer: 1, round: 1, phase: 'waiting',
         //dice: Array(6).fill({ face: '-', kept: false }),
 		dice: Array.from(6, () => ({ face: "-", kept: false })),
-        rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
+        rerollsLeft: 0, gameEnded: false, showDiceText: true, freeBuyActive: false, extraTurn: false, somnambulismTurn: false,
         signatureSiobhanBonusPending:false, signatureSiobhanBonusRoll:false, signatureTexAllocationPending:false, signatureTexAllocationDone:false, signatureFableDecisionPending:false, signatureFableDecisionMade:false, signatureFableSpend:false, signatureHyeriPromptPending:false, signatureRozBonusGranted:false, signatureAlexAbsorbedThisTurn:false,
         log: []
     };
@@ -489,7 +516,6 @@ function startTutorialDemoGame() {
 
     gameState.gameMode = 'solo';
     gameState.showDiceText = document.getElementById('dice-text-option')?.value !== 'off';
-    gameState.showEnergyActions = false;
     gameState.p1.name = p1Name;
     gameState.p1.transformTarget = p1Target;
     gameState.p2.name = cpuName;
@@ -501,8 +527,6 @@ function startTutorialDemoGame() {
     gameState.activePlayer = 1;
     gameState.p2.energy = 1;
 
-    document.getElementById('energy-actions-panel-1').style.display = 'none';
-    document.getElementById('energy-actions-panel-2').style.display = 'none';
     document.getElementById('btn-end-turn-2').style.display = 'none';
     document.getElementById('p1-last-keep-section').style.display = 'none';
 

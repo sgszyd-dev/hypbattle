@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261114.1"; // Update this label for each release.
+const GAME_VERSION = "20261115.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -11,7 +11,7 @@ const CPU_PIN_ESCAPE_V2 = true;
 // CPU respects human Turn the Tables (once-per-game flip). Soft-caps offensive submission while unused.
 // Defensive soft ceiling +2; Virtuoso/Master soft ceiling +3. Set false to ignore Tables.
 const CPU_TABLES_RESPECT_V1 = true;
-const cardDebugOn = false;
+const cardDebugOn = true;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
@@ -22,8 +22,8 @@ const debugStart = {
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
 	cpuTransform: null,
-	p1Power: "turntables",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
-	cpuPower: "echo"				// same for CPU
+	p1Power: "kaleidoscope",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
+	cpuPower: "layaway"				// same for CPU
 };
 
 
@@ -226,7 +226,7 @@ const CHARACTER_MANIFEST = {
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
-	"Dare": ["Snake","Skunk"], // Snake
+	"Dare": ["Snake","Skunk","Cow"], // Snake
 	};
 
 
@@ -316,7 +316,7 @@ let gameState = {
     submission: 0, activePlayer: 1, round: 1, phase: "waiting",
     //dice: Array(6).fill({ face: "-", kept: false }),
 	dice: Array.from(6, () => ({ face: "-", kept: false })),
-    rerollsLeft: 0, gameEnded: false, showDiceText: true, showEnergyActions: false, freeBuyActive: false,
+    rerollsLeft: 0, gameEnded: false, showDiceText: true, freeBuyActive: false,
 	extraTurn: false, somnambulismTurn: false, bonusTurnType: "none", endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
     signatureSiobhanBonusPending: false, signatureSiobhanBonusRoll: false, signatureTexAllocationPending: false, signatureTexAllocationDone: false, signatureFableDecisionPending: false, signatureFableDecisionMade: false, signatureFableSpend: false, signatureHyeriPromptPending: false, signatureRozBonusGranted: false, signatureAlexAbsorbedThisTurn: false,
 	log: [] // Store log messages here
@@ -573,18 +573,18 @@ const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [34, 35, 53];
 // New Powers: Toll, Cornered, Deep Well, Surrender to Heat
 
 const SIGNATURE_POWERS = {
-    Roz: { key:"roz", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
-    Luci: { key:"luci", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
-    "Siobhán": { key:"siobhan", title:"Predatory Momentum", description:"A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls." },
-    Fable: { key:"fable", title:"Lucid Reversal", description:"Spend three Lucidity dice to reduce your own Transform by one." },
-    Hyeri: { key:"hyeri", title:"Perfect Harmony", description:"When all six standard faces appear, change all dice to a face this power has not used before." },
-    Alex: { key:"alex", title:"Unyielding Resistance", description:"Absorbs one incoming Submission point per opposing turn; Alex cannot benefit from defensive Submission cards." },
-    Xander: { key:"xander", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
-    Tex: { key:"tex", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
-    Zixuan: { key:"zixuan", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
-    Mark: { key:"mark", title:"Lingering Trance", description:"When Mark causes The Deepening, the opponent retains one 🌀 Trance."},
-	Ivy: {key:"ivy", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."},
-	Dare: {key: "meditation", title: "Meditation", description: "Instead of rolling, you may Meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. Not two turns in a row and you can still shop."},
+    Roz: { key:"tripletrouble", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
+    Luci: { key:"submissionamplifier", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
+    "Siobhán": { key:"predatorymomentum", title:"Predatory Momentum", description:"A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls." },
+    Fable: { key:"lucidreversal", title:"Lucid Reversal", description:"Spend three Lucidity dice to reduce your own Transform by one." },
+    Hyeri: { key:"perfectharmony", title:"Perfect Harmony", description:"When all six standard faces appear, change all dice to a face this power has not used before." },
+    Alex: { key:"unyieldingresistance", title:"Unyielding Resistance", description:"Absorbs one incoming Submission point per opposing turn; Alex cannot benefit from defensive Submission cards." },
+    Xander: { key:"heatedopening", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
+    Tex: { key:"twisteddice", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
+    Zixuan: { key:"marketmanipulator", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
+    Mark: { key:"lingeringtrance", title:"Lingering Trance", description:"When Mark causes The Deepening, the opponent retains one 🌀 Trance."},
+	Ivy: {key:"suggestedtransference", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."},
+	Dare: {key: "meditation", title: "Meditation", description: "Instead of rolling, you may Meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row."},
 	Val: {key: "turntables", title: "Turn the Tables", description:"Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3)."}
 };
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
@@ -833,7 +833,7 @@ function getSignaturePowerForName(name) {
     return SIGNATURE_POWERS[key] || Abilities.infoForCharacter(name) || null;
 }
 function getMarketWipeCost(playerId = gameState?.activePlayer) {
-    return hasSignaturePower(Number(playerId), "zixuan") ? 1 : 2;
+    return hasSignaturePower(Number(playerId), "marketmanipulator") ? 1 : 2;
 }
 function signatureFaceCounts(dice = gameState?.dice || []) {
     const counts = { SPIRAL:0, LUCIDITY:0, ENERGY:0, SUBMISSION:0, AROUSAL:0, TRANSFORM:0 };
@@ -916,11 +916,13 @@ function renderSignaturePowerHint(playerId, parent, id) {
     }
     const pObj = playerId === 1 ? gameState?.p1 : gameState?.p2;
     if (!pObj?.name) { hint.style.display = "none"; return; }
-    const power = Abilities.infoFor(Abilities.keyFor(pObj)) || getSignaturePowerForName(pObj.name);
+    const power = Abilities.hintFor(pObj) || getSignaturePowerForName(pObj.name);
     if (!power) { hint.style.display = "none"; return; }
     // Only show an ability on the board when it is switched on.
     hint.style.display = pObj.specialAbility === false ? "none" : "block";
-    hint.innerHTML = `<strong class="signature-power-title">${power.title}</strong><br>${power.description}`;
+    const used = Abilities.isUsed(pObj);                                   // once-per-game powers (Turn the Tables) grey out after use
+    hint.classList.toggle("power-used", used);
+    hint.innerHTML = `<strong class="signature-power-title">${power.icon ? power.icon + " " : ""}${power.title}</strong>${used ? ' <span class="power-used-tag">✔ Used</span>' : ""}<br>${power.description}`;
 }
 function bindSignaturePowerHintEvents() {
     ["p1-name", "cpu-name"].forEach(id => {
@@ -3759,13 +3761,10 @@ function initializeGame() {
     setSoundEnabled(!!(soundOption && soundOption.checked));
     const showDiceText = document.getElementById("dice-text-option").value === "on";
     localShowDiceText = showDiceText;
-    const showEnergyActions = false;
 	resetPlayerTransformationTaunts();
 	cpuVictoryTaunt = null;
 	cpuDefeatSubmission = null;
-	//document.getElementById("energy-actions-option").value === "on";
 
-    document.getElementById("energy-actions-panel-1").style.display = showEnergyActions ? "block" : "none";
     document.getElementById("settings-modal").style.display = "none";
 
     if (gameMode === "online") {
@@ -3775,7 +3774,6 @@ function initializeGame() {
         bindFirebaseConnectionStatus();
         updateOnlineStatusUI();
 
-        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
 
@@ -3789,7 +3787,6 @@ function initializeGame() {
             // --- HOST (PLAYER 1) ---
             gameState.gameMode = "online";
             gameState.showDiceText = showDiceText;
-            gameState.showEnergyActions = showEnergyActions;
 
             gameState.p1.name = localName;
             gameState.p1.specialAbility = setupAbilityEnabled("p1");
@@ -3865,7 +3862,6 @@ function initializeGame() {
 	document.getElementById("choice-dialog").style.display = "none";
     gameState.gameMode = gameMode;
     gameState.showDiceText = showDiceText;
-    gameState.showEnergyActions = showEnergyActions;
 	gameState.p1.setbacksSuffered = 0; gameState.p2.setbacksSuffered = 0;
 
     gameState.p1.name = p1N.split(" ")[0]; 
@@ -3882,7 +3878,6 @@ function initializeGame() {
     }
 
     if (gameMode === "pvp") {
-        document.getElementById("energy-actions-panel-2").style.display = showEnergyActions ? "block" : "none";
         document.getElementById("btn-end-turn-2").style.display = "block";
         document.getElementById("p1-last-keep-section").style.display = "block";
     } else {
@@ -4096,7 +4091,6 @@ function recStart() {
         mode: gameState.gameMode, cpuDifficulty: gameState.p2.difficulty,
         players: { p1: { name: gameState.p1.name, target: gameState.p1.transformTarget },
                    p2: { name: gameState.p2.name, target: gameState.p2.transformTarget } },
-        settings: { energyActions: gameState.showEnergyActions },
         firstPlayer: gameState.activePlayer, outcome: null, events: []
     };
     recEvent("start", { snap: recSnap() });
@@ -4199,7 +4193,6 @@ function recWrap(name, describe, withDice) {
 function recInstall() {
     const mk = i => { const c = market[i]; return c ? { id: c.id, card: c.name, cost: getCardPurchaseCost(c, gameState.activePlayer) } : null; };
     recWrap("buyCard", i => Object.assign({ market: market.map(c => c ? c.id : null) }, mk(i)));
-    recWrap("buyAction", (type, pId) => ({ action: type, player: pId }));
     recWrap("wipeMarket", () => ({ market: market.map(c => c ? c.id : null) }));
     recWrap("sellCard", (i, pId) => { const p = pId === 1 ? gameState.p1 : gameState.p2; return { card: p.inventory[i] && p.inventory[i].name, player: pId }; });
     recWrap("discardForFreeBuy", (i, pId) => { const p = pId === 1 ? gameState.p1 : gameState.p2; return { card: p.inventory[i] && p.inventory[i].name, player: pId }; });
@@ -4390,6 +4383,10 @@ function cpuKeepDie(face, difficulty, counts) {
 }
 
 function cpuChooseDiceToKeep() {
+    cpuChooseDiceToKeepBase();
+    Abilities.cpuCalledShotAdjustKeep();     // Called Shot: play to get at least 2 of the called face (not Beginner)
+}
+function cpuChooseDiceToKeepBase() {
     if (cpuIsAdaptive()) { cpuAdaptiveChooseKeep(); return; }
 	const pinned = isCpuPinnedInSubmission();
     const difficulty = getCpuDifficulty();
@@ -4513,6 +4510,7 @@ function cpuShouldUseAbsoluteFocus(keptCount) {
     const card = getCardRef(2, 20);
     if (!card || !card.charges || card.charges <= 0) return false;
     if (!cpuLegacyHasFreeDice()) return false;                      // everything would stay locked
+    if (Abilities.cpuNeedsCalledShotReroll()) return true;           // Called Shot with fewer than 2 of the called face: use the free reroll
     if (cpuIsAdaptive()) return cpuExtraRerollGain() >= 0.3;
     if (cpuIsTier()) keptCount = cpuTierKeepPlan(getCpuDifficulty(), 1).filter(Boolean).length;
     return getCpuDifficulty() === "random" ? Math.random() > 0.8 : keptCount < 4;
@@ -4588,7 +4586,7 @@ function cpuShouldAvoidSubmissionPush() {
     const SU_ENGINE = [36, 15, 46, 24, 23, 22, 10, 39, 11, 18, 8, 52, 34];
     let engine = 0;
     (p.inventory || []).forEach(c => { if (c && SU_ENGINE.includes(c.id)) engine++; });
-    if (typeof hasSignaturePower === "function" && hasSignaturePower(2, "luci")) engine += 2;
+    if (typeof hasSignaturePower === "function" && hasSignaturePower(2, "submissionamplifier")) engine += 2;
     if (engine >= 3) return false;
     // Late-game race: both deep — allow pressure
     if ((Number(p.transform) || 0) >= 7 && (Number(opp.transform) || 0) >= 7) return false;
@@ -4826,7 +4824,7 @@ function cpuFaceWeights() {
     }
 
     const has = id => hasCard(2, id);
-	const xander = hasSignaturePower(2, "xander");
+	const xander = hasSignaturePower(2, "heatedopening");
 
     if (has(2)) w.TR += 0.3;
     if (has(41)) w.TR += 0.2;
@@ -4889,7 +4887,7 @@ function cpuArousalDiceNeeded() {
     const needed = cpuArousalNeeded();
     if (needed <= 0) return 0;
     if (gameState.p1.shieldActive) return 0;        // Rapid Pulse blocks the Arousal step entirely
-    const xander = hasSignaturePower(2, "xander");
+    const xander = hasSignaturePower(2, "heatedopening");
     const stoking = hasCard(2, 13);
     for (let k = 1; k <= 6; k++) {
         if (cpuArousalGain(k, xander, stoking) >= needed) return k;
@@ -5007,7 +5005,7 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     let minFree = counts[lead] >= 3 ? 0 : (counts[lead] === 2 ? 2 : 3);
     if (cpuBrain.plan === "energy" || cpuBrain.plan === "trance") minFree = Math.max(0, minFree - 1);
     const arLimit = cpuArousalDiceNeeded();
-    const xanderOn = hasSignaturePower(2, "xander");
+    const xanderOn = hasSignaturePower(2, "heatedopening");
     const arousalWanted = arLimit > 0 && counts.AR >= (xanderOn ? 1 : 2)
         && (xanderOn || w.AR >= 0.75 || [1, 2, 3, 4].includes(opp.arousal));
     const linear = [{ k: "EN", w: w.EN }, { k: "SP", w: w.SP }];
@@ -5031,26 +5029,26 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
 
 function cpuApplySignatureKeepPlan(keep) {
     const dice=gameState.dice, p=gameState.p2, opp=gameState.p1;
-    const name=String(p.name||"").normalize("NFC").toLocaleLowerCase();
     const faces=dice.map(d=>cpuFaceKey(d.face));
     const counts=cpuCountsFromFaces(dice.map(d=>d.face));
     const keepFace=key=>faces.forEach((f,i)=>{if(f===key)keep[i]=true;});
-    if (name === "xander") { if (hasSignaturePower(2, "xander")) cpuKeepArousalUpTo(keep, faces); }
-    else if(name==="luci") { if(counts.SU>=2 || (counts.SU>=1 && (opp.transform>=6 || gameState.submission>=2))) keepFace("SU"); }
-    else if(name==="siobhán" || name==="siobhan") { const key=counts.SU>=counts.TR?"SU":"TR"; if((key==="SU"?counts.SU:counts.TR)>=2) keepFace(key); }
-    else if(name==="hyeri") {
+    // chosen by the POWER the CPU has, not by the character's name
+    if (hasSignaturePower(2, "heatedopening")) cpuKeepArousalUpTo(keep, faces);
+    else if (hasSignaturePower(2, "submissionamplifier")) { if(counts.SU>=2 || (counts.SU>=1 && (opp.transform>=6 || gameState.submission>=2))) keepFace("SU"); }
+    else if (hasSignaturePower(2, "predatorymomentum")) { const key=counts.SU>=counts.TR?"SU":"TR"; if((key==="SU"?counts.SU:counts.TR)>=2) keepFace(key); }
+    else if (hasSignaturePower(2, "perfectharmony")) {
         // Keep one of each distinct face and reroll duplicates to pursue Perfect Harmony without Trigger Word.
         const seen=new Set();
         faces.forEach((f,i)=>{if(!seen.has(f)){keep[i]=true;seen.add(f);}});
     }
-    else if(name==="tex") { if(counts.SU>0) keepFace("SU"); }
+    else if (hasSignaturePower(2, "twisteddice")) { if(counts.SU>0) keepFace("SU"); }
     cpuSmartKeepRules(keep, faces, counts);
 	return cpuLockSpecialDie(keep);
 }
 function cpuAdaptiveChooseKeep() {
     const plan = cpuAdaptiveKeepPlan(gameState.rerollsLeft);
     plan.keep=cpuApplySignatureKeepPlan(plan.keep);
-    if(hasSignaturePower(2,"hyeri"))
+    if(hasSignaturePower(2,"perfectharmony"))
 		plan.hunting=true;
     cpuBrain.hunting = plan.hunting;
     if (hasCard(2, 55) && !plan.keep.some((kp, i) => kp && cpuFaceKey(gameState.dice[i].face) === "TR")) { const i = gameState.dice.findIndex(d => cpuFaceKey(d.face) === "TR"); if (i >= 0) plan.keep[i] = true; }
@@ -5100,7 +5098,7 @@ function cpuPickSimmeringDie() {
     if (arousalNeeded <= 0) return -1;
 
     // A lone 🔥 normally does nothing, but Xander benefits from one.
-    if (counts.AR === 0 && hasSignaturePower(2, "xander")) {
+    if (counts.AR === 0 && hasSignaturePower(2, "heatedopening")) {
         // If one point is all that's needed, don't create excess 🔥.
         // A single die is still useful for Xander's signature ability.
     }
@@ -5114,7 +5112,7 @@ function cpuPickSimmeringDie() {
 
     // If the dice already show enough 🔥 to reach the target,
     // don't convert additional dice.
-    if (cpuArousalGain(counts.AR, hasSignaturePower(2, "xander"), hasCard(2, 13)) >= arousalNeeded)
+    if (cpuArousalGain(counts.AR, hasSignaturePower(2, "heatedopening"), hasCard(2, 13)) >= arousalNeeded)
 		return -1;
 
     const w = cpuFaceWeights();
@@ -5181,7 +5179,7 @@ function cpuAdaptiveCardScore(card) {
     let score = (card.ai && card.ai.adaptive != null) ? card.ai.adaptive : 30;
 	
 	// xander wants these cards
-	if (hasSignaturePower(2, "xander")) {
+	if (hasSignaturePower(2, "heatedopening")) {
         if (card.id === 13) score += 30;              // Stoking Fires
         if (card.id === 48) score += 25;              // Burning Intensity
         if (card.id === 56) score += 15;              // Deeper Bargains (his special die becomes 🔥)
@@ -5314,7 +5312,7 @@ function cpuAdaptiveExtraConditions(card) {
             const enables = market.some(c => c && c !== card && passesCardSpecificConditions(c) &&
                 cpuAdaptiveCardScore(c) >= cpuAdaptiveBuyThreshold() &&
                 getCardPurchaseCost(c, 2) <= after && getCardPurchaseCost(c, 2) > p.energy - cost);
-            return enables || (gameState.showEnergyActions && after >= 5 && opp.transform >= 4);
+            return enables;
         }
         case 5:  return opp.inventory.some(c => !inventoryHasName(p, c.name) && cpuAdaptiveCardScore(c) >= 55);
         case 42: return market.some(c => c && c !== card && c.cost >= 5 && passesCardSpecificConditions(c) &&
@@ -5431,7 +5429,7 @@ function cpuAdaptiveNextShopAction() {
 	{ const rescue = cpuEmergencyShopAction() || cpuRescueShopAction(); if (rescue) return rescue; }
 	{ const hunt = cpuEndgameWipeHunt(); if (hunt) return hunt; }
 	
-	if (hasSignaturePower(2, "zixuan")) {
+	if (hasSignaturePower(2, "marketmanipulator")) {
         return cpuZixuanShopAction(info.map(i => ({
             idx: i.idx, card: i.card, cost: i.cost,
             passes: i.passes || (!i.dup && i.card.type === "Keep"),     // same rule as the normal buy list
@@ -5460,34 +5458,17 @@ function cpuAdaptiveNextShopAction() {
     if (best) { cpuShopReport(info, thr, `buy ${best.card.name}`); return { type: "buy", idx: best.idx, name: best.card.name, deny: best.deny > best.score * 0.5 && best.deny >= 40 }; }
 
     // wipe to deny a dangerous card the human can afford
-    if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 2) && p.energy >= getMarketWipeCost(2) && deck.length > 0 && market.length > 0) {
+    if ((hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < 2) && p.energy >= getMarketWipeCost(2) && deck.length > 0 && market.length > 0) {
         const threat = info.filter(i => i.humanCanAfford && i.deny >= 45).sort((a, b) => b.deny - a.deny)[0];
         if (threat && p.energy >= getMarketWipeCost(2)) return { type: "wipe", why: `deny ${threat.card.name}` };
         // wipe a market with nothing we want
         const usefulExists = info.some(i => i.passes && i.score >= thr);
-        if (!usefulExists && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : 5) && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 1)) return { type: "wipe", why: "nothing useful" };
+        if (!usefulExists && p.energy >= (hasSignaturePower(2, "marketmanipulator") ? 1 : 5) && (hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < 1)) return { type: "wipe", why: "nothing useful" };
     }
 	cpuShopReport(info, thr, "no purchase");
     return null;
 }
 
-function cpuAdaptiveEnergyActions() {
-    if (!gameState.showEnergyActions) return;
-    const p = gameState.p2, opp = gameState.p1;
-    const reserve = hasCard(2, 16) ? 3 : 0;            // keep a few ⚡ for Hypnotic Suggestion rerolls
-    for (let g = 0; g < 12 && !gameState.gameEnded; g++) {
-        if (p.energy >= 5 && opp.transform + Math.floor(p.energy / 5) >= 10) { buyAction("transform", 2); cpuSay("Lethal: cashing Energy into Transform."); continue; }
-        if (isCpuPinnedInSubmission() && p.energy >= 6) { buyAction("submission", 2); continue; }
-        if (gameState.submission >= 2 && p.energy >= 9
-            && !(typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
-                 && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap())) {
-            buyAction("submission", 2); continue;
-        }
-        if (p.energy - 3 >= reserve && (p.arousal === 3 || p.arousal === 5 || (p.arousal === 4 && p.energy - 6 >= reserve))) { buyAction("arousal", 2); continue; }
-        if (p.energy - 5 >= reserve && p.energy >= 5 && (opp.transform >= 5 || p.energy >= 10)) { buyAction("transform", 2); continue; }
-        break;
-    }
-}
 
 function cpuAdaptiveWantsCalm() {
     const p = gameState.p2;
@@ -5524,7 +5505,7 @@ async function cpuAdaptiveShopPhase() {
 	cpuBrain.huntWipes = 0;
 	cpuBrain.rescueWipes = 0; cpuBrain.emergencyWipes = 0;
     const p = gameState.p2;
-    const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
+    const maxShopActions = hasSignaturePower(2, "marketmanipulator") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
         const act = cpuAdaptiveNextShopAction();
         if (!act) break;
@@ -5564,7 +5545,6 @@ async function cpuAdaptiveShopPhase() {
         cpuReplan();
     }
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
-    cpuAdaptiveEnergyActions();
     cpuNoteEndOfTurn();
     cpuSay(`Ends turn with ${p.energy}⚡ (plan: ${cpuPlanLabel()}).`);
 }
@@ -5786,7 +5766,7 @@ function cpuTierCardScore(card, level) {
     const pr = cpuTierProblems(level);
 	
 	// xander wants these cards
-	if (hasSignaturePower(2, "xander")) {
+	if (hasSignaturePower(2, "heatedopening")) {
         if (card.id === 13) score += 30;              // Stoking Fires
         if (card.id === 48) score += 25;              // Burning Intensity
         if (card.id === 56) score += 15;              // Deeper Bargains (his special die becomes 🔥)
@@ -5868,7 +5848,7 @@ function cpuTierNextAction(level) {
 	{ const rescue = cpuEmergencyShopAction() || cpuRescueShopAction(); if (rescue) return rescue; }
 	{ const hunt = cpuEndgameWipeHunt(); if (hunt) return hunt; }
 	
-	if (hasSignaturePower(2, "zixuan")) {
+	if (hasSignaturePower(2, "marketmanipulator")) {
         return cpuZixuanShopAction(info.map(i => {
             let deny = cpuDenyScore(i.card);
             if (level === "transformer") { if (CPU_STRATEGIES.transform.cards[i.card.id]) deny = 0; }   // Virtuoso never denies Transform cards
@@ -5882,7 +5862,7 @@ function cpuTierNextAction(level) {
     const likedBuy = liked.find(canPay);
     if (likedBuy) return { type: "buy", idx: likedBuy.idx, name: likedBuy.card.name };
     // 2a) Virtuoso: wipe the market when the human could buy a card that fits THEIR strategy (never Transform cards: we want those)
-    if (level === "transformer" && !cpuBrain.denyBlind && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 2) && p.energy >= getMarketWipeCost(2) && deck.length > 0) {
+    if (level === "transformer" && !cpuBrain.denyBlind && (hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < 2) && p.energy >= getMarketWipeCost(2) && deck.length > 0) {
         const target = info.filter(i => (i.humanCanAfford || i.humanNear) && !CPU_STRATEGIES.transform.cards[i.card.id] && cpuDenyScore(i.card) >= cfg.denyMin &&
                                         !(i.passes && i.score >= cfg.like))        // not a card we like ourselves
                            .sort((a, b) => cpuDenyScore(b.card) - cpuDenyScore(a.card))[0];
@@ -5890,7 +5870,7 @@ function cpuTierNextAction(level) {
     }
     // 2) a liked card we can't afford but the human can: wipe the market so they don't get it
     const threat = liked.find(i => !canPay(i) && (i.humanCanAfford || (level === "transformer" && i.humanNear)) && i.score >= cfg.denyMin);
-    if (threat && !cpuBrain.denyBlind && (hasSignaturePower(2, "zixuan") || cpuBrain.wipes < (level === "transformer" ? 2 : 1)) && p.energy >= getMarketWipeCost(2) && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
+    if (threat && !cpuBrain.denyBlind && (hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < (level === "transformer" ? 2 : 1)) && p.energy >= getMarketWipeCost(2) && deck.length > 0) return { type: "wipe", why: `deny ${threat.card.name}` };
     // 3) other useful cards - but save for a liked card that is about a turn away (for a few turns at most)
     let best = info.filter(i => i.passes && canPay(i) && i.score >= buyThr).sort((a, b) => b.score - a.score)[0] || null;
     if (best) {
@@ -5905,8 +5885,8 @@ function cpuTierNextAction(level) {
     if (best) return { type: "buy", idx: best.idx, name: best.card.name };
     // 4) nothing worth buying and plenty of energy: refresh the market
     const anyUseful = info.some(i => i.passes && i.score >= buyThr);
-    if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 2) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : cfg.excessWipe)) return { type: "wipe", why: "excess energy" };
-    if ((hasSignaturePower(2, "zixuan") || cpuBrain.wipes < 1) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "zixuan") ? 1 : cfg.idleWipe) && !anyUseful) return { type: "wipe", why: "nothing useful" };
+    if ((hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < 2) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "marketmanipulator") ? 1 : cfg.excessWipe)) return { type: "wipe", why: "excess energy" };
+    if ((hasSignaturePower(2, "marketmanipulator") || cpuBrain.wipes < 1) && deck.length > 0 && market.length > 0 && p.energy >= (hasSignaturePower(2, "marketmanipulator") ? 1 : cfg.idleWipe) && !anyUseful) return { type: "wipe", why: "nothing useful" };
 	cpuShopReport(info, buyThr, "no purchase");
     return null;
 }
@@ -5917,7 +5897,7 @@ async function cpuTierShopPhase(level) {
 	cpuBrain.rescueWipes = 0; cpuBrain.emergencyWipes = 0;
     const p = gameState.p2;
     if (level === "transformer") cpuReplan();      // read the human's strategy (their cards, rolls and what they did to us)
-    const maxShopActions = hasSignaturePower(2, "zixuan") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
+    const maxShopActions = hasSignaturePower(2, "marketmanipulator") ? Math.min(100, Math.max(10, Math.floor(p.energy) + deck.length + 3)) : 10;
     for (let g = 0; g < maxShopActions && !gameState.gameEnded; g++) {
         const act = cpuTierNextAction(level);
         if (!act) break;
@@ -5957,8 +5937,6 @@ async function cpuTierShopPhase(level) {
     }
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
     if (level === "transformer") cpuNoteEndOfTurn();
-    while (gameState.showEnergyActions == true && cpuShouldBuyTransformWithEnergy()) buyAction("transform", 2);
-    while (gameState.showEnergyActions == true && cpuShouldBuySubmissionWithEnergy()) buyAction("submission", 2);
 }
 
 // ============================================================
@@ -6046,7 +6024,7 @@ function cpuChooseBreakTarget(targets, pid) {
 }
 function cpuChooseSpecialFace() {            // Deeper Bargains: which face the special die should show
 	// xander always chooses 🔥
-	if (hasSignaturePower(2, "xander")) return FACES[4];   // 🔥: with Heated Opening every 🔥 die counts
+	if (hasSignaturePower(2, "heatedopening")) return FACES[4];   // 🔥: with Heated Opening every 🔥 die counts
 	
     const d = getCpuDifficulty();
     if (d === "adaptive") {
@@ -6159,7 +6137,7 @@ function passesCardSpecificConditions(card) {
 	const burstDmg = CPU_BURST[Number(card.id)] || 0;
 	const finishesGame = burstDmg > 0 && burstDmg >= Math.max(0, 10 - p1.transform);
 	
-    if (hasSignaturePower(2, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) return false;
+    if (hasSignaturePower(2, "unyieldingresistance") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) return false;
 	if (!cpuCanSpendKeepingFS(getCardPurchaseCost(card, 2))) return false;
 	if (!cpuEndgameAllowsPurchase(card)) return false; // endgame: keep the ⚡ a finishing card needs
 	if (!cpuRescueAllowsPurchase(card)) return false;	
@@ -6247,6 +6225,8 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     const buyer = buyerNum === 1 ? gameState.p1 : gameState.p2;
     const seller = buyerNum === 1 ? gameState.p2 : gameState.p1;
 
+    if (gameState.meditating) { playSound("deny"); log("Cannot buy cards on a meditation turn."); return false; }
+    if (Abilities.holdsLayaway(buyerNum)) { playSound("deny"); log("Cannot buy other cards while holding a Layaway."); return false; }
     // 1. Verify buyer owns Card 5 (Hypnotic Dominance)
     const hasDominance = buyer.inventory.some(c => c.id === 5);
     if (!hasDominance) {
@@ -6257,7 +6237,7 @@ function buyCardFromOpponent(buyerNum, opponentCardIndex) {
     // 2. Validate target card
     const targetCard = seller.inventory[opponentCardIndex];
     if (!targetCard) return false;
-    if (hasSignaturePower(buyerNum, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(targetCard.id))) {
+    if (hasSignaturePower(buyerNum, "unyieldingresistance") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(targetCard.id))) {
         playSound("deny");
         log(`${buyer.name}'s Unyielding Resistance cannot use defensive Submission card ${targetCard.name}.`);
         if (buyerNum === 1 && isLocalPlayerTurn()) showPopup("Unyielding Resistance", "Alex cannot use defensive Submission cards while his special ability is on.");
@@ -6341,7 +6321,7 @@ function cpuShouldUseWipe() {
 
     if (hasAffordableCard) return false;
 	
-	const zixPower = hasSignaturePower(2, "zixuan")
+	const zixPower = hasSignaturePower(2, "marketmanipulator")
 
     switch (difficulty) {
 		case "random": return p.energy >= 6 && Math.random() < 0.15;
@@ -6351,37 +6331,6 @@ function cpuShouldUseWipe() {
         case "defensive": return p.energy >= 6;
         default: return false;
     }
-}
-
-function cpuShouldBuyTransformWithEnergy() {
-    const p = gameState.p2; const difficulty = getCpuDifficulty();
-    if (p.energy < 5) return false;
-    if (difficulty === "random") return Math.random() > 0.8;
-    if (difficulty === "smart") return true;
-    if (difficulty === "aggressive") return p.transform >= 4 || gameState.p1.transform >= 5;
-    if (difficulty === "v23low") return p.transform >= 7 || (gameState.p1.transform >= 7 && p.energy >= 7) || p.energy >= 9;
-    if (difficulty === "defensive") return p.energy >= 10 || (p.transform >= 7 && p.energy >= 7);
-    return false;
-}
-
-function cpuShouldBuySubmissionWithEnergy() {
-    const p = gameState.p2; const difficulty = getCpuDifficulty();
-    if (p.energy < 6) return false;
-    // Tables respect: do not spend energy deepening the marker while the human can flip it.
-    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
-        && typeof cpuAtTablesSoftCap === "function" && cpuAtTablesSoftCap()) return false;
-    if (typeof cpuShouldAvoidSubmissionPush === "function" && cpuShouldAvoidSubmissionPush()
-        && (Number(gameState.submission) || 0) >= 1) return false;
-	// Priority 1: If pinned, ALL AI levels dump remaining energy into Submission
-    if (isCpuPinnedInSubmission()) {
-        return true;
-    }
-    if (difficulty === "v23low") return p.energy >= 7 && p.transform >= 7 && gameState.p1.transform >= 8 && gameState.submission > -5;
-    if (difficulty === "aggressive") return p.energy >= 6 && p.transform >= 5 && gameState.p1.transform >= 5;
-    if (difficulty === "defensive") return p.energy >= 8 && p.transform >= 6 && gameState.p1.transform >= 7 && gameState.submission > -5;
-    if (difficulty === "smart") return true;
-    if (difficulty === "random") return Math.random() > 0.8;
-    return false;
 }
 
 function isLocalPlayerTurn() {
@@ -6801,8 +6750,10 @@ function updateUI() {
 
     if (!gameState) return;
     updateSignaturePowerHints();
+    Abilities.renderCalledShotBadges();
+    Abilities.renderLayawayZone();
     document.querySelectorAll('[onclick*="wipeMarket"]').forEach(button => {
-        const base = hasSignaturePower(Number(gameState.activePlayer), "zixuan") ? "Wipe Market (1 ⚡)" : "Wipe Market (2 ⚡)";
+        const base = hasSignaturePower(Number(gameState.activePlayer), "marketmanipulator") ? "Wipe Market (1 ⚡)" : "Wipe Market (2 ⚡)";
         if (!button.dataset.signatureWipeLabel) button.dataset.signatureWipeLabel = button.textContent.trim();
         button.textContent = base;
     });
@@ -7045,9 +6996,6 @@ function updateUI() {
     !isHumanTurn || activeP.energy < getMarketWipeCost(gameState.activePlayer) || gameState.phase !== "shop";
     
     // UI Button Toggles P1
-    document.getElementById("btn-buy-arousal-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 3 || gameState.phase !== "shop";
-    document.getElementById("btn-buy-transform-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 5 || gameState.phase !== "shop";
-    document.getElementById("btn-buy-submission-1").disabled = !isHumanTurn || !isP1 || gameState.p1.energy < 6 || gameState.phase !== "shop";
 	
 	// Update End Turn button labels for bonus actions.
 	const endTurnLabel =
@@ -7069,9 +7017,6 @@ function updateUI() {
     // UI Button Toggles P2
     if (gameState.gameMode === "pvp" || gameState.gameMode === "online") {
         let isP2 = activePlayerNum === 2;
-        document.getElementById("btn-buy-arousal-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 3 || gameState.phase !== "shop";
-        document.getElementById("btn-buy-transform-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 5 || gameState.phase !== "shop";
-        document.getElementById("btn-buy-submission-2").disabled = !isHumanTurn || !isP2 || gameState.p2.energy < 6 || gameState.phase !== "shop";
         
         let btnEnd2 = document.getElementById("btn-end-turn-2");
         btnEnd2.disabled = !isHumanTurn || !isP2 || gameState.phase !== "shop" || isChoicePending();
@@ -7151,7 +7096,7 @@ function renderDiceAndActions(isHumanTurn) {
     ag.innerHTML += `<button onclick="rollDiceAction()" id="btn-roll" ${rollBtnDisabled ? 'disabled' : ''} style="${rollBtnDisabled ? '' : 'background: ' + activeColor + ';'}">${isInitRoll ? "Roll Dice" : "Roll Unkept Dice"}</button>`;
     
     let activeP = gameState.activePlayer === 1 ? gameState.p1 : gameState.p2;
-    if (isHumanTurn && !gameState.signatureSiobhanBonusRoll && hasCard(gameState.activePlayer, 16) && gameState.phase === 'rolling' && !isInitRoll && gameState.rerollsLeft <= 0 && activeP.energy >= 1) {
+    if (isHumanTurn && !gameState.meditating && !gameState.signatureSiobhanBonusRoll && hasCard(gameState.activePlayer, 16) && gameState.phase === 'rolling' && !isInitRoll && gameState.rerollsLeft <= 0 && activeP.energy >= 1) {
         ag.innerHTML += `<button onclick="buyReroll(1, 16, ${gameState.activePlayer})" style="background:#f4a261; color:#000; font-weight:bold;">Use Hypnotic Suggestion (1⚡)</button>`;
     }
     
@@ -7173,9 +7118,9 @@ function renderMarket() {
         if (gameState.freeBuyActive) displayCost = 0;
 
         const alreadyOwned = inventoryHasName(activeP, card.name);
-        const alexBlocked = hasSignaturePower(gameState.activePlayer, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id));
+        const alexBlocked = hasSignaturePower(gameState.activePlayer, "unyieldingresistance") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id));
         const canAfford = activeP.energy >= displayCost || gameState.freeBuyActive;
-        const purchasable = isHumanTurn && gameState.phase === "shop" && canAfford && !alreadyOwned && !alexBlocked;
+        const purchasable = isHumanTurn && gameState.phase === "shop" && canAfford && !alreadyOwned && !alexBlocked && !gameState.meditating && !Abilities.holdsLayaway(gameState.activePlayer);
         const affordClass = alexBlocked ? "signature-blocked" : (alreadyOwned ? "already-owned" : (canAfford ? "can-afford" : "cannot-afford"));
         let btnDisabled = purchasable ? "" : "disabled";
         const cardTitle = alexBlocked ? ` title="Unavailable with Alex's Unyielding Resistance: defensive Submission cards are prohibited."` : "";
@@ -7186,7 +7131,7 @@ function renderMarket() {
                 <div class="card-header"><span>${card.name}</span> <span style="${displayCost < card.cost ? 'color:var(--player); font-weight:bold;' : ''}">${displayCost}⚡</span></div>
                 <div class="card-type"><span class="card-type-chip">${card.type}</span></div>
                 <div style="font-size:0.8em; margin: 10px 0; color:#ccc;">${card.desc}</div>
-                <button ${btnDisabled}${wipeDisabled} onclick="buyCard(${index})">${alexBlocked ? "Unavailable to Alex" : (alreadyOwned ? "Already owned" : "Purchase")}</button>
+                <button ${btnDisabled}${wipeDisabled} onclick="buyCard(${index})">${alexBlocked ? "Unavailable to Alex" : (alreadyOwned ? "Already owned" : (gameState.meditating ? "Meditating" : (Abilities.holdsLayaway(gameState.activePlayer) ? "Holding Layaway" : "Purchase")))}</button>
             </div>`;
     });
 }
@@ -7291,7 +7236,7 @@ function renderInventory(playerId) {
 			// Ivy: Suggested Transference
 			if (
 				gameState.phase === "shop" &&
-				hasSignaturePower(playerId, "ivy") &&
+				hasSignaturePower(playerId, "suggestedtransference") &&
 				!p.ivyExchangeUsedThisTurn &&
 				ivyCanExchangeCard(card, p)
 			) {
@@ -7302,13 +7247,13 @@ function renderInventory(playerId) {
 					</button>`;
 			}
             if (card.id === 12 && gameState.phase === 'rolling' && p.energy >= 2 && !p.shieldActive) html += `<button onclick="useRapidPulse(${playerId})" style="background:#457b9d;">Use Rapid Pulse (-2⚡)</button>`;
-            if (card.id === 20 && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
+            if (card.id === 20 && !gameState.meditating && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && gameState.rerollsLeft <= 0 && card.charges > 0) html += `<button onclick="useAbsoluteFocus(${idx}, ${playerId})" style="background:#f4a261; color:#000;">Use Focus Charge (+1 Reroll)</button>`;
             if (card.id === 26) html += `<button onclick="sellCard(${idx}, ${playerId})" style="background:#e76f51;">Sell (+2⚡)</button>`;
             if (card.id === 58 && gameState.phase === "shop") html += `<button onclick="activateSubmissiveBreak(${playerId})" style="background:#9d4edd;">Use Submissive Break</button>`;
             if (card.id === 33 && gameState.phase === 'shop' && p.energy >= 2) html += `<button onclick="useQuietMind(${playerId})" style="background:#2a9d8f;">Quiet Mind (-2⚡)</button>`;
             if (card.id === 42 && gameState.phase === 'shop') html += `<button onclick="discardForFreeBuy(${idx}, ${playerId})" style="background:#2a9d8f;">Discard for Free Buy</button>`;
-            if (card.id === 47 && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
-            if (card.id === 49 && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
+            if (card.id === 47 && !gameState.meditating && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice.some(d => d.face === "👁️ TRANSFORM" && !d.kept)) html += `<button onclick="useFadingReality(${playerId})" style="background:#9d4edd;">Reroll Unlocked 👁️</button>`;
+            if (card.id === 49 && !gameState.meditating && !gameState.signatureSiobhanBonusRoll && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.simmeringUsed) html += `<button onclick="useSimmeringArousal(${playerId})" style="background:#d62828;">Change 1 die to 🔥</button>`;
             if (card.id === 54 && !gameState.signatureSiobhanBonusRoll && canUseBurningUp(playerId)) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (up to 2 extra rerolls)</button>`;
             //if (card.id === 54 && gameState.phase === 'rolling' && gameState.dice[0].face !== "-" && !p.burningUpUsed) html += `<button onclick="useBurningUp(${playerId})" style="background:#d62828;">Burning Up (+2 Rerolls)</button>`;
         }
@@ -7324,7 +7269,7 @@ function renderInventory(playerId) {
 			isHuman &&
 			isTurn &&
 			gameState.phase === "shop" &&
-			hasSignaturePower(buyerId, "ivy") &&
+			hasSignaturePower(buyerId, "suggestedtransference") &&
 			!buyer.ivyExchangeUsedThisTurn &&
 			playerId !== buyerId &&
 			card.type === "Keep"
@@ -7342,11 +7287,12 @@ function renderInventory(playerId) {
 		}
 
 function buyReroll(energyCost, cardId, pId) {
-    if (gameState.signatureSiobhanBonusRoll) return false;
+    if (gameState.signatureSiobhanBonusRoll || gameState.meditating) return false;
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     if (p.energy >= energyCost && hasCard(pId, cardId)) { p.energy -= energyCost; gameState.rerollsLeft += 1; cardResolvedThisTurn.add(`${pId}:${cardId}`); log(`Bought reroll for ${energyCost}⚡.`); syncToFirebase(); updateUI(); }
 }
 function useAbsoluteFocus(idx, pId) {
+    if (gameState.meditating) return;            // no rolls on a meditation turn
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     let card = p.inventory[idx];
 
@@ -7395,6 +7341,7 @@ function showNextChoice() {
     choiceActive.options.forEach(opt => {
         const b = document.createElement("button");
         b.textContent = opt.label;
+        if (opt.faceName) b.dataset.faceName = opt.faceName;
         if (opt.secondary) b.className = "secondary";
         b.onclick = () => {
             choiceActive = null;
@@ -7474,6 +7421,7 @@ function showShieldBlock(playerId, stat) {                  // stat: "trance" | 
 
 
 function useFadingReality(pId) {
+    if (gameState.meditating) return;            // no rolls on a meditation turn
     let changed = 0;
     gameState.dice.forEach(d => {
         if (d.face === "👁️ TRANSFORM" && !d.kept) {
@@ -7493,6 +7441,7 @@ function useFadingReality(pId) {
 
 
 function useSimmeringArousal(pId) {
+    if (gameState.meditating) return;            // no dice to change on a meditation turn
     let p = pId === 1 ? gameState.p1 : gameState.p2;
     let idx = gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL" && !d.kept);
     if(idx !== -1) { queueCardTrigger(pId, 49, "Changed one die to 🔥", "manual"); gameState.dice[idx].face = "🔥 AROUSAL"; p.simmeringUsed = true; log("Simmering Arousal: Changed a die to Arousal."); syncToFirebase(); updateUI(); }
@@ -7560,11 +7509,12 @@ function checkTranceSetback(oppP, activePlayerId) {
     const amt = 2 * mult;                                            // 2 normally, 4 for Deep Well
     while (oppP.trance >= setbackAt) {
         oppP.trance -= setbackAt;
+        Abilities.markUsed(oppP, "deepwell");                           // Kaleidoscope: used up when The Deepening lands
         const victimId = oppP === gameState.p1 ? 1 : 2;
         oppP.setbacksSuffered = (oppP.setbacksSuffered || 0) + 1;      // lives in gameState, so it syncs to the other player online
         if (window.Subliminal)
             Subliminal.onTranceSetback(victimId);
-        if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "mark")) {
+        if (activePlayerId && activePlayerId !== victimId && hasSignaturePower(activePlayerId, "lingeringtrance")) {
             oppP.trance += 1;
             flashSignaturePowerHint(activePlayerId);
             log(`Mark's Lingering Trance leaves ${oppP.name} at ${oppP.trance} 🌀 after The Deepening.`);
@@ -7747,7 +7697,7 @@ function burningUpRise(p) {
 // 54 Burning Up: up to 2 extra rerolls per turn; your 🔥 rises by 1 after the first and by 2 after the second
 function canUseBurningUp(pid) {
     const p = playerById(pid);
-    return hasCard(pid, 54)
+    return hasCard(pid, 54) && !gameState.meditating
 		&& (p.burningUpUses || 0) < 2
 		&& p.arousal + burningUpRise(p) <= 5
 		&& gameState.phase === "rolling"
@@ -7900,7 +7850,7 @@ function rollFaceForDie(playerId, dieIndex) {
     } else {
         face = FACES[Math.floor(Math.random() * FACES.length)];
     }
-    if (face === "🌀 SPIRAL" && hasSignaturePower(playerId, "tex")) return "⬜ BLANK";
+    if (face === "🌀 SPIRAL" && hasSignaturePower(playerId, "twisteddice")) return "⬜ BLANK";
     return face;
 }
 
@@ -7915,8 +7865,8 @@ function startTurn() {
     gameState.signatureFableSpend = false;
     gameState.signatureHyeriPromptPending = false;
     gameState.signatureSiobhanTriggerFace = null;
-    const signatureSiobhanBonusTurn = !!gameState.signatureSiobhanBonusPending && hasSignaturePower(Number(gameState.activePlayer), "siobhan");
-	const activePlayerIsSiobhan = hasSignaturePower(Number(gameState.activePlayer), "siobhan");
+    const signatureSiobhanBonusTurn = !!gameState.signatureSiobhanBonusPending && hasSignaturePower(Number(gameState.activePlayer), "predatorymomentum");
+	const activePlayerIsSiobhan = hasSignaturePower(Number(gameState.activePlayer), "predatorymomentum");
 	// Keep the button label synchronized with the bonus turn actually starting.
 	if (signatureSiobhanBonusTurn) {
 		gameState.bonusTurnType = "roll";
@@ -8029,7 +7979,7 @@ function startTurn() {
 
 function maybeGrantRozBonusReroll() {
     const playerId = Number(gameState.activePlayer);
-    if (!hasSignaturePower(playerId, "roz") || gameState.signatureRozBonusGranted || gameState.rerollsLeft > 0 || gameState.signatureSiobhanBonusRoll) return false;
+    if (!hasSignaturePower(playerId, "tripletrouble") || gameState.signatureRozBonusGranted || gameState.rerollsLeft > 0 || gameState.signatureSiobhanBonusRoll) return false;
     const faceCounts = new Map();
     gameState.dice.forEach(die => { if (die && die.face && die.face !== "-") faceCounts.set(die.face, (faceCounts.get(die.face) || 0) + 1); });
     const best = [...faceCounts.entries()].sort((a,b) => b[1]-a[1])[0];
@@ -8069,6 +8019,7 @@ function maybeGrantRozBonusReroll() {
 }
 
 function rollDiceAction() {
+	if (gameState.meditating) return;          // a meditation turn has no rolls at all (powers or cards)
 	// have to have this here for "Called Shot"
 	if (Abilities.beforeRoll()) return;
     // A new roll selects this player's turn card; otherwise browsing stays where the player left it.
@@ -8079,6 +8030,7 @@ function rollDiceAction() {
     if (cardTriggerToastTimer) { clearTimeout(cardTriggerToastTimer); cardTriggerToastTimer = null; }
     if (typeof cardTriggerFlushTimer !== "undefined" && cardTriggerFlushTimer) { clearTimeout(cardTriggerFlushTimer); cardTriggerFlushTimer = null; }
     if (typeof pendingCardTriggerNotices !== "undefined") pendingCardTriggerNotices = [];
+    Abilities.afterRollStarts();                       // Called Shot: "called X" goes into the alert box right after the wipe
     let isInitRoll = gameState.dice[0].face === "-";
     if (!isInitRoll && gameState.rerollsLeft <= 0) return;
     gameState.dice.forEach(die => { if (die && die.signatureRozLocked) die.kept = true; });
@@ -8254,13 +8206,13 @@ async function resolveDice() {
     const preflightPlayer = activePlayerNum === 1 ? gameState.p1 : gameState.p2;
     const preflightCounts = signatureFaceCounts(gameState.dice);
     gameState.signatureSiobhanTriggerFace = null;
-    if (hasSignaturePower(activePlayerNum, "siobhan") && !preflightPlayer.signatureSiobhanUsed && !gameState.signatureSiobhanBonusRoll) {
+    if (hasSignaturePower(activePlayerNum, "predatorymomentum") && !preflightPlayer.signatureSiobhanUsed && !gameState.signatureSiobhanBonusRoll) {
         if (preflightCounts.TRANSFORM >= 4) gameState.signatureSiobhanTriggerFace = "TRANSFORM";
         else if (preflightCounts.SUBMISSION >= 4) gameState.signatureSiobhanTriggerFace = "SUBMISSION";
     }
 
     // Hyeri: choose one previously unused face when all six standard faces appear.
-    if (hasSignaturePower(activePlayerNum, "hyeri") && !gameState.signatureHyeriPromptPending && allSixStandardFacesPresent(gameState.dice)) {
+    if (hasSignaturePower(activePlayerNum, "perfectharmony") && !gameState.signatureHyeriPromptPending && allSixStandardFacesPresent(gameState.dice)) {
         const used = Array.isArray(preflightPlayer.signatureHyeriUsedFaces) ? preflightPlayer.signatureHyeriUsedFaces : (preflightPlayer.signatureHyeriUsedFaces = []);
         const available = FACES.filter(face => !used.includes(face));
         if (available.length) {
@@ -8294,7 +8246,7 @@ async function resolveDice() {
     }
 
     // Tex: choose individually how each final Submission die is spent.
-    if (hasSignaturePower(activePlayerNum, "tex") && !gameState.signatureTexAllocationDone && !gameState.signatureTexAllocationPending) {
+    if (hasSignaturePower(activePlayerNum, "twisteddice") && !gameState.signatureTexAllocationDone && !gameState.signatureTexAllocationPending) {
         const submissionIndices = gameState.dice.map((die, index) => die?.face === "⛓️ SUBMISSION" ? index : -1).filter(index => index >= 0);
         if (submissionIndices.length && !(activePlayerNum === 2 && gameState.gameMode === "solo")) {
             gameState.signatureTexAllocationPending = true;
@@ -8349,7 +8301,7 @@ async function resolveDice() {
     }
 
     // Fable: decide whether to spend three Lucidity dice before normal resolution.
-    if (hasSignaturePower(activePlayerNum, "fable") && !gameState.signatureFableDecisionMade && !gameState.signatureFableDecisionPending && preflightCounts.LUCIDITY >= 3 && preflightPlayer.transform > 0) {
+    if (hasSignaturePower(activePlayerNum, "lucidreversal") && !gameState.signatureFableDecisionMade && !gameState.signatureFableDecisionPending && preflightCounts.LUCIDITY >= 3 && preflightPlayer.transform > 0) {
         if (activePlayerNum === 2 && gameState.gameMode === "solo") {
             gameState.signatureFableSpend = preflightPlayer.transform >= 3 || (preflightPlayer.trance === 0 && preflightPlayer.arousal === 0 && preflightPlayer.vulnerability === 0);
             gameState.signatureFableDecisionMade = true;
@@ -8432,7 +8384,7 @@ async function resolveDice() {
     if (challengeActive && activePlayerNum === 2 && Math.max(...Object.values(counts)) >= 4) showChallengeTaunt("BigRollAI");
 
     // Siobhán's qualifying roll resolves only the qualifying face; all other dice are lost.
-    if (hasSignaturePower(activePlayerNum, "siobhan") && !activeP.signatureSiobhanUsed && !gameState.signatureSiobhanBonusRoll) {
+    if (hasSignaturePower(activePlayerNum, "predatorymomentum") && !activeP.signatureSiobhanUsed && !gameState.signatureSiobhanBonusRoll) {
         const triggerFace = gameState.signatureSiobhanTriggerFace || (counts.TRANSFORM >= 4 ? "TRANSFORM" : (counts.SUBMISSION >= 4 ? "SUBMISSION" : null));
         if (triggerFace) {
 			flashSignaturePowerHint(activePlayerNum);
@@ -8452,7 +8404,7 @@ async function resolveDice() {
     }
 
     // Fable's three spent Lucidity dice reduce her own Transform before the remaining Lucidity resolves.
-    if (gameState.signatureFableSpend && hasSignaturePower(activePlayerNum, "fable")) {
+    if (gameState.signatureFableSpend && hasSignaturePower(activePlayerNum, "lucidreversal")) {
         const before = Number(activeP.transform) || 0;
         activeP.transform = Math.max(0, before - 1);
 		flashSignaturePowerHint(activePlayerNum);
@@ -8465,7 +8417,7 @@ async function resolveDice() {
 
     // Tex's Trance dice are blank, and reassigned Submission dice have already changed face.
     // Luci adds one extra Submission point when at least three Submission dice remain.
-    if (hasSignaturePower(activePlayerNum, "luci") && counts.SUBMISSION >= 3) {
+    if (hasSignaturePower(activePlayerNum, "submissionamplifier") && counts.SUBMISSION >= 3) {
 		flashSignaturePowerHint(activePlayerNum);
         log(`${activeP.name}'s Submission Amplifier adds +1 Submission push.`);
     }
@@ -8528,7 +8480,7 @@ async function resolveDice() {
     // 4. Arousal
     // Heated Opening makes every Arousal die count, including the first.
     // Without Xander's active Bat power, the standard rule starts at two dice.
-	let arousalEffect = hasSignaturePower(activePlayerNum, "xander")
+	let arousalEffect = hasSignaturePower(activePlayerNum, "heatedopening")
         ? counts.AROUSAL
         : (counts.AROUSAL >= 2 ? counts.AROUSAL - 1 : 0);
     if (hasCard(activePlayerNum, 13) && arousalEffect > 0)
@@ -8537,7 +8489,7 @@ async function resolveDice() {
 	}
     if (arousalEffect > 0) { 
         if (!oppP.shieldActive) { 
-			if (hasSignaturePower(activePlayerNum, "xander")) {
+			if (hasSignaturePower(activePlayerNum, "heatedopening")) {
 				flashSignaturePowerHint(activePlayerNum);
 			}
             if (typeof increaseArousal === "function") {
@@ -8553,7 +8505,7 @@ async function resolveDice() {
     // 5. Submission
     if (counts.SUBMISSION >= 3) {
         let effect = 1 + (counts.SUBMISSION - 3);
-        if (hasSignaturePower(activePlayerNum, "luci")) effect += 1;
+        if (hasSignaturePower(activePlayerNum, "submissionamplifier")) effect += 1;
         pushSubmission(activePlayerNum === 1 ? effect : -effect, activePlayerNum); 
         log(`${oppP.name}'s submission deepens +${effect} ⛓️.`);
         if (hasCard(activePlayerNum, 23)) { 
@@ -8639,7 +8591,7 @@ function pushSubmission(amount, sourcePlayer = null) {
     
 	// Mesmerizing Rhythm then blocks a push that is still exactly 1 point.
     // Alex cannot benefit from defensive Submission cards; his signature power replaces their protection.
-    if (validSource && Math.abs(amount) === 1 && hasCard(targetId, 35) && !hasSignaturePower(targetId, "alex")) {
+    if (validSource && Math.abs(amount) === 1 && hasCard(targetId, 35) && !hasSignaturePower(targetId, "unyieldingresistance")) {
         queueCardTrigger(targetId, 35, "Blocked a 1-point Submission push", "reaction");
         log("Mesmerizing Rhythm blocked exactly 1 point of push!");
         return;
@@ -8647,7 +8599,7 @@ function pushSubmission(amount, sourcePlayer = null) {
 
     // Alex absorbs one point of the final incoming push per opposing turn.
     const pushesTowardTargetEnd = validSource && (targetId === 1 ? amount < 0 : amount > 0);
-    if (validSource && pushesTowardTargetEnd && hasSignaturePower(targetId, "alex") && !gameState.signatureAlexAbsorbedThisTurn) {
+    if (validSource && pushesTowardTargetEnd && hasSignaturePower(targetId, "unyieldingresistance") && !gameState.signatureAlexAbsorbedThisTurn) {
 		flashSignaturePowerHint(targetId);
         const originalAmount = amount;
         amount -= Math.sign(amount);
@@ -8812,7 +8764,7 @@ function wipeMarket() {
             if (
                 gameState.gameMode === "solo" &&
                 Number(gameState.activePlayer) === 2 &&
-                hasSignaturePower(2, "zixuan")
+                hasSignaturePower(2, "marketmanipulator")
             ) {
                 log(`${player.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${newCards}`);
             } else {
@@ -8913,7 +8865,7 @@ function wipeMarketOld() {
 			.filter(Boolean)
 			.join(", ") || "none";
 
-		if (hasSignaturePower(2, "zixuan")) {
+		if (hasSignaturePower(2, "marketmanipulator")) {
 			log(`${p.name}'s Market Manipulator wipes the market for 1 ⚡. New cards: ${newCards}`);
 		} else {
 			log(`Market Wiped. New cards: ${newCards}`);
@@ -9158,19 +9110,30 @@ function showInstantCardPurchase(card, effectMessages) {
     if (shell) shell.classList.add("card-popup-instant");
 }
 
-function buyCard(index) {
+function buyCard(index, opts) {                  // opts = { layaway, ownerId, cost } buys a reserved Layaway card instead of a market card
+    const fromLayaway = !!(opts && opts.layaway);
     if (marketWipeAnimating) return false;
-    let card = market[index];
+    let card = fromLayaway ? opts.layaway.card : market[index];
     if (!card) return false;
 
     let playerId = gameState.activePlayer;
     let p = playerId === 1 ? gameState.p1 : gameState.p2;
-    const marketCardElement = document.querySelectorAll("#market-container > .card")[index] || null;
+    if (gameState.meditating) {                                  // Meditation: no buying on a meditation turn
+        playSound("deny");
+        if (!(playerId === 2 && gameState.gameMode === "solo")) log(`${p.name} is meditating and cannot buy cards this turn.`);
+        return false;
+    }
+    if (!fromLayaway && Abilities.holdsLayaway(playerId)) {        // Layaway: while you hold a reservation you can only buy that card
+        playSound("deny");
+        if (!(playerId === 2 && gameState.gameMode === "solo")) log(`${p.name} is holding a Layaway and can only buy that card.`);
+        return false;
+    }
+    const marketCardElement = fromLayaway ? null : (document.querySelectorAll("#market-container > .card")[index] || null);
     const marketCardRect = marketCardElement ? marketCardElement.getBoundingClientRect() : null;
     const isHumanInstantPurchase = playerId === 1 && isLocalPlayerTurn() && card.type === "Instant";
     const logStartIndex = Array.isArray(gameState.log) ? gameState.log.length : 0;
 
-    if (hasSignaturePower(playerId, "alex") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) {
+    if (hasSignaturePower(playerId, "unyieldingresistance") && ALEX_DEFENSIVE_SUBMISSION_CARD_IDS.includes(Number(card.id))) {
         playSound("deny");
         log(`${p.name}'s Unyielding Resistance cannot use defensive Submission card ${card.name}.`);
         if (isLocalPlayerTurn()) showPopup("Unyielding Resistance", `${p.name} cannot use defensive Submission cards while Unyielding Resistance is on.`);
@@ -9183,7 +9146,7 @@ function buyCard(index) {
         return false;
     }
 
-    let cost = getCardPurchaseCost(card, playerId);
+    let cost = fromLayaway ? opts.cost : getCardPurchaseCost(card, playerId);
     if (p.energy < cost) { playSound("deny"); return false; }
     if (hasCard(playerId, 29)) cardResolvedThisTurn.add(`${playerId}:29`);
     if (hasCard(playerId, 28) && !p.boughtCardThisTurn) cardResolvedThisTurn.add(`${playerId}:28`);
@@ -9223,8 +9186,8 @@ function buyCard(index) {
         discardCard(card);
     }
 
-    market.splice(index, 1);
-    refillMarket();
+    if (fromLayaway) Abilities.layawayTaken(opts.ownerId);
+    else { market.splice(index, 1); refillMarket(); }
     syncToFirebase();
     updateUI();
     if (card.type === "Keep") {
@@ -9240,14 +9203,6 @@ function buyCard(index) {
     return true;
 }
 
-function buyAction(type, pId) {
-    let p = pId === 1 ? gameState.p1 : gameState.p2;
-    let oppId = pId === 1 ? 2 : 1;
-    if (type === 'arousal' && p.energy >= 3) { p.energy -= 3; p.arousal = Math.max(0, p.arousal - 1); }
-    if (type === 'transform' && p.energy >= 5) { p.energy -= 5; applyTransform(oppId, 1, pId); }
-    if (type === 'submission' && p.energy >= 6) { p.energy -= 6; pushSubmission(pId === 1 ? 2 : -2, pId); }
-    log(`${p.name} bought Action: ${type}`); syncToFirebase(); updateUI();
-}
 
 function endTurn() {
     if (isChoicePending()) {
@@ -9432,7 +9387,7 @@ function executeCPUTurn() {
             let keptCount = gameState.dice.filter(d => d.kept).length;
             let idx20 = gameState.p2.inventory.findIndex(c => c.id === 20);
 
-            if (!gameState.signatureSiobhanBonusRoll &&
+            if (!gameState.meditating && !gameState.signatureSiobhanBonusRoll &&
                 idx20 !== -1 &&
                 gameState.p2.inventory[idx20].charges > 0 &&
                 cpuShouldUseAbsoluteFocus(keptCount)
@@ -9454,7 +9409,7 @@ function executeCPUTurn() {
                 return;
             }
 			
-            if (!gameState.signatureSiobhanBonusRoll && cpuShouldUseHypnoticSuggestion(keptCount)) {
+            if (!gameState.meditating && !gameState.signatureSiobhanBonusRoll && cpuShouldUseHypnoticSuggestion(keptCount)) {
                 buyReroll(1, 16, 2);
                 return;
             }
@@ -9478,7 +9433,7 @@ function executeCPUTurn() {
                 // --------------------------------------------------------
                 let idx49 = gameState.p2.inventory.findIndex(c => c.id === 49);
 
-                if (!gameState.signatureSiobhanBonusRoll && idx49 !== -1 && !gameState.p2.simmeringUsed) {
+                if (!gameState.meditating && !gameState.signatureSiobhanBonusRoll && idx49 !== -1 && !gameState.p2.simmeringUsed) {
                     let dIdx = cpuIsAdaptive() ? cpuPickSimmeringDie() : gameState.dice.findIndex(d => d.face !== "🔥 AROUSAL");
 
                     if (dIdx !== -1) {
@@ -9493,17 +9448,20 @@ function executeCPUTurn() {
 				Abilities.cpuTryEcho();
 				
                 cpuEnsureRitualKeep();
-                if (cpuIsAdaptive()) cpuBrainRecordRoll();
+                if (cpuIsAdaptive() && !gameState.meditating) cpuBrainRecordRoll();
                 resolveDice();
 
 				// Ivy gets one opportunity to use Suggested Transference
 				// before making her normal card purchases.
-				if (hasSignaturePower(2, "ivy")) {
+				if (hasSignaturePower(2, "suggestedtransference")) {
 					ivyCpuTryExchange();
 				}
 				
 				// CPU Turn the Tables
 				Abilities.cpuShopPowers();
+				Abilities.cpuLayawayShop();             // buy its own reserved card, or the human's open one
+				// No buying on a meditation turn, and no other buying while the CPU holds a Layaway: the CPU is done
+				if (gameState.meditating || Abilities.cpuHoldsLayaway()) { endTurn(); return; }
 
 				if (cpuDebugBuyFirst()) {
 					endTurn();
@@ -9677,7 +9635,7 @@ function executeCPUTurn() {
 						// only mark bought if we actually bought something
                         if (buyCard(bestIndex))
 							boughtSomething = true;
-					} else if (!gameState.showEnergyActions) {
+					} else {
                         // High Energy Wipe Check
                         let diff = getCpuDifficulty();
                         let wipeThreshold = Infinity;
@@ -9686,7 +9644,7 @@ function executeCPUTurn() {
                         else if (diff === "v23low") wipeThreshold = 9;
                         else if (diff === "defensive") wipeThreshold = 10;
                         
-                        if (gameState.p2.energy >= (hasSignaturePower(2, "zixuan") ? 1 : wipeThreshold) && deck.length > 0 && market.length > 0) {
+                        if (gameState.p2.energy >= (hasSignaturePower(2, "marketmanipulator") ? 1 : wipeThreshold) && deck.length > 0 && market.length > 0) {
                             let energyBefore = gameState.p2.energy;
                             await wipeMarket();
                             log(`CPU used Wipe (Excess Energy): refreshed market (${energyBefore} → ${gameState.p2.energy}).`);
@@ -9707,15 +9665,6 @@ function executeCPUTurn() {
 					// spend until don't want to spend
 				}
 
-                // --------------------------------------------------------
-                // ENERGY ACTIONS
-                // --------------------------------------------------------
-                while (gameState.showEnergyActions == true && cpuShouldBuyTransformWithEnergy()) {
-                    buyAction('transform', 2);
-                }
-                while (gameState.showEnergyActions == true && cpuShouldBuySubmissionWithEnergy()) {
-                    buyAction('submission', 2);
-                }
                 endTurn();
             }, 1000);
         }

@@ -131,6 +131,9 @@ function helperCardTip(el) {
 // ---------- the tips: first matching rule wins ----------
 // sel = CSS selector.  h3 = text of a heading.  build(el) returns [title, html].
 const HELPER_TIP_RULES = [
+    // --- die faces named by a power (Called Shot buttons and badge): the symbol is shown, the tooltip gives the name ---
+    { sel: "[data-face-name]", build: el => HELPER_DIE_TIPS[el.dataset.faceName] || null },
+    { sel: ".called-shot-badge", build: () => ["Called Shot", "The face named before the roll. If it shows <b>3 or more</b> times its effect is +1. If it shows <b>fewer than 2</b> times, 1 ⚡ is lost."] },
     // --- dice (specific) ---
     { sel: "#dice-container .die.special-die", build: () => ["Special Die", "From <b>Deeper Bargains</b>: three of this die's six sides show the chosen face and the other three are blank."] },
     { sel: "#dice-container .die", build: el => {
@@ -143,9 +146,9 @@ const HELPER_TIP_RULES = [
     } },
     // --- buttons ---
     { sel: "#btn-roll", build: () => ["Roll / Reroll", "The first click rolls all your dice. Click dice to <b>lock</b> the ones you like, then <b>Reroll</b> the rest. Your rerolls are limited: see the Rerolls counter."] },
-	{ sel: "button[onclick^='Abilities.meditate']", build: () => ["Meditate", "Skip your roll this turn: gain 3 ⚡ and lower your Trance and Arousal by 1. Then go straight to the shop. You cannot meditate two turns in a row."] },
+	{ sel: "button[onclick^='Abilities.meditate']", build: () => ["Meditate", "Skip your roll this turn: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or card purchases that turn (you can still wipe the market). You cannot meditate two turns in a row."] },
     { sel: "button[onclick^='Abilities.openEcho']", build: () => ["Echo", "Pay 1 ⚡ to copy one die's face onto another die. Once per turn, after you have rolled."] },
-    { sel: "button[onclick^='Abilities.turnTables']", build: () => ["Turn the Tables", "Once per game, in your shop phase: flip the Submission marker to the other side (+3 becomes -3)."] },
+    { sel: "button[onclick^='Abilities.turnTables']", build: () => ["🪞 Turn the Tables", "Once per game, in your shop phase: flip the Submission marker to the other side (+3 becomes -3)."] },
     { sel: "#btn-resolve", build: () => ["Resolve Dice", "Stop rolling and apply your dice: Transform, Submission, Trance, Arousal, Energy and Lucidity all take effect. Then you can shop and End Turn."] },
     { sel: "#btn-wipe-market", build: () => {
         const cost = typeof getMarketWipeCost === "function" ? getMarketWipeCost(gameState.activePlayer) : 2;

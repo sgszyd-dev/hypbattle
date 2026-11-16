@@ -446,9 +446,7 @@
         .board > .panel.turn-owner-p1 { box-shadow: inset 0 2px 0 var(--player); }
         .board > .panel.turn-owner-p2 { box-shadow: inset 0 2px 0 var(--cpu); }
         .board.awaiting-opponent #actions-grid button,
-        .board.awaiting-opponent #btn-wipe-market,
-        .board.awaiting-opponent #energy-actions-panel-1 button,
-        .board.awaiting-opponent #energy-actions-panel-2 button { opacity: .42; }
+        .board.awaiting-opponent #btn-wipe-market { opacity: .42; }
         .die { position: relative; }
         .die.combo-die { animation: comboPop .45s ease; }
         .die-combo-badge {
@@ -874,9 +872,9 @@
         .panel.panel-active-p2 { border-top-color: var(--cpu); box-shadow: inset 0 1px 0 rgba(255,77,77,.4); }
         #turn-indicator.turn-p1 { text-shadow: 0 0 10px rgba(76,201,240,.5); }
         #turn-indicator.turn-p2 { text-shadow: 0 0 10px rgba(255,77,77,.5); }
-        #actions-grid button, #btn-wipe-market, .market-row .card button, .btn-end-turn, .panel .inventory button, .panel [id^="energy-actions-panel"] button { transition: opacity .25s ease, filter .25s ease; }
+        #actions-grid button, #btn-wipe-market, .market-row .card button, .btn-end-turn, .panel .inventory button { transition: opacity .25s ease, filter .25s ease; }
         .board.not-my-turn #actions-grid button, .board.not-my-turn #btn-wipe-market, .board.not-my-turn .market-row .card button, .board.not-my-turn .btn-end-turn,
-        .panel.panel-inactive .inventory button, .panel.panel-inactive [id^="energy-actions-panel"] button, .panel.panel-inactive .btn-end-turn { opacity: .38; filter: saturate(.45); cursor: not-allowed; }
+        .panel.panel-inactive .inventory button, .panel.panel-inactive .btn-end-turn { opacity: .38; filter: saturate(.45); cursor: not-allowed; }
         .btn-end-turn.choice-blocked { opacity: .6; }
 		/* ============================================================
 		   RAPID PULSE VISUALS: add anywhere in your stylesheet (after the .panel rules)
@@ -2534,3 +2532,61 @@ body.game-ethereal-enabled { background-color: transparent; }
     }
 }
 
+/* CPU difficulty indicator beside the opponent's name */
+.cpu-difficulty-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 9px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.48em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    opacity: 0.85;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+}
+
+/* Difficulty tier colors */
+.cpu-difficulty-random {
+    color: #67cfe0;
+}
+
+.cpu-difficulty-smart {
+    color: #a78bfa;
+}
+
+.cpu-difficulty-aggressive {
+    color: #f472b6;
+}
+
+.cpu-difficulty-v23low {
+    color: #fb923c;
+}
+
+.cpu-difficulty-defensive {
+    color: #5eead4;
+}
+
+.cpu-difficulty-transformer {
+    color: #e8c75a;
+}
+
+/* ---- Special powers: used state and Called Shot badge ---- */
+.signature-power-hint.power-used { opacity: .5; filter: grayscale(1); border-color: rgba(150,150,150,.45); }
+.signature-power-hint .power-used-tag { color: #aaa; font-size: .85em; font-weight: 700; margin-left: 4px; }
+.called-shot-badge {
+    text-align: center; margin: 6px auto 4px; padding: 4px 10px; width: fit-content;
+    color: #fcd34d; font-weight: bold;
+    border: 1px solid rgba(252, 211, 77, .45); border-radius: 8px; background: rgba(60, 45, 10, .35);
+}
+.called-shot-badge .called-face { font-size: 1.25em; margin-left: 2px; cursor: help; }
+/* ---- Layaway slot and Kaleidoscope ---- */
+.layaway-zone { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 8px 0; }
+.layaway-tile { border: 2px dashed #14b8a6; border-radius: 10px; padding: 6px 8px; background: rgba(15, 118, 110, .12); max-width: 260px; }
+.layaway-tile.layaway-open { border-color: #f59e0b; background: rgba(180, 83, 9, .14); }
+.layaway-head { font-size: .78rem; font-weight: 700; color: #5eead4; text-align: center; margin-bottom: 4px; }
+.layaway-tile.layaway-open .layaway-head { color: #fcd34d; }
+.layaway-tile .layaway-card { margin: 0 auto; }
+.signature-power-hint .kaleido-current { display: block; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(232, 121, 249, .4); color: #f5d0fe; }
