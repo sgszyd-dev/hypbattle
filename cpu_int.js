@@ -53,6 +53,26 @@ function cpuPowersOf(id)    { return CPU_POWER_KEYS.filter(k => hasSignaturePowe
 function cpuOwnPower()      { return cpuPowersOf(2)[0] || null; }
 function cpuOpponentPower() { return cpuPowersOf(1)[0] || null; }
 
+// How close a Deepening is, on the standard scale (5 Trance = 5). Deep Well needs 7, so 7 Trance reads as 5 here. Use this wherever the CPU
+// asks "is a Deepening near?" instead of comparing Trance to a fixed number.
+function cpuTranceEff(p) { return (Number(p.trance) || 0) + 5 - Abilities.setbackThreshold(p); }
+
+// One card value and one "good enough to buy" bar for the two top levels (and Hard), so the power code can ask the same questions the shop asks.
+function cpuCardValue(card) {
+    try {
+        if (cpuIsAdaptive()) return Number(cpuAdaptiveCardScore(card)) || 0;
+        if (cpuIsTier()) return Number(cpuTierCardScore(card, getCpuDifficulty())) || 0;
+    } catch (e) {}
+    return (Number(card.cost) || 0) * 10;
+}
+function cpuBuyBar() {
+    try {
+        if (cpuIsAdaptive()) return Number(cpuAdaptiveBuyThreshold()) || 40;
+        if (cpuIsTier()) return Number(cpuTierBuyThreshold(getCpuDifficulty(), CPU_TIERS[getCpuDifficulty()])) || 40;
+    } catch (e) {}
+    return 40;
+}
+
 // ---------- card groups ----------
 const CPU_REROLL_CARDS = [43, 20, 16, 54];                       // Mental Awakening, Absolute Focus, Hypnotic Suggestion, Burning Up
 const CPU_SUBMISSION_KEEPS = [36, 15, 46, 24, 23, 34, 22];       // offensive ⛓️ cards that stay in play
@@ -236,6 +256,16 @@ function cpuLockSpecialDie(keep) {
     return keep;
 }
 
+// Surrender: at the end of our turn every 2 🔥 become 1 🌀 on us. A Quiet Mind spent on an EVEN Arousal (4→3, 2→1) saves a Trance; an odd Arousal
+// gains nothing from one step. If that conversion would trigger our own Deepening, lower the Trance instead. Returns "arousal", "trance" or null.
+function cpuSurrenderQuietChoice() {
+    if (cpuSmartTier() < 2 || !hasSignaturePower(2, "surrender")) return null;
+    const p = gameState.p2, T = Abilities.setbackThreshold(p), a = Number(p.arousal) || 0, t = Number(p.trance) || 0, gain = Math.floor(a / 2);
+    if (a >= 2 && a % 2 === 0) return "arousal";
+    if (t > 0 && t + gain >= T) return "trance";
+    return null;
+}
+
 // ---------- card values ----------
 function cpuPowerDeny(card) {                // raw "keep this from the human" points for the human's ability
     if (cpuSmartTier() < 1) return 0;
@@ -280,6 +310,7 @@ function cpuSmartCardBonus(card, scoreFn) {
     if (id === 31 && hasSignaturePower(2, "marketmanipulator")) b += 45;                          // Zixuan: energy + Falling Sensation is the engine
     if (hasSignaturePower(2, "marketmanipulator") && !has(31) && CPU_BIG_INSTANTS.includes(id)) b += 20;   // without it: big instant cards
     if (id === 38) b += cpuNewIdentityBonus();                              // losing: New Identity is a good card
+    if (id === 52 && gameState.submission < 0) b += 40;                     // You Will Obey with the marker on their side (e.g. right after our Turn the Tables) is lethal
     if (id === 5) b += Math.min(45, cpuStealValue(scoreFn) * 0.45);        // Hypnotic Dominance: worth what it can take
     if (id === 3 && hasSignaturePower(2, "perfectharmony")) b += 10;                         // Trigger Word and Perfect Harmony want the same six faces
 	b += cpuEndgameCardBonus(card);
@@ -802,7 +833,7 @@ function ivyCpuCurrentPlan() {
 
     // Survival comes first if Ivy is in danger.
     if (
-        p.trance >= 3 ||
+        cpuTranceEff(p) >= 3 ||
         p.arousal >= 3 ||
         gameState.submission >= 3 ||
         p.vulnerability > 0
@@ -1174,7 +1205,7 @@ function cpuEndgameFaceWeights(w) {
         w.TR += 0.25 * urgency;                                              // a 👁️ triple is a Transform
         if (info.pinned) {
             w.SU += 0.3 * urgency + 0.2;                                     // every ⛓️ point past the edge is a Transform
-            if (opp.trance >= 3) w.SP += 0.3 * urgency;                      // a Deepening pushes ⛓️ by 2
+            if (cpuTranceEff(opp) >= 3) w.SP += 0.3 * urgency;                      // a Deepening pushes ⛓️ by 2
         }
         if (info.urgent) w.EN += 0.2;                                        // energy buys the finishing card
     }
@@ -1200,7 +1231,7 @@ function cpuEndgameKeepRules(keep, faces, counts) {
     // Pinned in the endgame: ⛓️ (and a nearly full 🌀) are the finishers
     if (info.active && info.pinned) {
         if (counts.SU >= 2 && free >= 1) lock("SU");
-        if (opp.trance >= 3 && counts.SP >= 1) lock("SP");
+        if (cpuTranceEff(opp) >= 3 && counts.SP >= 1) lock("SP");
     }
     // Pressing with good ⛓️ / 🌀 cards: keep pairs and go for the triple
     if (mode === "press") {
@@ -1349,22 +1380,33 @@ function cpuBurstMinCost() {                                         // cheapest
 }
 
 function cpuThreatForecast() {
-    const me = gameState.p2, hu = gameState.p1, s = gameState.submission;
-    const key = [gameState.round, hu.energy, hu.transform, me.transform, s, me.trance, market.map(c => c ? c.id : 0).join(",")].join("|");
+    const me = gameState.p2, hu = gameState.p1;
+    // Turn the Tables: if they still have it and the marker is deep on THEIR side, assume they flip it onto ours
+    const flipRisk = humanHasUnusedTables() && gameState.submission <= -2;
+    const s = flipRisk ? -gameState.submission : gameState.submission;
+    const humanHold = hu.layaway && hu.layaway.stage === "owner" ? hu.layaway.card : null;       // a Layaway holder can only buy that card
+    const myOpen = me.layaway && me.layaway.stage === "open" ? me.layaway.card : null;             // our unclaimed Layaway card is theirs at 1 ⚡ less
+    const key = [gameState.round, hu.energy, hu.transform, me.transform, s, me.trance, cpuPowersOf(1).join("+"), humanHold ? humanHold.id : "", myOpen ? myOpen.id : "", market.map(c => c ? c.id : 0).join(",")].join("|");
     if (cpuBrain.forecastKey === key && cpuBrain.forecast) return cpuBrain.forecast;
 
     const margin = Math.max(0, 10 - (me.transform || 0));
     const toMe = 5 - s;                                              // points until the marker is over OUR end
-    const budget = (hu.energy || 0) + 2;                             // ⚡ they can have next turn (their dice add about 2)
+    const cornered = hasSignaturePower(1, "cornered") && (hu.transform || 0) >= 8;                // Cornered: +1 ⚡ and an extra die every turn
+    const budget = (hu.energy || 0) + 2 + (cornered ? 1 : 0);        // ⚡ they can have next turn (their dice add about 2)
+    // What a "strong roll" is worth to them: Echo turns a pair into a triple, Called Shot adds 1 to a hit, Cornered adds a die
+    const strong = 2 + (hasSignaturePower(1, "echo") && (hu.energy || 0) >= 1 ? 1 : 0) + (hasSignaturePower(1, "calledshot") ? 0.5 : 0) + (cornered ? 1 : 0);
     const has = id => hasCard(1, id);
     const keepPush = (has(36) ? 1 : 0) + (has(15) ? 1 : 0) + (has(34) && s > 0 ? 1 : 0) + (has(46) ? 1 : 0)
         + (has(22) ? 0.5 : 0) + (hasSignaturePower(1, "submissionamplifier") ? 1 : 0);
-    const setbackPush = me.trance >= 3 ? 2 : 0;                      // a Deepening lets them "Push Submission 2"
-    const physManip = (has(17) && me.trance >= 3) ? 1 : 0;           // Physical Manipulation turns it into a Transform
+    const setbackPush = cpuTranceEff(me) >= 3 ? (hasSignaturePower(2, "deepwell") ? 4 : 2) : 0;   // a Deepening lets them "Push Submission 2" (Deep Well doubles it)
+    const physManip = (has(17) && cpuTranceEff(me) >= 3) ? 1 : 0;           // Physical Manipulation turns it into a Transform
 
-    const cards = market.filter(Boolean).map(c => ({
-        id: Number(c.id), cost: getCardPurchaseCost(c, 1),
-        dmg: CPU_BURST[Number(c.id)] || 0, push: CPU_PUSH_INSTANTS[Number(c.id)] || 0, kill: Number(c.id) === 52 && s > 0
+    let pool = market.filter(Boolean).map(c => ({ card: c, cost: getCardPurchaseCost(c, 1) }));
+    if (myOpen) pool.push({ card: myOpen, cost: Math.max(0, getCardPurchaseCost(myOpen, 1) - 1) });
+    if (humanHold) pool = [{ card: humanHold, cost: getCardPurchaseCost(humanHold, 1) }];                 // holding a Layaway: no other card can be bought
+    const cards = pool.map(o => ({ c: o.card, cost: o.cost })).map(o => ({
+        id: Number(o.c.id), cost: o.cost,
+        dmg: CPU_BURST[Number(o.c.id)] || 0, push: CPU_PUSH_INSTANTS[Number(o.c.id)] || 0, kill: Number(o.c.id) === 52 && s > 0
     })).filter(c => c.dmg || c.push || c.kill);
 
     let best = { total: 0, ids: [], overflow: 0 };
@@ -1373,13 +1415,13 @@ function cpuThreatForecast() {
         cards.forEach((c, i) => { if (mask & (1 << i)) { cost += c.cost; dmg += c.dmg; push += c.push; kill = kill || c.kill; ids.push(c.id); } });
         if (cost > budget) continue;
         const extra = keepPush + setbackPush + push;
-        const ovDice = kill ? toMe + 2 : Math.max(0, 2 + extra - toMe);    // their dice go into ⛓️ (2 = a strong roll)
-        const ovNoDice = kill ? toMe + 2 : Math.max(0, extra - toMe);      // their dice go into 👁️ instead (also 2)
-        const total = dmg + Math.max(ovDice, ovNoDice + 2) + physManip;
+        const ovDice = kill ? toMe + 2 : Math.max(0, strong + extra - toMe);    // their dice go into ⛓️ (a strong roll)
+        const ovNoDice = kill ? toMe + 2 : Math.max(0, extra - toMe);           // their dice go into 👁️ instead (also a strong roll)
+        const total = dmg + Math.max(ovDice, ovNoDice + strong) + physManip;
         if (total > best.total) best = { total, ids, overflow: Math.max(ovDice, ovNoDice) };
     }
     const style = cpuStyle();
-    const max = best.total || (2 + physManip);
+    const max = best.total || (strong + physManip);
     const likely = max * 0.5 + (style.transformer ? 0.5 : 0);
     const f = { margin, max, likely, lethal: max >= margin, likelyLethal: likely >= margin, overflow: best.overflow, ids: best.ids };
     cpuBrain.forecastKey = key; cpuBrain.forecast = f;
@@ -1459,6 +1501,7 @@ function cpuTranceThreat() {                       // how much 🌀 the human co
     [0, 31, 14, 8, 18].forEach(id => { if (hasCard(1, id)) t += 1; });
     if (st.trancer) t += 1.5;
     if (hasSignaturePower(1, "lingeringtrance") || hasSignaturePower(1, "twisteddice")) t += 1;
+    if (hasSignaturePower(1, "echo")) t += 0.5;                       // Echo can turn a pair of 🌀 into three
     return t;
 }
 function cpuLucidityValue(p, v, a, t) {
@@ -1467,9 +1510,14 @@ function cpuLucidityValue(p, v, a, t) {
     const a0 = p.arousal || 0, a1 = a0 - a;
     val += (rerolls(a1) - rerolls(a0)) * 2.2 + a * 0.35;                       // crossing a reroll band is what matters
     if (cpuStyle().arousal || hasSignaturePower(1, "heatedopening") || hasSignaturePower(1, "twisteddice")) val += a * 0.5;
-    const t0 = p.trance || 0, t1 = t0 - t, th = cpuTranceThreat();
+    const t0 = p.trance || 0, t1 = t0 - t, th = cpuTranceThreat(), T = Abilities.setbackThreshold(p);
     val += t * 0.45;
-    if (t0 + th >= 5 && t1 + th < 5) val += 2.5 * (1 + 0.3 * Math.max(0, gameState.submission - 1));   // a Deepening is worse the closer we are to our end
+    if (t0 + th >= T && t1 + th < T) val += 2.5 * (1 + 0.3 * Math.max(0, gameState.submission - 1));   // a Deepening is worse the closer we are to our end
+    if (p === gameState.p2 && hasSignaturePower(2, "surrender")) {         // Surrender: at end of turn every 2 🔥 become 1 🌀 on us
+        const g0 = Math.floor(a0 / 2), g1 = Math.floor(a1 / 2);
+        val += (g0 - g1) * 1.1;
+        if (t0 + g0 >= T && t1 + g1 < T) val += 4;                          // cleaning up now avoids a Deepening we would cause ourselves
+    }
     return val;
 }
 // Same contract as autoAllocateLucidity(points, playerObj, arousalCost): spends the points and returns {trance, arousal, vuln}

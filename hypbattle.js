@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261115.1"; // Update this label for each release.
+const GAME_VERSION = "20261116.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -11,7 +11,7 @@ const CPU_PIN_ESCAPE_V2 = true;
 // CPU respects human Turn the Tables (once-per-game flip). Soft-caps offensive submission while unused.
 // Defensive soft ceiling +2; Virtuoso/Master soft ceiling +3. Set false to ignore Tables.
 const CPU_TABLES_RESPECT_V1 = true;
-const cardDebugOn = false;
+const cardDebugOn = true;
 const debugCards = [];     // card ids dealt into the first market (as before)
 const debugStart = {
     p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
@@ -22,8 +22,8 @@ const debugStart = {
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
 	cpuTransform: null,
-	p1Power: "kaleidoscope",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
-	cpuPower: "layaway"				// same for CPU
+	p1Power: "deepwell",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
+	cpuPower: "echo"				// same for CPU
 };
 
 
@@ -89,6 +89,9 @@ window.addEventListener("resize", applyGameSpiralBackground, { passive: true });
 window.addEventListener("orientationchange", applyGameSpiralBackground, { passive: true });
 
 // Each character has a gender field ("male" / "female"). It is used for things like the Master / Mistress title.
+// current ratio, male: 6, female: 7
+// need 7 more (4 male, 3 female)
+// missing letters: B, C, E, G, J, K, N, O, P, Q, U, W, Y
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
 	{ name: "Dare",      gender: "male"},
@@ -226,7 +229,7 @@ const CHARACTER_MANIFEST = {
     "Fable": ["Cat", "Bunny", "Cow","Otter","Werewolf","Statue"], // Otter
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
-	"Dare": ["Snake","Skunk","Cow"], // Snake
+	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
 	};
 
 
@@ -4361,22 +4364,22 @@ function cpuKeepDie(face, difficulty, counts) {
     if (difficulty === "smart") return (face === "⛓️ SUBMISSION" || face === "⚡ ENERGY" || (face === "👁️ TRANSFORM" && counts.transform >= 2));
     if (difficulty === "aggressive") {
 		if (["👁️ TRANSFORM", "⛓️ SUBMISSION", "⚡ ENERGY"].includes(face)) return true;
-        if (face === "💧 LUCIDITY") return gameState.p2.trance >= 3 || gameState.p2.arousal >= 3 || gameState.p2.vulnerability >= 1;
-        if (face === "🌀 SPIRAL") return gameState.p1.trance >= 3;
+        if (face === "💧 LUCIDITY") return cpuTranceEff(gameState.p2) >= 3 || gameState.p2.arousal >= 3 || gameState.p2.vulnerability >= 1;
+        if (face === "🌀 SPIRAL") return cpuTranceEff(gameState.p1) >= 3;
         return false;
     }
     if (difficulty === "v23low") {
         if (["👁️ TRANSFORM", "⚡ ENERGY"].includes(face)) return true;
         if (face === "⛓️ SUBMISSION") return counts.submission >= 4 || (counts.submission >= 3 && gameState.p2.transform >= 7 && gameState.p1.transform >= 7);
-        if (face === "💧 LUCIDITY") return (gameState.p2.trance >= 4 || gameState.p2.arousal >= 4 || gameState.p2.vulnerability >= 1);
+        if (face === "💧 LUCIDITY") return (cpuTranceEff(gameState.p2) >= 4 || gameState.p2.arousal >= 4 || gameState.p2.vulnerability >= 1);
         return false;
     }
     if (difficulty === "defensive") {
-        if (face === "💧 LUCIDITY") return (gameState.p2.trance >= 2 || gameState.p2.arousal >= 2 || gameState.p2.vulnerability >= 1);
+        if (face === "💧 LUCIDITY") return (cpuTranceEff(gameState.p2) >= 2 || gameState.p2.arousal >= 2 || gameState.p2.vulnerability >= 1);
         if (face === "⚡ ENERGY") return true;
         if (face === "👁️ TRANSFORM") return counts.transform >= 2 || gameState.p1.transform >= 6;
         if (face === "⛓️ SUBMISSION") return counts.submission >= 2 && gameState.p1.transform >= 5;
-        if (face === "🌀 SPIRAL") return gameState.p1.trance >= 3;
+        if (face === "🌀 SPIRAL") return cpuTranceEff(gameState.p1) >= 3;
         if (face === "🔥 AROUSAL") return gameState.p1.arousal >= 3;
         return false;
     }
@@ -4434,15 +4437,16 @@ function cpuShouldUseQuietMind() {
     const p = gameState.p2;
     if (!hasCard(2, 33) || p.energy < 2) return false;
     if (p.trance <= 0 && p.arousal <= 0) return false;
+    if (cpuSurrenderQuietChoice()) return true;                       // Surrender: it pays off before the end-of-turn conversion
     if (cpuIsAdaptive()) return cpuAdaptiveWantsCalm();
 
     switch (getCpuDifficulty()) {
-        case "defensive":  return p.arousal >= 3 || p.trance >= 3;     // wants Arousal at 2 or less
-        case "aggressive": return p.arousal >= 4 || p.trance >= 4;     // only one step from max (or at it)
-        case "v23low":     return p.arousal >= 4 || p.trance >= 4;
-        case "transformer": return p.arousal >= 3 || p.trance >= 4;     // Arousal from 3; barely cares about its own Trance
+        case "defensive":  return p.arousal >= 3 || cpuTranceEff(p) >= 3;     // wants Arousal at 2 or less
+        case "aggressive": return p.arousal >= 4 || cpuTranceEff(p) >= 4;     // only one step from max (or at it)
+        case "v23low":     return p.arousal >= 4 || cpuTranceEff(p) >= 4;
+        case "transformer": return p.arousal >= 3 || cpuTranceEff(p) >= 4;     // Arousal from 3; barely cares about its own Trance
         case "random":     return Math.random() > 0.5;
-        default:           return p.arousal > 2 || p.trance >= 4; // smart
+        default:           return p.arousal > 2 || cpuTranceEff(p) >= 4; // smart
     }
 }
 
@@ -4451,8 +4455,11 @@ function cpuUseQuietMind() {
     if (!cpuShouldUseQuietMind()) return false;
     p.energy -= 2;
     let lowered = "Trance";
-    if (cpuIsAdaptive()) {
-        if (p.arousal >= 3 && !(p.trance >= 4 && p.arousal === 4)) { p.arousal--; lowered = "Arousal"; }
+    const sq = cpuSurrenderQuietChoice();
+    if (sq === "arousal") { p.arousal--; lowered = "Arousal"; }
+    else if (sq === "trance") p.trance--;
+    else if (cpuIsAdaptive()) {
+        if (p.arousal >= 3 && !(cpuTranceEff(p) >= 4 && p.arousal === 4)) { p.arousal--; lowered = "Arousal"; }
         else if (p.trance > 0) p.trance--;
         else { p.arousal--; lowered = "Arousal"; }
     } else if (cpuIsTier()) {
@@ -4477,16 +4484,16 @@ function cpuShouldUseRapidPulse() {
     if (!hasCard(2, 12) || p.energy < 2 || p.shieldActive) return false;
     switch (getCpuDifficulty()) {
         case "random": return Math.random() > 0.75;
-        case "smart": return p.trance >= 3 || p.arousal >= 3;
-        case "aggressive": return p.trance >= 4 || p.arousal >= 4;
-        case "v23low": return p.trance >= 4 || p.arousal >= 4 || p.vulnerability >= 1;
+        case "smart": return cpuTranceEff(p) >= 3 || p.arousal >= 3;
+        case "aggressive": return cpuTranceEff(p) >= 4 || p.arousal >= 4;
+        case "v23low": return cpuTranceEff(p) >= 4 || p.arousal >= 4 || p.vulnerability >= 1;
         case "transformer": return p.arousal >= 3 || p.vulnerability >= 1;
         case "adaptive": {
             const th = cpuObservedThreats();
             if (p.arousal >= 3 && p.energy >= 2) return true;                 // protect the little rerolls we have left
-            return (p.trance >= 3 || p.vulnerability >= 1 || (p.arousal >= 2 && th.arousal >= 2.5) || (p.trance >= 2 && th.trance >= 2)) && p.energy >= 4;
+            return (cpuTranceEff(p) >= 3 || p.vulnerability >= 1 || (p.arousal >= 2 && th.arousal >= 2.5) || (cpuTranceEff(p) >= 2 && th.trance >= 2)) && p.energy >= 4;
         }
-        case "defensive": return p.trance >= 2 || p.arousal >= 2 || p.vulnerability >= 1;
+        case "defensive": return cpuTranceEff(p) >= 2 || p.arousal >= 2 || p.vulnerability >= 1;
         default: return false;
     }
 }
@@ -4532,7 +4539,7 @@ function cpuShouldUseHypnoticSuggestion(keptCount) {
         case "aggressive": return keptCount < 4 && p.energy >= 4;     // keeps a little more energy back for cards
         case "v23low":     return keptCount < 3 && p.energy >= 5;     // energy theme: spends it on cards, not rerolls
         case "transformer": return keptCount < 4 && p.energy >= 3;    // rerolls are how it finds 👁️👁️👁️
-        case "defensive":  return keptCount < 3 && p.energy >= 2 && (p.trance >= 2 || p.arousal >= 2 || p.vulnerability > 0);
+        case "defensive":  return keptCount < 3 && p.energy >= 2 && (cpuTranceEff(p) >= 2 || p.arousal >= 2 || p.vulnerability > 0);
         default:           return false;
     }
 }
@@ -4941,8 +4948,8 @@ function cpuAdaptiveKeepPlan(rerollsAvail) {
     if (p.vulnerability > 0) { luNeed += p.vulnerability; severity += 1.2 * p.vulnerability; }
     if (p.arousal >= 5) { luNeed += arousalCost; severity += 1.4; }
     else if (p.arousal >= 3) { luNeed += (p.arousal - 2) * arousalCost; severity += 0.9; }
-    if (p.trance >= 4) { luNeed += p.trance - 2; severity += 1.4; }
-    else if (p.trance >= 3) { luNeed += 1; severity += 0.7; }
+    if (cpuTranceEff(p) >= 4) { luNeed += cpuTranceEff(p) - 2; severity += 1.4; }
+    else if (cpuTranceEff(p) >= 3) { luNeed += 1; severity += 0.7; }
     if (hasCard(2, 9) && counts.LU > 0) luNeed = Math.max(0, luNeed - 1);
     if (severity >= 0.9 && luNeed > 0) {
         let k = Math.min(counts.LU, luNeed);
@@ -5196,7 +5203,7 @@ function cpuAdaptiveCardScore(card) {
 
     // emergencies
     if (isCpuPinnedInSubmission() && SUBMISSION_RECOVERY_CARDS.includes(card.id)) score += 60;
-    const danger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
+    const danger = cpuTranceEff(p2) >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
     if (danger && [9, 12, 33].includes(card.id)) score += 18;
     // Arousal 3+ costs rerolls (5 = none: only ~6% to roll a triple). Energy actions are off, so the only cures are
     // 💧 dice, Quiet Mind, or extra rerolls that bypass the penalty.
@@ -5320,7 +5327,7 @@ function cpuAdaptiveExtraConditions(card) {
                                        cpuAdaptiveCardScore(c) >= cpuAdaptiveBuyThreshold() + 8);
         case 25: return gameState.submission <= 0;     // pushes OUR submission +2: never when it is already sliding
         case 30: return gameState.submission <= -1;    // pushes OUR submission +4
-        case 37: return opp.energy >= 8 || (p.trance >= 4 && opp.energy >= 4);
+        case 37: return opp.energy >= 8 || (cpuTranceEff(p) >= 4 && opp.energy >= 4);
         case 34: return gameState.submission >= 1;
         case 38: return p.transform >= 6;
         case 1:  return opp.transform >= 5;
@@ -5478,7 +5485,7 @@ function cpuAdaptiveWantsCalm() {
     if (p.arousal === 3 || p.arousal === 5) return true;
     if (p.arousal === 4) return p.energy >= 4;                      // two steps restore a reroll
     const reserve = hasCard(2, 16) ? 2 : 0;
-    return p.trance >= 4 && p.energy - 2 >= reserve;                // The Deepening is one spiral away
+    return cpuTranceEff(p) >= 4 && p.energy - 2 >= reserve;                // The Deepening is one spiral away
 }
 
 // What the CPU picks when it causes a The Deepening (no Physical Manipulation, or pinned)
@@ -5657,7 +5664,7 @@ function cpuTierKeepPlan(level, r) {
     // 1) trouble first: Lucidity for Arousal / Trance / Vulnerability, ⛓️ when Submission is sliding toward us
     let need = prob.vuln;
     if (prob.arousal > 0) need += Math.max(1, p.arousal - cfg.target.arousal) * (hasCard(1, 48) ? 2 : 1);
-    if (prob.trance > 0) need += Math.max(1, p.trance - cfg.target.trance);
+    if (prob.trance > 0) need += Math.max(1, cpuTranceEff(p) - cfg.target.trance);
     if (has(9) && counts.LU > 0) need = Math.max(0, need - 1);
     if (need > 0) { let k = Math.min(counts.LU, need); faces.forEach((f, i) => { if (f === "LU" && k > 0) { keep[i] = true; k--; } }); }
     if (prob.sub > 0 || pinEscape) keepFace("SU");
@@ -5692,12 +5699,12 @@ function cpuTierKeepPlan(level, r) {
         keepFace("TR");
         if (!(typeof tablesAvoid !== "undefined" && tablesAvoid) || counts.SU >= 3) keepFace("SU");
         keepFace("EN");
-        if (opp.trance >= 3) keepFace("SP");
+        if (cpuTranceEff(opp) >= 3) keepFace("SP");
     } else if (level === "defensive") {
         if (counts.TR >= 2 || opp.transform >= 6) keepFace("TR");
         if (!(typeof tablesAvoid !== "undefined" && tablesAvoid) && counts.SU >= 2 && opp.transform >= 5) keepFace("SU");
         keepFace("EN");
-        if (opp.trance >= 3) keepFace("SP");
+        if (cpuTranceEff(opp) >= 3) keepFace("SP");
         if (opp.arousal >= 3) cpuKeepArousalUpTo(keep, faces);
 
     } else if (level === "transformer") {
@@ -6101,7 +6108,7 @@ function cpuCardPurchaseScore(card) {
     }
     
     // Defensive Emergency: Boost defense/cleansing if CPU is under heavy Trance/Arousal/Vulnerability
-    const inDanger = p2.trance >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
+    const inDanger = cpuTranceEff(p2) >= 3 || p2.arousal >= 3 || p2.vulnerability > 0;
     if (inDanger) {
         // Cards that clear debuffs or shield (e.g., Deep Safeties, Rapid Pulse, Flow Reversal)
         if ([9, 12, 33, 44].includes(card.id)) {

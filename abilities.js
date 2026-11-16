@@ -48,7 +48,7 @@
         echo:        { key: "echo",        icon: "🔁", title: "Echo",              phase: 2, description: "Once per turn, after your final roll, pay 1 ⚡ to copy one die's face onto another die." },
         calledshot:  { key: "calledshot",  icon: "🎯", title: "Called Shot",       phase: 2, description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡." },
 		surrender: { key: "surrender", icon: "🏳️", title: "Surrender to Heat", phase: 1, description: "Arousal never costs you rerolls. At the end of your turn you gain 1 Trance for every 2 Arousal, which can trigger The Deepening." },
-        deepwell:    { key: "deepwell",    icon: "🌊", title: "Deep Well",         phase: 1, description: "You need 7 Trance for a Setback instead of 5, but when one lands its effect is doubled." },
+        deepwell:    { key: "deepwell",    icon: "🌊", title: "Deep Well",         phase: 1, description: "You need 7 Trance for The Deepening instead of 5, but when one lands its effect is doubled." },
         toll:        { key: "toll",        icon: "🪙", title: "Toll",              phase: 1, description: "Whenever your opponent buys a card, you gain 1 ⚡." },
         layaway:     { key: "layaway",     icon: "🏷️", title: "Layaway",           phase: 3, description: "At the end of your turn, pay 1 ⚡ to reserve a market card. For your next 2 turns only you can buy it (and no other card). Then your opponent may buy it for 1 ⚡ less, or it is discarded." },
         meditation:  { key: "meditation",  icon: "🧘", title: "Meditation",        phase: 2, description: "Instead of rolling, you may meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row." },
@@ -305,9 +305,55 @@
         });
     }
     // CPU: copy a face when it completes or extends a combination
+    // value of a final roll to the CPU, counting the thresholds that matter (a win, Submission running off the end, a Deepening)
+    function cpuEchoOutcome(counts) {
+        const g = G(), me = g.p2, opp = g.p1, T = setbackThreshold(opp), has = id => hasCard(2, id);
+        let v = 0;
+        const tr = counts.TRANSFORM || 0;
+        if (tr >= 3) {
+            const eff = 1 + (tr - 3) + (has(2) ? 1 : 0);
+            v += eff * 9;
+            if ((Number(opp.transform) || 0) + eff >= 10) v += 1000;                    // this roll wins the game
+        }
+        const su = counts.SUBMISSION || 0;
+        if (su >= 3) {
+            const push = 1 + (su - 3) + (ptHas(me, "submissionamplifier") ? 1 : 0) + (has(36) ? 1 : 0);
+            v += push * 4;
+            if ((Number(g.submission) || 0) - push <= -5) v += 30;                      // the marker runs off their end: a Transform
+        }
+        const sp = counts.SPIRAL || 0;
+        if (sp > 0 && !opp.shieldActive) {
+            v += sp * 1.2;
+            if ((Number(opp.trance) || 0) < T && (Number(opp.trance) || 0) + sp >= T) v += 10;    // a Deepening
+        }
+        const ar = counts.AROUSAL || 0, arEff = ptHas(me, "heatedopening") ? ar : (ar >= 2 ? ar - 1 : 0);
+        if (arEff > 0 && !opp.shieldActive) {
+            v += arEff * 1.4;
+            if ((Number(opp.arousal) || 0) < 5 && (Number(opp.arousal) || 0) + arEff >= 5) v += 3;
+        }
+        v += (counts.ENERGY || 0) * 0.9;
+        v += Math.min(counts.LUCIDITY || 0, (Number(me.trance) || 0) + (Number(me.arousal) || 0)) * 0.8;   // 💧 only helps if there is something to clean up
+        return v;
+    }
+    function cpuTryEchoSmart(p) {
+        const g = G();
+        const keys = g.dice.map(d => faceKey(d.face));
+        const tally = ks => { const c = {}; ks.forEach(k => { if (k) c[k] = (c[k] || 0) + 1; }); return c; };
+        const base = cpuEchoOutcome(tally(keys));
+        let best = null;
+        keys.forEach((f, i) => keys.forEach((t, j) => {
+            if (i === j || !f || !t || f === t) return;
+            const next = keys.slice(); next[j] = f;                                      // die j becomes a copy of die i
+            const gain = cpuEchoOutcome(tally(next)) - base;
+            if (!best || gain > best.gain) best = { i, j, gain };
+        }));
+        if (best && best.gain >= 3) { doEcho(p, best.i, best.j); return true; }
+        return false;
+    }
     function cpuTryEcho() {
         const g = G(), p = g.p2;
         if (!echoAvailable(p) || (Number(p.energy) || 0) < 2) return false;     // keep a spare ⚡
+        if (typeof cpuSmartTier === "function" && cpuSmartTier() >= 2) return cpuTryEchoSmart(p);
         const keys = g.dice.map(d => faceKey(d.face));
         const counts = {}; keys.forEach(k => { if (k) counts[k] = (counts[k] || 0) + 1; });
         const worth = { TRANSFORM: 3, SUBMISSION: 2.2, AROUSAL: 1.5, SPIRAL: 1.2, ENERGY: 1, LUCIDITY: 0.8 };
@@ -507,6 +553,28 @@
         return (Number(p.arousal) || 0) >= 4 || (Number(p.trance) || 0) >= setbackThreshold(p) - 1
             || ((Number(p.energy) || 0) <= 1 && Math.random() < 0.35);
     }
+    // Top two levels: meditating means NO buying this turn, so skip it when there is a card worth buying right now (unless it is an emergency)
+    function cpuMeditationWorthIt(p) {
+        const g = G();
+        if (typeof cpuSmartTier !== "function" || cpuSmartTier() < 2 || typeof cpuCardValue !== "function") return true;
+        const T = setbackThreshold(p);
+        if ((Number(p.trance) || 0) >= T - 1 || (Number(p.arousal) || 0) >= 5) return true;            // a Deepening or the worst Arousal band is imminent: recover
+        const bar = cpuBuyBar(), energy = Number(p.energy) || 0;
+        let best = 0;
+        const consider = (card, cost) => {
+            if (!card || cost > energy) return;
+            if (typeof inventoryHasName === "function" && inventoryHasName(p, card.name)) return;
+            best = Math.max(best, cpuCardValue(card));
+        };
+        if (holdsLayaway(2)) {                                                                          // holding a reservation: only that card matters
+            const o = layawayOffer(2, 2); if (o && o.cost <= energy) best = 999;
+        } else {
+            market.forEach(card => card && consider(card, getCardPurchaseCost(card, 2)));
+            const L = g.p1.layaway;
+            if (L && L.stage === "open") consider(L.card, Math.max(0, getCardPurchaseCost(L.card, 2) - CFG.layaway.discount));
+        }
+        return best < bar;
+    }
     // called at the very start of the CPU's turn; true = it meditated (so the caller must NOT roll)
     // how useful is this borrowed power to the CPU right now (0 to 10)? Only clearly dead powers are worth a 3 ⚡ swap.
     function cpuKaleidoValue(p, key) {
@@ -528,7 +596,7 @@
         const g = G(); if (!g || g.gameMode !== "solo") return false;
         const p = g.p2;
         cpuKaleidoSwapMaybe(p);
-        if (meditationAvailable(p) && cpuWantsMeditation(p)) { applyMeditation(p, 2); return true; }
+        if (meditationAvailable(p) && cpuWantsMeditation(p) && cpuMeditationWorthIt(p)) { applyMeditation(p, 2); return true; }
         if (ptHas(p, "calledshot") && !p.calledFace) p.calledFace = cpuPickCalledFace(p);
         return false;
     }
@@ -554,7 +622,18 @@
     function cpuShopPowers() {
         const g = G(); if (!g || g.gameMode !== "solo") return;
         const p = g.p2;
-        if (tablesAvailable(p) && Number(g.submission) >= 3) doTables(p, 2);
+        if (!tablesAvailable(p)) return;
+        const sub = Number(g.submission) || 0;                              // positive = against the CPU
+        const top = typeof cpuSmartTier === "function" && cpuSmartTier() >= 2;
+        let flip = sub >= 3;
+        if (top && !flip) {
+            // 1) You Will Obey is lethal once the marker is on THEIR side: flip, then buy it
+            const obey = market.some(cd => cd && Number(cd.id) === 52 && getCardPurchaseCost(cd, 2) <= (Number(p.energy) || 0));
+            if (obey && sub >= 1 && !holdsLayaway(2)) flip = true;
+            // 2) they could push the marker over our end next turn: flip while it still helps
+            if (sub >= 2 && typeof cpuDanger === "function" && cpuDanger() > 0 && cpuThreatForecast().overflow > 0) flip = true;
+        }
+        if (flip) doTables(p, 2);
     }
 
 
@@ -795,18 +874,36 @@
     function cpuLayawayReserve(p) {
         const g = G();
         if (!g || !ptHas(p, "layaway") || p.layaway || (Number(p.energy) || 0) < CFG.layaway.reserveCost || !market.length) return;
-        const thr = cpuLayawayThreshold(), after = (Number(p.energy) || 0) - CFG.layaway.reserveCost;
+        const top = typeof cpuSmartTier === "function" && cpuSmartTier() >= 2;
+        // while it holds a reservation the CPU cannot buy anything else, so never reserve when it may need the shop for an emergency
+        if (top && ((typeof cpuDanger === "function" && cpuDanger() > 0) || (typeof cpuPressure === "function" && cpuPressure() >= 1))) return;
+        const thr = cpuLayawayThreshold(), energy = Number(p.energy) || 0, after = energy - CFG.layaway.reserveCost;
+        const has = id => hasCard(2, id);
+        const income = 2 + (has(45) ? 1 : 0) + (has(55) ? 2 : 0);                // about what it earns per turn
+        const reach = top ? after + income * CFG.layaway.ownerTurns : after + 4;  // what it can have by the end of its 2 exclusive turns
+        const hu = g.p1;
+        const rows = market.map((card, i) => card ? { card, i, cost: getCardPurchaseCost(card, 2) } : null).filter(Boolean);
         let best = null;
-        market.forEach((card, i) => {
-            if (!card) return;
-            const cost = getCardPurchaseCost(card, 2);
-            if (cost <= (Number(p.energy) || 0)) return;               // it could have bought this one already
-            if (cost > after + 4) return;                              // too far away to be affordable within a turn or two
-            if (!cpuCardOk(card)) return;
-            const score = cpuLayawayCardScore(card);
-            if (score >= thr && (!best || score > best.score)) best = { i, score };
+        rows.forEach(r => {
+            if (r.cost <= energy) return;                                        // it could have bought this one already
+            if (r.cost > reach) return;                                          // too far away to be affordable in time
+            if (!cpuCardOk(r.card)) return;
+            let score = cpuLayawayCardScore(r.card);
+            if (top) {                                                           // reserving also keeps the card from the human
+                const deny = typeof cpuDenyScore === "function" ? Number(cpuDenyScore(r.card)) || 0 : 0;
+                score += deny * 0.5 + ((Number(hu.energy) || 0) + 2 >= getCardPurchaseCost(r.card, 1) ? 6 : 0);
+            }
+            if (score >= thr + (top ? 8 : 0) && (!best || score > best.score)) best = { i: r.i, score, cost: r.cost, card: r.card };
         });
-        if (best) reserveLayaway(p, 2, best.i);
+        if (!best) return;
+        if (top) {
+            // opportunity cost: would it rather just buy something else next turn?
+            const nextBudget = after + income;
+            const alt = rows.filter(r => r.i !== best.i && r.cost <= nextBudget && cpuCardOk(r.card))
+                .reduce((m, r) => Math.max(m, cpuLayawayCardScore(r.card)), 0);
+            if (alt > best.score - 5) return;
+        }
+        reserveLayaway(p, 2, best.i);
     }
 
     // ---------- the buttons (added to the centre action row) ----------
