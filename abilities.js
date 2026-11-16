@@ -1,27 +1,27 @@
 // ============================================================
 // ABILITIES  (abilities.js)
-// Load order in index.html:   cpu_int.js  ->  abilities.js  ->  hypbattle.js
+// Load order in index.html:   powers.js  ->  cpu_int.js  ->  abilities.js  ->  hypbattle.js
 // Nothing here runs at load time except defining things, so it is safe to load before hypbattle.js. Functions from the
 // main file (gameState, log, hasCard, increaseTrance...) are only used later, when the game calls us.
 //
 // IDEAS BEHIND IT
+//   * What each power IS (icon, title, text) and who has it lives in powers.js (POWERS and CHARACTER_POWERS).
+//     This file holds the BEHAVIOUR of the powers whose impl is "abilities", plus the lookups everything else uses.
 //   * A power is a KEY ("deepwell", "toll", ...), not a character. Each player object carries  powerKey.
-//     The ten original characters keep working exactly as before (their key comes from SIGNATURE_POWERS by name).
-//   * To give a NEW character a power: add one line to CHARACTER_POWER_KEYS below. That is all (plus the character's art,
+//   * To give a character a power: add one line to CHARACTER_POWERS in powers.js. That is all (plus the character's art,
 //     taunts and transformation list as usual).
 //   * To TEST a power with no character yet: set debugStart.p1Power / debugStart.cpuPower in hypbattle.js, or in the
 //     browser console:   Abilities.setPower(1, "deepwell")
-//   * Everything asks  hasSignaturePower(playerId, key)  (which now calls Abilities.hasPower), so a power only has to be
-//     written once and Kaleidoscope (phase 3) can borrow any of them.
-//
-// PHASES
-//   Phase 1 (this file): Toll, Cornered, Deep Well, Surrender to Heat      <- implemented
-//   Phase 2: Echo, Called Shot, *Meditation, *Turn the Tables                 <- implemented (with simple CPU rules)
-//   Phase 3: Layaway, Kaleidoscope                                          <- implemented
+//   * Everything asks  hasSignaturePower(playerId, key)  (which calls Abilities.hasPower), so a power only has to be
+//     written once and Kaleidoscope can borrow any of them.
 // ============================================================
 
 (function () {
     "use strict";
+    if (typeof POWERS === "undefined" || typeof CHARACTER_POWERS === "undefined") {
+        console.error("abilities.js needs powers.js loaded first (see the load order at the top of powers.js).");
+        return;
+    }
 
     // ############################################################
     // 1) NUMBERS YOU MAY WANT TO TUNE
@@ -34,33 +34,15 @@
         layaway:   { reserveCost: 1, ownerTurns: 2, discount: 1 },
         // Kaleidoscope can borrow any of these. A legacy (original character) power counts as "used" when its board box flashes
         // (see legacyFired); a new power calls markUsed() itself.
-        kaleidoscope: { swapCost: 3, pool: [
-            "echo", "calledshot", "surrender", "deepwell", "toll", "layaway", "meditation", "cornered", "turntables",
-            "tripletrouble", "submissionamplifier", "predatorymomentum", "lucidreversal", "perfectharmony", "unyieldingresistance",
-            "heatedopening", "twisteddice", "marketmanipulator", "lingeringtrance", "suggestedtransference"
-        ] }
+        kaleidoscope: { swapCost: 3, pool: Object.keys(POWERS).filter(k => k !== "kaleidoscope") }
     };
 
     // ############################################################
-    // 2) THE REGISTRY (player-facing text is used by the setup box, the board hint and the Characters help tab)
+    // 2) POWER DATA
     // ############################################################
-    const REGISTRY = {
-        echo:        { key: "echo",        icon: "🔁", title: "Echo",              phase: 2, description: "Once per turn, after your final roll, pay 1 ⚡ to copy one die's face onto another die." },
-        calledshot:  { key: "calledshot",  icon: "🎯", title: "Called Shot",       phase: 2, description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡." },
-		surrender: { key: "surrender", icon: "🏳️", title: "Surrender to Heat", phase: 1, description: "Arousal never costs you rerolls. At the end of your turn you gain 1 Trance for every 2 Arousal, which can trigger The Deepening." },
-        deepwell:    { key: "deepwell",    icon: "🌊", title: "Deep Well",         phase: 1, description: "You need 7 Trance for The Deepening instead of 5, but when one lands its effect is doubled." },
-        toll:        { key: "toll",        icon: "🪙", title: "Toll",              phase: 1, description: "Whenever your opponent buys a card, you gain 1 ⚡." },
-        layaway:     { key: "layaway",     icon: "🏷️", title: "Layaway",           phase: 3, description: "At the end of your turn, pay 1 ⚡ to reserve a market card. For your next 2 turns only you can buy it (and no other card). Then your opponent may buy it for 1 ⚡ less, or it is discarded." },
-        meditation:  { key: "meditation",  icon: "🧘", title: "Meditation",        phase: 2, description: "Instead of rolling, you may meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row." },
-        cornered:    { key: "cornered",    icon: "🧱", title: "Cornered",          phase: 1, description: "While you have 8 or more Transform, you roll one extra die and gain 1 ⚡ at the start of each of your turns." },
-        turntables:  { key: "turntables",  icon: "🪞", title: "Turn the Tables",   phase: 2, description: "Once per game, in your shop phase, mirror the Submission marker (+3 becomes -3)." },
-        kaleidoscope:{ key: "kaleidoscope",icon: "🔮", title: "Kaleidoscope",      phase: 3, description: "You hold one random borrowed power. Use it and you draw a new one (all get used before any repeat). Once per turn, pay 3 ⚡ to swap it for another." },
-    };
-
-    // New characters: "Their Name": "powerkey".   (Use the name exactly as it appears in CHARACTERS.)
-    const CHARACTER_POWER_KEYS = {
-        // "Newcharacter": "echo",
-    };
+    // POWERS (what each power is) and CHARACTER_POWERS (who holds which) are defined in powers.js.
+    // A power whose impl is "core" has its behaviour in hypbattle.js; those only flash their board box when they fire (see legacyFired).
+    function isCorePower(key) { const d = POWERS[key]; return !!d && d.impl === "core"; }
 
     // ############################################################
     // 3) FINDING OUT WHO HAS WHAT
@@ -69,21 +51,15 @@
     function plainName(name) {                                  // same idea as normalizedCharacterName()
         return String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().split(/\s+/)[0].toLowerCase();
     }
-    function legacyKeyForName(name) {                           // the original characters: key comes from SIGNATURE_POWERS
-        if (typeof SIGNATURE_POWERS === "undefined") return null;
-        const want = plainName(name);
-        const hit = Object.entries(SIGNATURE_POWERS).find(([n]) => plainName(n) === want);
-        return hit ? hit[1].key : null;
-    }
-    function keyForName(name) {
+    function keyForName(name) {                                     // the power a character holds (CHARACTER_POWERS in powers.js)
         const p = plainName(name);
-        const mapped = Object.keys(CHARACTER_POWER_KEYS).find(n => plainName(n) === p);
-        return mapped ? CHARACTER_POWER_KEYS[mapped] : legacyKeyForName(name);
+        const hit = Object.keys(CHARACTER_POWERS).find(n => plainName(n) === p);
+        return hit ? CHARACTER_POWERS[hit] : null;
     }
     function normalizeKey(nameOrKey) {                          // callers pass a key ("marketmanipulator") or, rarely, a name ("Siobhán")
         const s = String(nameOrKey || "");
-        if (REGISTRY[s.toLowerCase()]) return s.toLowerCase();
-        return legacyKeyForName(s) || s.toLowerCase();
+        if (POWERS[s.toLowerCase()]) return s.toLowerCase();
+        return keyForName(s) || s.toLowerCase();
     }
     // the player's own power key
     function keyFor(pObj) {
@@ -103,24 +79,16 @@
     function idOf(pObj) { const g = G(); return g && pObj === g.p1 ? 1 : 2; }
     function otherId(id) { return id === 1 ? 2 : 1; }
 
-    // title and description for the UI (setup box, board hint, help tab)
-    // the original characters' powers live in SIGNATURE_POWERS (hypbattle.js); these are their board icons
-    const LEGACY_ICONS = {
-        tripletrouble: "🎲", submissionamplifier: "📣", predatorymomentum: "🐆", lucidreversal: "💧", perfectharmony: "☯️",
-        unyieldingresistance: "🛡️", heatedopening: "🔥", twisteddice: "🃏", marketmanipulator: "🏪", lingeringtrance: "🌫️", suggestedtransference: "🔀"
-    };
-    function infoFor(key) {
-        const r = REGISTRY[key];
-        if (r) return { key: r.key, icon: r.icon || "", title: r.title, description: r.description };
-        if (typeof SIGNATURE_POWERS !== "undefined") {
-            const hit = Object.values(SIGNATURE_POWERS).find(p => p.key === key);
-            if (hit) return { key: hit.key, icon: LEGACY_ICONS[key] || "✨", title: hit.title, description: hit.description };
-        }
-        return null;
+    // title, icon and description for the UI (setup box, board hint, help tab)
+    // holderName (optional) fills the {NAME}/{HIS}/... tokens in the text for whoever holds the power
+    function infoFor(key, holderName) {
+        const d = POWERS[key]; if (!d) return null;
+        const fill = t => (typeof formatCharacterText === "function") ? formatCharacterText(t, holderName) : t;
+        return { key, icon: d.icon || "", title: d.title, description: fill(d.description), helpText: fill(d.helpText || d.description) };
     }
     function infoForCharacter(name) {
-        const k = CHARACTER_POWER_KEYS[Object.keys(CHARACTER_POWER_KEYS).find(n => plainName(n) === plainName(name))];
-        return k ? infoFor(k) : null;
+        const k = keyForName(name);
+        return k ? infoFor(k, name) : null;
     }
 
     // ############################################################
@@ -134,7 +102,7 @@
             if (debugStart.p1Power) g.p1.powerKey = debugStart.p1Power;
             if (debugStart.cpuPower) g.p2.powerKey = debugStart.cpuPower;
         }
-        // per-game state for the powers that need it (phase 2 and 3 fill these in)
+        // per-game state for the powers that need it
         [g.p1, g.p2].forEach(p => {
             p.borrowedKey = null; p.meditatedLast = false; p.meditatedThis = false; p.tablesUsed = false; p.echoUsedThisTurn = false; p.calledFace = null;
             p.layaway = null; p.kUsed = []; p.kSwapped = false; p.corneredFired = false;
@@ -187,7 +155,7 @@
     function onTurnStart(playerId) {
         const g = G(); if (!g) return;
         const p = playerId === 1 ? g.p1 : g.p2;
-        p.echoUsedThisTurn = false; p.calledFace = null; p.meditatedThis = false; p.kSwapped = false; g.meditating = false;      // phase 2 per-turn flags
+        p.echoUsedThisTurn = false; p.calledFace = null; p.meditatedThis = false; p.kSwapped = false; g.meditating = false;      // per-turn flags
         if (ptHas(p, "cornered") && (Number(p.transform) || 0) >= CFG.cornered.transformAt) {
             p.energy = (Number(p.energy) || 0) + CFG.cornered.energy;
             p.corneredFired = true;
@@ -233,7 +201,7 @@
 
 
     // ############################################################
-    // 6b) PHASE 2: ECHO, CALLED SHOT, MEDITATION, TURN THE TABLES
+    // 6b) ECHO, CALLED SHOT, MEDITATION, TURN THE TABLES
     // ############################################################
     const FACE_NAMES = { TRANSFORM: "Transform", SUBMISSION: "Submission", AROUSAL: "Arousal", SPIRAL: "Trance", ENERGY: "Energy", LUCIDITY: "Lucidity" };
     const FACE_ICONS = { TRANSFORM: "👁️", SUBMISSION: "⛓️", AROUSAL: "🔥", SPIRAL: "🌀", ENERGY: "⚡", LUCIDITY: "💧" };
@@ -638,7 +606,7 @@
 
 
     // ############################################################
-    // 6c) PHASE 3: LAYAWAY and KALEIDOSCOPE
+    // 6c) LAYAWAY and KALEIDOSCOPE
     // ############################################################
 
     // ---------- KALEIDOSCOPE ----------
@@ -703,7 +671,7 @@
     function legacyFired(playerId) {
         const g = G(); if (!g) return;
         const p = Number(playerId) === 1 ? g.p1 : g.p2;
-        if (!p || keyFor(p) !== "kaleidoscope" || !p.borrowedKey || REGISTRY[p.borrowedKey]) return;     // new powers call markUsed themselves
+        if (!p || keyFor(p) !== "kaleidoscope" || !p.borrowedKey || !isCorePower(p.borrowedKey)) return;     // powers written in this file call markUsed themselves
         p.kFired = p.borrowedKey;
     }
     function flushLegacyFired() {
@@ -717,9 +685,9 @@
     }
     // the board hint for a Kaleidoscope player also shows the power they are holding
     function hintFor(pObj) {
-        const key = keyFor(pObj), info = infoFor(key);
-        if (!info || key !== "kaleidoscope" || !pObj.borrowedKey || !infoFor(pObj.borrowedKey)) return info;
-        const b = infoFor(pObj.borrowedKey); if (!b) return info;
+        const key = keyFor(pObj), info = infoFor(key, pObj && pObj.name);
+        if (!info || key !== "kaleidoscope" || !pObj.borrowedKey) return info;
+        const b = infoFor(pObj.borrowedKey, pObj.name); if (!b) return info;
         return Object.assign({}, info, { description: `${info.description}<br><span class="kaleido-current">Holding: <b>${b.icon} ${b.title}</b>. ${b.description}</span>` });
     }
 
@@ -921,30 +889,28 @@
     }
 
     // ############################################################
-    // 7) HELP TAB: boxes for powers that have a character (so new characters appear automatically)
+    // 7) HELP TAB: one box per character that holds a power (built from CHARACTER_POWERS, so new characters appear automatically)
     // ############################################################
     function helpBoxes() {
-        return Object.keys(CHARACTER_POWER_KEYS).map(name => {
-            const info = infoFor(CHARACTER_POWER_KEYS[name]); if (!info) return "";
-            const file = (typeof characterFilename === "function") ? characterFilename(name) : name;
+        return Object.keys(CHARACTER_POWERS).map(name => {
+            const info = infoFor(CHARACTER_POWERS[name], name); if (!info) return "";
+            const folder = (typeof characterFilename === "function") ? characterFilename(name) : name;
             return `<div class="help-box signature-power-box">
-                    <img class="signature-portrait" src="images/avatars/${file}/${file}_head.jpg" alt="${name}">
-                    <strong>${name}</strong><br><em>${info.title}</em><br>${info.description}
+                    <img class="signature-portrait" src="images/avatars/${folder}/${folder}_head.jpg" alt="${name}">
+                    <strong>${name}</strong><br><em>${info.icon ? info.icon + " " : ""}${info.title}</em><br>${info.helpText}
                 </div>`;
         }).join("");
     }
 
     window.Abilities = {
-        config: CFG, registry: REGISTRY, characterKeys: CHARACTER_POWER_KEYS,
+        config: CFG, powers: POWERS, characterPowers: CHARACTER_POWERS,
         keyFor, hasPower, infoFor, infoForCharacter, assignPowers, setPower,
         baseRerolls, setbackThreshold, setbackMultiplier, extraDice,
         onTurnStart, onTurnEnd, onCardPurchased, helpBoxes,
-        // phase 2
         beforeRoll, applyCalledShot, meditate, openEcho, turnTables, actionButtonsHtml,
         cpuStartOfTurn, cpuTryEcho, cpuShopPowers,
         // meditation rules, Called Shot display and CPU play, used-state
         meditatingNow, isUsed, afterRollStarts, renderCalledShotBadges, cpuCalledShotAdjustKeep, cpuNeedsCalledShotReroll,
-        // phase 3: Layaway and Kaleidoscope
         markUsed, legacyFired, effectiveKey, hintFor, kaleidoSwap, openLayaway, buyLayaway, layawayTaken, holdsLayaway, renderLayawayZone,
         cpuLayawayShop, cpuHoldsLayaway
     };

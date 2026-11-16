@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261116.1"; // Update this label for each release.
+const GAME_VERSION = "20261116.2"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -119,6 +119,23 @@ function getGender(name) {
     return character ? character.gender : null;
 }
 
+const GENDER_PRONOUNS = {
+    male:   { he: "he",   him: "him",  his: "his",  self: "himself", bg: "boy"},
+    female: { he: "she",  him: "her",  his: "her",  self: "herself", bg: "girl" },
+    neutral:{ he: "they", him: "them", his: "their", self: "themself", bg: "kid" }
+};
+
+// Fills {NAME} {HE} {HIM} {HIS} {SELF} (and the _CAP forms, e.g. {HE_CAP}) for ONE named character. Used by the special-power
+// texts in powers.js, which are shown in the setup box, on the board and in Help, where "human" and "CPU" do not apply.
+// A name we do not know gets neutral pronouns.
+function formatCharacterText(text, name) {
+    const pr = GENDER_PRONOUNS[getGender(name)] || GENDER_PRONOUNS.neutral;
+    const who = String(name || "").trim().split(/\s+/)[0] || "this character";
+    const vals = { NAME: who, HE: pr.he, HIM: pr.him, HIS: pr.his, SELF: pr.self };
+    return String(text ?? "").replace(/\{(NAME|HE|HIM|HIS|SELF)(_CAP)?\}/g, (m, key, cap) =>
+        cap ? vals[key].charAt(0).toUpperCase() + vals[key].slice(1) : vals[key]);
+}
+
 // {HIM}	he or she for the human player
 // {HIM_CAP}	He or She
 // {HIS}	his or her
@@ -145,11 +162,7 @@ function processGenderTokens(text) {
 	const humanTrans = getTransformationConv(human);
 	const cpuTrans = getTransformationConv(cpu);
 
-    const pronouns = {
-        male:   { he: "he",   him: "him",  his: "his",  self: "himself", bg: "boy"},
-        female: { he: "she",  him: "her",  his: "her",  self: "herself", bg: "girl" },
-        neutral:{ he: "they", him: "them", his: "their", self: "themself", bg: "kid" }
-    };
+    const pronouns = GENDER_PRONOUNS;
 
     let result = String(text);
 
@@ -573,23 +586,7 @@ const CHALLENGE_CHARACTER_FORMS = {
 // whose primary purpose is defensive Submission protection are unavailable to him.
 const ALEX_DEFENSIVE_SUBMISSION_CARD_IDS = [34, 35, 53];
 
-// New Powers: Toll, Cornered, Deep Well, Surrender to Heat
-
-const SIGNATURE_POWERS = {
-    Roz: { key:"tripletrouble", title:"Triple Trouble", description:"After normal rerolls, a final triple locks matching dice and grants one bonus reroll." },
-    Luci: { key:"submissionamplifier", title:"Submission Amplifier", description:"A final roll with 3+ Submission dice adds one extra Submission push." },
-    "Siobhán": { key:"predatorymomentum", title:"Predatory Momentum", description:"A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls." },
-    Fable: { key:"lucidreversal", title:"Lucid Reversal", description:"Spend three Lucidity dice to reduce your own Transform by one." },
-    Hyeri: { key:"perfectharmony", title:"Perfect Harmony", description:"When all six standard faces appear, change all dice to a face this power has not used before." },
-    Alex: { key:"unyieldingresistance", title:"Unyielding Resistance", description:"Absorbs one incoming Submission point per opposing turn; Alex cannot benefit from defensive Submission cards." },
-    Xander: { key:"heatedopening", title:"Heated Opening", description:"Every Arousal die inflicts one Arousal, starting with the first die." },
-    Tex: { key:"twisteddice", title:"Twisted Dice", description:"Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal." },
-    Zixuan: { key:"marketmanipulator", title:"Market Manipulator", description:"Market wipes cost one Energy, with no per-turn limit." },
-    Mark: { key:"lingeringtrance", title:"Lingering Trance", description:"When Mark causes The Deepening, the opponent retains one 🌀 Trance."},
-	Ivy: {key:"suggestedtransference", title: "Suggested Transference", description:"Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."},
-	Dare: {key: "meditation", title: "Meditation", description: "Instead of rolling, you may Meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row."},
-	Val: {key: "turntables", title: "Turn the Tables", description:"Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3)."}
-};
+// Special powers (what each one is, and which character holds it) are defined in powers.js: POWERS and CHARACTER_POWERS.
 function normalizedForm(form) { return String(form || "").trim().toLocaleLowerCase(); }
 function normalizedCharacterName(name) {
     return String(name || "")
@@ -832,8 +829,7 @@ function hasSignaturePower(playerId, characterNameOrKey) {
 }
 
 function getSignaturePowerForName(name) {
-    const key = String(name || "").trim().split(" ")[0];
-    return SIGNATURE_POWERS[key] || Abilities.infoForCharacter(name) || null;
+    return Abilities.infoForCharacter(name);        // { key, icon, title, description, helpText } or null
 }
 function getMarketWipeCost(playerId = gameState?.activePlayer) {
     return hasSignaturePower(Number(playerId), "marketmanipulator") ? 1 : 2;
@@ -907,7 +903,7 @@ function fillSpecialAbilityBox(side, anchorSelect, charName, isRandom) {
     const cb = box.querySelector("input");
     if (box.dataset.char !== key) { box.dataset.char = key; cb.checked = true; }   // a new character: back to on
 	box.classList.toggle("sab-off", !cb.checked);
-    box.querySelector(".sab-title").textContent = isRandom ? "Random opponent" : power.title;
+    box.querySelector(".sab-title").textContent = isRandom ? "Random opponent" : `${power.icon ? power.icon + " " : ""}${power.title}`;
     box.querySelector(".sab-desc").textContent = isRandom ? "The randomly chosen opponent's special ability." : power.description;
 }
 function renderSignaturePowerHint(playerId, parent, id) {
@@ -4567,8 +4563,8 @@ function humanHasUnusedTables() {
             return !!Abilities.hasPower(h, "turntables");
         }
     } catch (e) {}
-    // Fallback if Abilities is not loaded yet: powerKey / legacy name
-    const key = h.powerKey || (typeof SIGNATURE_POWERS !== "undefined" && SIGNATURE_POWERS[h.name] && SIGNATURE_POWERS[h.name].key);
+    // Fallback if Abilities is not loaded yet: powerKey / character name
+    const key = h.powerKey || (typeof CHARACTER_POWERS !== "undefined" && CHARACTER_POWERS[h.name]);
     return key === "turntables";
 }
 
