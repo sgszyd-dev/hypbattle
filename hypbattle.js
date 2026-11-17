@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261116.2"; // Update this label for each release.
+const GAME_VERSION = "20261117.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -91,7 +91,7 @@ window.addEventListener("orientationchange", applyGameSpiralBackground, { passiv
 // Each character has a gender field ("male" / "female"). It is used for things like the Master / Mistress title.
 // current ratio, male: 6, female: 7
 // need 7 more (4 male, 3 female)
-// missing letters: B, C, E, G, J, K, N, O, P, Q, U, W, Y
+// missing letters: B, C, E, G, J, K, N, O, P, U, W, Y
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
 	{ name: "Dare",      gender: "male"},
@@ -100,6 +100,7 @@ const CHARACTERS = [
 	{ name: "Ivy",		 gender: "female"},
     { name: "Luci", 	gender: "female" },
     { name: "Mark",       gender: "male" },
+	{ name: "Qiyana",    gender: "female" },
     { name: "Roz",       gender: "female" },
 	{ name: "Siobhán",   gender: "female" },
     { name: "Tex",       gender: "male" },
@@ -226,7 +227,7 @@ function processGenderTokens(text) {
     return result;
 }
 
-const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Skunk", "Snake", "Squirrel", "Statue", "Werewolf"];
+const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Deer", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Skunk", "Snake", "Squirrel", "Statue", "Werewolf"];
 
 
 const CHARACTER_MANIFEST = {
@@ -243,6 +244,7 @@ const CHARACTER_MANIFEST = {
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
+	"Qiyana": ["Cat","Deer"], // Deer 
 	};
 
 
@@ -333,7 +335,7 @@ let gameState = {
     //dice: Array(6).fill({ face: "-", kept: false }),
 	dice: Array.from(6, () => ({ face: "-", kept: false })),
     rerollsLeft: 0, gameEnded: false, showDiceText: true, freeBuyActive: false,
-	extraTurn: false, somnambulismTurn: false, bonusTurnType: "none", endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
+	extraTurn: false, somnambulismTurn: false, suddenFlashPending: 0, bonusTurnType: "none", endReason: null, forfeitingPlayerId: null, forfeitWinnerId: null,
     signatureSiobhanBonusPending: false, signatureSiobhanBonusRoll: false, signatureTexAllocationPending: false, signatureTexAllocationDone: false, signatureFableDecisionPending: false, signatureFableDecisionMade: false, signatureFableSpend: false, signatureHyeriPromptPending: false, signatureRozBonusGranted: false, signatureAlexAbsorbedThisTurn: false,
 	log: [] // Store log messages here
 };
@@ -452,7 +454,7 @@ function isOnlineSetup() { const m = document.getElementById("game-mode-option")
 
 // One icon per transformation, shown in the setup dropdowns (the option VALUE stays the plain form name).
 const TRANSFORM_ICONS = {
-    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
+    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Deer: "🦌", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
 	Robot: "🤖", Snake: "🐍", Skunk: "🦨", Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
 };
 function transformIcon(form) { return TRANSFORM_ICONS[form] || "✨"; }
@@ -580,7 +582,7 @@ const CLASSIC_CHALLENGE_RIVALS = [
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
     Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon",
-	Dare: "Snake", Val:"Fox"
+	Dare: "Snake", Val:"Fox", Qiyana:"Deer"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
@@ -7752,7 +7754,8 @@ function executeInstant(card, playerId) {
     let oppId = playerId === 1 ? 2 : 1;
 
     if (card.id === 1) {
-		gameState.extraTurn = true;
+		// Own counter (not extraTurn), so it stacks with Somnambulism / Predatory Momentum instead of merging with them.
+		gameState.suddenFlashPending = (gameState.suddenFlashPending || 0) + 1;
 		gameState.bonusTurnType = "turn";
 		log(`${p.name} plays Sudden Flash! Taking an extra turn!`);
 	}
@@ -9309,8 +9312,11 @@ function finishEndTurn() {
 
     if (checkWinCondition()) return;
 
-    if (gameState.extraTurn || gameState.somnambulismTurn) {
+    if (gameState.extraTurn || gameState.somnambulismTurn || gameState.suddenFlashPending > 0) {
         gameState.extraTurn = false;
+        // Somnambulism turns come first and keep coming while the player keeps rolling 3+ Submission (startTurn clears somnambulismTurn).
+        // Sudden Flash is used up only once no Somnambulism turn is pending.
+        if (!gameState.somnambulismTurn && gameState.suddenFlashPending > 0) gameState.suddenFlashPending--;
         if (gameState.signatureSiobhanBonusRoll) gameState.signatureSiobhanBonusRoll = false;
         log("Taking extra turn!");
         syncToFirebase();

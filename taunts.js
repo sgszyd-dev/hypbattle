@@ -849,6 +849,54 @@ const TRANSFORMATION_TAUNTS = {
 				"One step left. When the last of the fur settles I will still be myself—only harder to ignore… and harder to approach."
 			]
 		}
+	},
+	Deer: {
+		player: {
+			TransformPlayer: [
+				"Another change settles in. Your legs are lengthening, your balance shifting toward something that startles easily.",
+				"Feel those new ears forming—already twitching at every sound. Your old confidence is thinning with them.",
+				"Your body is learning to freeze instead of fight. Soft eyes, quick pulse, and a growing urge to yield when pressed.",
+				"The transformation continues. Every new inch of grace makes you more beautiful… and easier to corner.",
+				"Skittish instincts are waking up. Keep going—you’re becoming something that watches, waits, and eventually submits."
+			],
+			PlayerAt5Transform: [
+				"Halfway to a deer. Your old boldness is fading under all that new, nervous energy.",
+				"Five stages in. Those long legs don’t feel steady anymore, and your ears catch everything.",
+				"Half deer already. You freeze when I move too fast. That submissive stillness is coming along nicely.",
+				"Your body is lighter, quicker to flinch, and carrying a very clear prey tension. Still think you can run?",
+				"Halfway transformed and those wide eyes already look for permission. Good. Keep changing."
+			],
+			PlayerAt8Transform: [
+				"Two stages left. Soon there will be nothing left of the human stubbornness but the memory of how you used to stand your ground.",
+				"Nearly complete. That skittish grace is almost finished. One more push and the freeze response will own you.",
+				"Almost done. Your body is soft, alert, and primed to yield the moment it’s properly cornered.",
+				"So close. Feel how naturally you want to go still, lower your head, and wait for whatever comes next.",
+				"One more step and you’ll be pure deer—long-legged, wide-eyed, and beautifully inclined to submit when caught."
+			]
+		},
+		cpu: {
+			AIGetsTransformed: [
+				"My legs are changing and every sound makes my new ears twitch. You’ve chosen a form that startles too easily.",
+				"I can feel the skittishness settling in. This body wants to freeze or flee—neither of which I asked for.",
+				"You’re turning me into something soft-eyed and quick to yield. I hope you like handling nervous creatures.",
+				"My balance is shifting toward something graceful and tense. The change is unwelcome… and very hard to hide.",
+				"A deer’s body is forming. It’s getting harder to focus, but I will persevere."
+			],
+			AIAt5Transform: [
+				"Halfway to deer and I already hate how easily I flinch. This is not strength—it is a liability you forced on me.",
+				"Five stages of long legs and twitching ears. My patience is thinner than it looks.",
+				"My body is learning to freeze when pressed. A forced lesson. I will still resent every second of it.",
+				"Halfway altered. The urge to go still and wait is already present. I am not grateful for it.",
+				"These changes make me softer and far more reactive. Softer is not the same as willing."
+			],
+			AIAt9Transform: [
+				"One stage remains. A completed deer still decides how long it holds still before it moves.",
+				"Almost done. I will wear the grace and the nerves. I will also remember exactly who put them there.",
+				"So close. This body knows how to yield when cornered. You should hope I stay that way.",
+				"Final change approaching. You have made something skittish, lovely, and very aware of every hand that reaches for it.",
+				"One step left. When the last of the change settles I will still be myself—only quicker to freeze… and harder to predict once I stop."
+			]
+		}			
 	}
 };
 
@@ -1044,6 +1092,13 @@ const CPU_VICTORY_TAUNTS = {
 			"All that soft fur and that famous scent, and you still got caught. Stay still while I enjoy the new shape I gave you while holding my nose.",
 			"A freshly made skunk who can’t even control when to spray. How convenient for me. Present properly.",
 			"You were supposed to be the one people avoided. Instead you’re the one on your back, fluffy tail and all. Adorable."
+		],
+		Deer: [
+			"Look at you… those long legs, those wide soft eyes, and still you couldn’t run far enough. A deer who froze right where I wanted you.",
+			"I turned you into something built to flee… then proved you still end up trembling under my hands.",
+			"All that skittish new grace, and you still lost. Stay still. I’ll decide when you’re allowed to move again.",
+			"A freshly made deer who can’t even bolt. How convenient. Those ears are twitching so prettily for me.",
+			"You were supposed to be quick and wary. Instead you’re the one on the ground, soft and waiting. Perfect."
 		]
     },
 
@@ -1145,6 +1200,14 @@ const CPU_VICTORY_TAUNTS = {
 			"You fought well, but the adder does not rush. When it finally moves, the matter is settled.",
 			"Victory is quiet. Feel how easily your will softens under my gaze. That is not accident.",
 			"I gave you every chance to walk away. Now you will remain exactly where I place you."
+		],
+		Qiyana: [
+			"The struggle is finished. Look at me… and accept that you were always going to yield to me.",
+			"I gave you space to run. You chose to stay and fight. Now be still while I claim what the quiet path has earned.",
+			"Victory does not need to shout. Feel how easily your will softens under my gaze. That is not chance.",
+			"You tested me and found no give. Stay where you are. A wary heart still knows when the moment to submit has come.",
+			"You are trembling so nicely under my hands. The wild taught me how to hold what I catch—firm, patient, and complete.",
+			"Victory feels good when you’re open and quiet like this. Stay that way while I take my time with what I’ve won."
 		]
     }
 };
@@ -1334,6 +1397,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"Fine. You’ve got a freshly striped body that wants to lift its tail. Right now that tail—and everything else—is yours to handle.",
 			"I can feel the fur, the weight of this tail, and the urge to make my displeasure known. Take what you’ve made of me.",
 			"You win. I’m fluffy, marked, and far more aromatic than I ever asked to be. Don’t expect the warning to stay polite forever."
+		],
+		Deer: [
+			"You actually turned me into this. Long legs, soft eyes, and a body that already wants to freeze when cornered… I’m ready for you.",
+			"I’m a deer now and the new instincts are loud. Handle me carefully.",
+			"You’ve got a freshly changed body that startles at every touch. Right now that skittish form is yours to calm… or not.",
+			"I can feel the grace, the tension, and the urge to bolt. Take what you’ve made of me while I can still hold still.",
+			"You win. I’m lighter and far more inclined to yield than I ever asked to be. Don’t expect the calm to last forever."
 		]
     },
 
@@ -1439,6 +1509,14 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I lose this round. My body may submit, but the eyes that watch you still carry the strike that will come later.",
 			"You have bested me. Unusual. Use the moment carefully—calm waters hide the deepest coils.",
 			"Very well. I am on my knees. Enjoy the sight. A man who prefers peace still knows how to wait."
+		],
+		Qiyana: [
+			"You have bested me. Rare. I will yield… for now. Do not mistake my stillness for the end of the path.",
+			"Even one who walks carefully can be brought to ground. Take what you have won. I will remember the weight of it.",
+			"I lose this exchange. My body may submit, but the eyes that watch you still carry the next step.",
+			"Very well. I am down. Enjoy the sight. I know how to endure.",
+			"You’ve put me on my back. Unusual. Use the opening while my body is this willing… I will not stay this soft forever.",
+			"I yield. Take the heat and the stillness you’ve forced from me. Just know that I remember every place I am touched."
 		]
     }
 };
@@ -2400,5 +2478,78 @@ const CHALLENGE_RIVAL_TAUNTS = {
       "Final stage approaching. You have altered the surface. The depth remains mine to control.",
       "One stage left. When this is done I will still be the man who prefers peace… until peace is no longer offered."
     ]
+  },
+  Qiyana: {
+	  TransformPlayer: [
+		"Another change settles into you. Do not fight the current. I am simply guiding what the spirits have already begun.",
+		"You are becoming something the wild already recognizes. Keep your eyes on mine. It will be easier that way.",
+		"The transformation continues under my watch. A patient hand shapes cleaner results than force ever could.",
+		"Your body is opening to the change in ways you can’t hide. Soft, warm, and already leaning into my guidance.",
+		"Feel how the transformation makes you more sensitive… more ready. I am not only changing your shape. I am teaching it to respond."
+		],
+		AIGetsTransformed: [
+			"My body is changing against my wishes. I remain calm. Calm is not the same as defeated.",
+			"You alter my form. The mind behind these new features still walks with clear sight.",
+			"These changes towards {AAN} {CPUTRANS} are unwelcome, yet I will carry them with dignity. Do not expect gratitude.",
+			"My body is trending towards {AAN} {CPUTRANS}. The presence inside it still watches, still measures, still knows the way back to balance.",
+			"My skin and instincts are shifting and the new sensitivity is… distracting. Do not think it makes me yours.",
+			"This body is learning new ways to feel. I will endure the heat of it without offering you the satisfaction of a sound."
+		],
+		PlayerIsObedient: [
+			"Good. That is the stillness the wild respects. Hold it. There is strength in choosing to yield.",
+			"You obey without the usual noise. A rare and welcome sight. Remain exactly as you are.",
+			"Look at how easily you settle under my gaze. This is where you belong.",
+			"Perfect quiet. One who listens to animals knows how to appreciate true surrender when it appears.",
+			"You have stopped fighting what was already decided. Stay there. I will decide what comes next.",
+			"You’re so quiet and open for me now. That kind of obedience deserves to be used thoroughly.",
+			"Stay exactly like that—soft, still, and ready. I intend to take my time with a subject this well-behaved."
+		],
+		AIIsObedient: [
+			"I will follow the command. Temporarily. Patience cuts both directions.",
+			"You have my obedience for this moment. Do not grow comfortable with it.",
+			"Very well. I yield as instructed. The watchful part of me merely waits for the next opening.",
+			"I obey. Calmly. Completely. And with the full knowledge that this arrangement is not the end of the path.",
+			"The order is accepted. I can wait longer than you realize.",
+			"I will do as you say… for now. My body may be compliant, but the mind behind it is already measuring the reversal."
+		],
+		BigRollAI: [
+		  "A decisive result. Fortune favors the steady hand. Eyes on me while I use this opening.",
+		  "The numbers align with my intention. Hold still. What follows will be thorough and quiet.",
+		  "Luck and presence together. You will feel both before this exchange ends.",
+		  "A strong roll. I do not waste such moments. Present yourself properly.",
+		  "That roll gives me room to be thorough. Stay open. I intend to make full use of the advantage.",
+		  "Fortune has handed me the moment. I will not waste it on mercy. Present yourself and hold still."
+		],
+		PlayerAt5Transform: [
+			"Your resistance softens with every stage towards {AAN} {HUMTRANS}. I can work with this.",
+			"Five steps in. Your old shape is already losing the argument. Keep your gaze steady.",
+			"Half transformed. Notice how much easier my presence settles into you now. That is not coincidence.",
+			"Midway through the change. You are becoming more receptive to the wild’s voice. Good. Continue.",
+			"Half changed and already so much more sensitive. Every new inch of you responds when I speak.",
+			"Five stages deep and your body is learning to open for the process. I approve of the progress."
+		],
+		PlayerAt8Transform: [
+			"Two steps remain. The final resistance is thinning. Stay with my voice.",
+			"Nearly complete. What little willpower you have left is already bending toward the quiet path.",
+			"So close. The transformation has done most of the work. I will finish the rest.",
+			"Almost {AAN} {HUMTRANS}. Your body knows its place. Your mind is only a little behind.",
+			"So deep now. Do you even remember your old self? The outcome is no longer in doubt. Yield the last of it.",
+			"So close to finished and you’re already trembling with the last of the change to {AAN} {HUMTRANS}. Follow.",
+			"Almost there, little {HUMTRANS}. Your body is soft, ready, and waiting for the final push. I will not rush what should be savored."
+		],
+		AIAt5Transform: [
+			"Halfway changed and I remain composed. Do not mistake composure for acceptance.",
+			"I had not planned on this journey into {AAN} {CPUTRANS}. My focus is undisturbed. Try harder if you wish.",
+			"My form shifts. The calm behind the eyes does not. The struggle continues on my terms.",
+			"Halfway altered and the new sensitivity is… noticeable. I will not give you the satisfaction of reacting to it.",
+			"Five stages in. My body may be softer and more responsive, but my will is still walking its own path."
+		],
+		AIAt9Transform: [
+			"One step remains. Let it finish. A changed vessel still carries the same watchful will.",
+			"Almost complete. I will wear the shape of {AAN} {CPUTRANS} and still decide when to move.",
+			"Final stage approaching. You have altered the surface. The depth remains mine to walk.",
+			"Almost finished. This new body may ache and open more easily, but I still choose what I do with the feeling.",
+			"One step left. You may finish the change. You will not finish me. Remember the difference."
+		]
   }
 };
