@@ -24,66 +24,79 @@
 // ============================================================
 
 const POWERS = {
+	// Alex
     unyieldingresistance: {
         icon: "🛡️", title: "Unyielding Resistance", impl: "core",
         description: "Absorbs one incoming Submission point per opposing turn; {NAME} cannot benefit from defensive Submission cards.",
         helpText: "Once per opposing turn, {NAME} absorbs 1 point of an incoming Submission push. {NAME} cannot buy or use <i>Mesmerizing Rhythm</i> or <i>I Will Not Obey</i>."
     },
+	// Roz
     tripletrouble: {
         icon: "🎲", title: "Triple Trouble", impl: "core",
         description: "After normal rerolls, a final triple locks matching dice and grants one bonus reroll.",
         helpText: "When {NAME} has no rerolls left and holds three or more matching dice, those dice lock and {NAME} gets one bonus reroll (once per turn)."
     },
+	// Xander
     heatedopening: {
         icon: "🔥", title: "Heated Opening", impl: "core",
         description: "Every Arousal die inflicts one Arousal, starting with the first die.",
         helpText: "Every 🔥 die adds 1 Arousal, starting with the first die, instead of the usual two-dice minimum."
     },
+	// Siobhan
     predatorymomentum: {
         icon: "🐆", title: "Predatory Momentum", impl: "core",
         description: "A final roll with 4+ Transform or Submission resolves that face, then grants one bonus turn with a single six-die roll and no rerolls.",
         helpText: "A final roll with 4 or more 👁️ or ⛓️ resolves only that face (the other dice are lost), then {NAME} takes a bonus turn: one six-die roll with no rerolls. Once per turn."
     },
+	// Tex
     twisteddice: {
         icon: "🃏", title: "Twisted Dice", impl: "core",
         description: "Trance dice become Blank; Submission dice may be reassigned to Trance or Arousal.",
         helpText: "Every 🌀 {NAME} rolls becomes Blank. Each ⛓️ die in {HIS} final roll can be kept or reassigned to 🌀 or 🔥, one die at a time."
     },
+	// Luci
     submissionamplifier: {
         icon: "📣", title: "Submission Amplifier", impl: "core",
         description: "A final roll with 3+ Submission dice adds one extra Submission push.",
         helpText: "A final roll with 3 or more ⛓️ adds one extra point to the Submission push."
     },
+	// Zixuan
     marketmanipulator: {
         icon: "🏪", title: "Market Manipulator", impl: "core",
         description: "Market wipes cost one Energy, with no per-turn limit.",
         helpText: "Wiping the market costs 1 ⚡ instead of 2."
     },
+	// Hyeri 
     perfectharmony: {
         icon: "☯️", title: "Perfect Harmony", impl: "core",
         description: "When all six standard faces appear, change all dice to a face this power has not used before.",
         helpText: "When all six faces appear in the final roll, every die changes to a face {NAME} has not used with this power yet. Each face can be used once per game."
     },
+	// Mark
     lingeringtrance: {
         icon: "🫧", title: "Lingering Trance", impl: "core",
         description: "When {NAME} causes The Deepening, the opponent retains one 🌀 Trance.",
         helpText: "When {NAME} causes The Deepening (and selects Trance,) the opponent retains 1 🌀 Trance instead of dropping to the usual remainder."
     },
+	// Fable
     lucidreversal: {
         icon: "💧", title: "Lucid Reversal", impl: "core",
         description: "Spend three Lucidity dice to reduce your own Transform by one.",
         helpText: "If {HIS} final roll has three or more 💧 and {NAME} has any Transform, {NAME} may spend three 💧 to reduce {HIS} own Transform by 1; the rest of {HIS} 💧 resolve normally."
     },
+	// Ivy
     suggestedtransference: {
         icon: "🔀", title: "Suggested Transference", impl: "core",
         description: "Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost.",
         helpText: "Once per turn, exchange one of your Keep cards for a market card (or an opponent card) of equal or lower Energy cost."
     },
+	// Dare
     meditation: {
         icon: "🧘", title: "Meditation", impl: "abilities",
         description: "Instead of rolling, you may Meditate: gain 3 ⚡ and lower your Trance and Arousal by 1. No rolls, rerolls or buying cards that turn. Not two turns in a row.",
         helpText: "Instead of rolling, {NAME} may Meditate: gain 3 ⚡ and lower {HIS} Trance and Arousal by 1. Not two turns in a row. {NAME} cannot roll anything or buy cards on that turn."
     },
+	// Val
     turntables: {
         icon: "🪞", title: "Turn the Tables", impl: "abilities",
         description: "Once per game, in your shop phase, switch the Submission marker to the other side (e.g., +3 becomes -3).",
@@ -113,6 +126,7 @@ const POWERS = {
         icon: "🏷️", title: "Layaway", impl: "abilities",
         description: "At the end of your turn, pay 1 ⚡ to reserve a market card. For your next 2 turns only you can buy it (and no other card). Then your opponent may buy it for 1 ⚡ less, or it is discarded."
     },
+	// Qiyana
     cornered: {
         icon: "🧱", title: "Cornered", impl: "abilities",
         description: "While you have 8 or more Transform, you roll one extra die and gain 1 ⚡ at the start of each of your turns."
@@ -137,7 +151,8 @@ const CHARACTER_POWERS = {
     Fable: "lucidreversal",
     Ivy: "suggestedtransference",
     Dare: "meditation",
-    Val: "turntables"
+    Val: "turntables",
+	Qiyana: "cornered",
 };
 
 // Characters whose image folder is not their accent-stripped name (the help tab uses these).

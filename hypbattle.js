@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261117.1"; // Update this label for each release.
+const GAME_VERSION = "20261118.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -227,7 +227,7 @@ function processGenderTokens(text) {
     return result;
 }
 
-const TRANSFORMS = ["Bat", "Bunny", "Cat", "Cow", "Deer", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Skunk", "Snake", "Squirrel", "Statue", "Werewolf"];
+const TRANSFORMS = ["Bat", "Bird", "Bunny", "Cat", "Cow", "Deer", "Demon", "Dog", "Doll", "Dragon", "Eevee", "Fox", "Gender", "Horse", "Mannequin", "Otter", "Pig", "Puppet", "Robot", "Skunk", "Snake", "Squirrel", "Statue", "Werewolf"];
 
 
 const CHARACTER_MANIFEST = {
@@ -244,7 +244,7 @@ const CHARACTER_MANIFEST = {
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
-	"Qiyana": ["Cat","Deer","Gender"], // Deer 
+	"Qiyana": ["Cat","Deer","Gender","Bird"], // Deer 
 	};
 
 
@@ -454,7 +454,7 @@ function isOnlineSetup() { const m = document.getElementById("game-mode-option")
 
 // One icon per transformation, shown in the setup dropdowns (the option VALUE stays the plain form name).
 const TRANSFORM_ICONS = {
-    Bat: "🦇", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Deer: "🦌", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
+    Bat: "🦇", Bird: "🐦‍⬛", Bunny: "🐰", Cat: "🐱", Cow: "🐮", Deer: "🦌", Demon: "😈", Dog: "🐶", Doll: "🪆", Dragon: "🐉", Eevee: "🧬", Fox: "🦊", Gender: "⚧️", Horse: "🐴", Mannequin: "👗", Otter: "🦦", Pig: "🐷", Puppet: "🧵", 
 	Robot: "🤖", Snake: "🐍", Skunk: "🦨", Squirrel: "🐿️", Statue: "🗿", Werewolf: "🐺"
 };
 function transformIcon(form) { return TRANSFORM_ICONS[form] || "✨"; }
