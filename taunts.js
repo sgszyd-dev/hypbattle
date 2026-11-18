@@ -897,6 +897,54 @@ const TRANSFORMATION_TAUNTS = {
 				"One step left. When the last of the change settles I will still be myself—only quicker to freeze… and harder to predict once I stop."
 			]
 		}			
+	},
+	Bird: {
+		player: {
+			TransformPlayer: [
+				"Another feather pushes through. Your arms are already thinking about becoming wings instead of tools.",
+				"Feel the lightness settling into your bones. The ground is starting to feel less like home and more like a temporary perch.",
+				"Your balance is shifting upward. Soon those new wings will itch for air whether you want them to or not.",
+				"The change keeps spreading—soft coverts, stronger shoulders, a body that wants height more than solid ground.",
+				"Preening instincts are waking up. You’re becoming something that needs open sky… and someone who decides when you get it."
+			],
+			PlayerAt5Transform: [
+				"Halfway to a bird. Your arms are more wing than limb now, and the old weight of walking feels wrong.",
+				"Five stages in. Feathers cover enough of you that the ground already feels like a compromise.",
+				"Half bird already. Those new wings twitch with every breeze. Still think you control the takeoff?",
+				"Your body is lighter, more restless, and carrying the constant urge to lift. The sky is calling louder than your old shape.",
+				"Halfway transformed and you’re already shifting your weight like you’re ready to launch. Not yet."
+			],
+			PlayerAt8Transform: [
+				"Two stages left. Soon there will be almost nothing left of the grounded human who started this.",
+				"Nearly complete. Those wings are almost strong enough to matter—and still completely under my say.",
+				"Almost finished. Your body is built for flight and currently denied it. That tension looks good on you.",
+				"So close. Feel how every feather wants air. One more push and the only thing keeping you down will be me.",
+				"One step remains. After this you’ll be pure bird—light, feathered, and entirely dependent on whether I let you leave the ground."
+			]
+		},
+		cpu: {
+			AIGetsTransformed: [
+				"Feathers are coming in and my arms already feel wrong for anything but flight. You’ve chosen a restless form for me.",
+				"I can feel the hollow lightness spreading. This body will not be content staying grounded for long.",
+				"You’re giving me wings and then expecting me to stay put. That is either brave or shortsighted.",
+				"My balance is shifting toward the air. The change is unwelcome… and already making the floor feel like a cage.",
+				"A bird’s body is forming. When it finishes, do not assume I will remain where you left me."
+			],
+			AIAt5Transform: [
+				"Halfway to bird and every breeze is already a distraction. I hate how much this body wants height.",
+				"Five stages of feathers and restless shoulders. My patience with the ground is thinning fast.",
+				"My arms are becoming wings whether I agree or not. A forced gift. I will decide how it’s used.",
+				"Halfway altered. The urge to launch is constant now. I am not thanking you for the restlessness.",
+				"These changes make me lighter and far more aware of open space. Lighter is not the same as compliant."
+			],
+			AIAt9Transform: [
+				"One stage remains. Let it finish. A completed bird still chooses when—and whether—to leave the perch.",
+				"Almost done. I will wear the feathers and the light bones. I will also remember who tried to keep them folded.",
+				"So close. This body knows the sky. You should hope I decide the ground is still interesting for a while.",
+				"Final change approaching. You have made something built for air and currently denied it. That tension cuts both ways.",
+				"One step left. When the last feather settles I will still be myself—only harder to keep on the ground."
+			]
+		}
 	}
 };
 
@@ -1099,6 +1147,13 @@ const CPU_VICTORY_TAUNTS = {
 			"All that skittish new grace, and you still lost. Stay still. I’ll decide when you’re allowed to move again.",
 			"A freshly made deer who can’t even bolt. How convenient. Those ears are twitching so prettily for me.",
 			"You were supposed to be quick and wary. Instead you’re the one on the ground, soft and waiting. Perfect."
+		],
+		Bird: [
+			"Look at those new wings… and how little good they did you. A bird who still ended up grounded under me.",
+			"I gave you flight and you still couldn’t get away. Stay right there while I enjoy the view of my grounded prize.",
+			"All those feathers and that light body, and you still lost. Wings don’t help when someone knows how to keep you from lifting off.",
+			"A freshly feathered bird who can’t even take off. How perfect. I’ll decide when—if ever—you get to use them.",
+			"You were supposed to soar. Instead you’re here with your wings folded, waiting on my word. I like this version better."
 		]
     },
 
@@ -1404,6 +1459,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"You’ve got a freshly changed body that startles at every touch. Right now that skittish form is yours to calm… or not.",
 			"I can feel the grace, the tension, and the urge to bolt. Take what you’ve made of me while I can still hold still.",
 			"You win. I’m lighter and far more inclined to yield than I ever asked to be. Don’t expect the calm to last forever."
+		],
+		Bird: [
+			"You actually grounded me and gave me these. Feathers, hollow bones, and a body that already wants to take off… even while I’m losing.",
+			"I’m a bird now and I still couldn’t stay in the air against you. The new instincts are loud. Handle the wings carefully.",
+			"Fine. You’ve clipped the flight out of me for the moment. This light, feathered body is yours to keep grounded.",
+			"I can feel every new feather and the urge to launch. Take what you’ve made while I can still be held down.",
+			"You win. I’m lighter, more restless, and built for skies I can’t reach right now. Don’t expect me to stay perched forever."
 		]
     },
 
