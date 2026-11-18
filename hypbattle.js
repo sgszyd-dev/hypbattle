@@ -244,7 +244,7 @@ const CHARACTER_MANIFEST = {
 	"Ivy": ["Demon", "Statue", "Dog", "Cat"], // Demon
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
-	"Qiyana": ["Cat","Deer"], // Deer 
+	"Qiyana": ["Cat","Deer","Gender"], // Deer 
 	};
 
 
