@@ -136,6 +136,7 @@ const POWERS = {
         icon: "🔮", title: "Kaleidoscope", impl: "abilities",
         description: "You hold one random borrowed power. Use it and you draw a new one (all get used before any repeat). Once per turn, pay 3 ⚡ to swap it for another."
     }
+    // 5 more???
 };
 
 // character name -> power key

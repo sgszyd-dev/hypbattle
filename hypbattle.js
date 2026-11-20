@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261118.1"; // Update this label for each release.
+const GAME_VERSION = "20261119.2"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -17,13 +17,13 @@ const debugStart = {
     p1Energy: 0,                // number = Player 1 starts with this much ⚡, null = normal start
     cpuEnergy: null,               // same for the CPU
     p1Cards: [],                   // Keep-card ids Player 1 starts holding, e.g. [13, 48]
-    cpuCards: [],                  // Keep-card ids the CPU starts holding
+    cpuCards: [58],                  // Keep-card ids the CPU starts holding
     cpuBuyFirst: null,              // card id the CPU saves up for and buys the moment it can pay, e.g. 12
 	submission: null,					// -5 is human obey and +5 is cpu obey
 	p1Transform: null,
 	cpuTransform: null,
-	p1Power: "deepwell",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
-	cpuPower: "echo"				// same for CPU
+	p1Power: "",			// power key for Player 1, e.g. "deepwell", "toll", "cornered", "surrender"
+	cpuPower: ""				// same for CPU
 };
 
 
@@ -246,7 +246,7 @@ const CHARACTER_MANIFEST = {
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
 	"Qiyana": ["Cat","Deer","Gender","Bird"], // Deer 
-	"Princess": ["Mannequin"], // Mannequin, (Dragon, Gender, Robot, Statue, Werewolf)
+	"Princess": ["Mannequin", "Dragon", "Statue"], // Mannequin, (Gender, Robot, Werewolf)
 	};
 
 
@@ -5552,6 +5552,7 @@ async function cpuAdaptiveShopPhase() {
         }
         cpuReplan();
     }
+    if (cpuTryUseSubmissiveBreak()) await submissiveBreakPause();       // let the player watch the card die
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
     cpuNoteEndOfTurn();
     cpuSay(`Ends turn with ${p.energy}⚡ (plan: ${cpuPlanLabel()}).`);
@@ -5943,6 +5944,7 @@ async function cpuTierShopPhase(level) {
             if (!buyCardFromOpponent(2, act.idx)) break;
         }
     }
+    if (cpuTryUseSubmissiveBreak()) await submissiveBreakPause();       // let the player watch the card die
     while (cpuUseQuietMind()) { /* spend until it no longer wants to */ }
     if (level === "transformer") cpuNoteEndOfTurn();
 }
@@ -5966,69 +5968,87 @@ function cpuBlankUseful() {                  // Blank: clears our 🌀 🔥 ⚡ 
     const lost = Math.max(0, me.energy - 7) * 0.3;
     return trouble - lost >= 1.6;
 }
-function cpuBreakTargetWorthIt() {
-    const diff = getCpuDifficulty();
-    const candidates = [];
+// ------------------------------------------------------------
+// Submissive Break (card 58): when the CPU uses it and on what
+// ------------------------------------------------------------
+// One profile per CPU level:
+//   noise      random swing added to every target's score when choosing (1000 = effectively a random pick)
+//   threshold  lowest score worth using it on (null = use it as soon as there is any eligible target)
+//   ownCards   may it destroy one of its own Keep cards?
+//   waitRelief the threshold drops by this much for every CPU turn it has held the card without using it (so it is never held forever)
+const CPU_BREAK_PROFILE = {
+    random:      { noise: 1000, threshold: null, ownCards: true  },                   // Beginner: uses it right away on a random card, even its own
+    smart:       { noise: 1000, threshold: null, ownCards: false },                   // Easy: uses it right away on a random card of the human's
+    aggressive:  { noise: 20,   threshold: 5,    ownCards: false, waitRelief: 5 },    // Normal: uses it on almost anything, with sloppy choices
+    v23low:      { noise: 12,   threshold: 12,   ownCards: false, waitRelief: 4 },    // Hard
+    defensive:   { noise: 5,    threshold: 22,   ownCards: false, waitRelief: 3 },    // Expert: waits for a card it rates highly
+    transformer: { noise: 0,    threshold: 25,   ownCards: false, waitRelief: 3 },    // Virtuoso: best target by its own card ratings
+    adaptive:    { noise: 0,    threshold: 25,   ownCards: false, waitRelief: 3 }     // Master
+};
+const CPU_BREAK_MIN_THRESHOLD = 8;      // waiting never lowers the bar below this (unless the level's own threshold is lower)
+let cpuBreakWaited = 0;                 // CPU turns it has held Submissive Break without using it
 
-    [1, 2].forEach(ownerId => {
-        const owner = ownerId === 1 ? gameState.p1 : gameState.p2;
+function cpuBreakProfile() { return CPU_BREAK_PROFILE[getCpuDifficulty()] || CPU_BREAK_PROFILE.aggressive; }
 
-        (owner.inventory || []).forEach(card => {
-            if (!card || card.type !== "Keep" || Number(card.id) === 58) return;
-            if (cardResolvedThisTurn.has(`${ownerId}:${Number(card.id)}`)) return;
-
-            const value = cpuCardValueProxy(card);
-            if (!Number.isFinite(value)) return;
-
-            // Destroying our own card is usually less attractive.
-            const ownCardPenalty = ownerId === 2 ? 15 : 0;
-
-            // The card's owner receives 2 Energy.
-            const energyPenalty = owner.energy >= 8 ? 12 : 5;
-
-            const netValue = value - ownCardPenalty - energyPenalty;
-
-            candidates.push({ ownerId, card, netValue });
-        });
-    });
-
-    if (!candidates.length) return false;
-
-    const best = Math.max(...candidates.map(c => c.netValue));
-
-    // Different difficulties use different thresholds.
-    if (diff === "aggressive") return best >= 15;
-    if (diff === "defensive") return best >= 35;
-    if (diff === "v23low") return best >= 5;
-    if (diff === "smart") return best >= 25;
-    if (diff === "adaptive") return best >= 20;
-
-    // Fallback for other difficulty names.
-    return best >= 15;
+// how good a target is for the CPU: the level's own rating of the card, minus the 2 ⚡ its owner gains, minus a penalty for hitting itself
+function cpuBreakScore(t) {
+    const level = getCpuDifficulty();
+    const value = (t.card.ai && t.card.ai[level] != null) ? t.card.ai[level] : cpuCardValueProxy(t.card);
+    const owner = playerById(t.ownerId);
+    const energyPenalty = owner.energy >= 8 ? 12 : 5;
+    const ownCardPenalty = t.ownerId === 2 ? 15 : 0;
+    return value - energyPenalty - ownCardPenalty;
 }
 
-function cpuChooseBreakTarget(targets, pid) {
-    let best = null;
-    let bestValue = -Infinity;
-
-    targets.forEach(t => {
-        if (!t || !t.card || !t.owner) return;
-
-        const value = cpuCardValueProxy(t.card);
-
-        // Account for the 2 Energy awarded to the card's owner.
-        const energyPenalty = t.owner.energy >= 8 ? 12 : 5;
-        const ownCardPenalty = t.owner === gameState.p2 ? 15 : 0;
-
-        const netValue = value - energyPenalty - ownCardPenalty;
-
-        if (netValue > bestValue) {
-            bestValue = netValue;
-            best = t;
-        }
+// Chooses a target the way this level would: { target, score } (score without the random noise), or null if it has no eligible target.
+// targets: candidates from submissiveBreakCandidates() (or anything with { ownerId | owner, card })
+function cpuPickBreakTarget(targets, noiseless) {
+    const prof = cpuBreakProfile();
+    let best = null, bestPicked = -Infinity;
+    (targets || []).forEach(raw => {
+        if (!raw || !raw.card) return;
+        const ownerId = raw.ownerId != null ? raw.ownerId : (raw.owner === gameState.p1 ? 1 : (raw.owner === gameState.p2 ? 2 : Number(raw.owner)));
+        if (!prof.ownCards && ownerId === 2) return;
+        const t = { ownerId, card: raw.card };
+        const score = cpuBreakScore(t);
+        const picked = score + ((prof.noise && !noiseless) ? (Math.random() * 2 - 1) * prof.noise : 0);
+        if (picked > bestPicked) { bestPicked = picked; best = { target: raw, score }; }
     });
-
     return best;
+}
+
+// Is buying / holding Submissive Break worthwhile right now? (no randomness, no waiting discount)
+function cpuBreakTargetWorthIt() {
+    const prof = cpuBreakProfile();
+    const pick = cpuPickBreakTarget(submissiveBreakCandidates(), true);
+    if (!pick) return false;
+    return prof.threshold == null || pick.score >= prof.threshold;
+}
+
+// Called once per CPU shop phase by every CPU level. Uses Submissive Break if this level thinks it is time. Returns true if it was used.
+function cpuTryUseSubmissiveBreak() {
+    const me = gameState.p2;
+    if (!(me.inventory || []).some(c => c && Number(c.id) === 58)) { cpuBreakWaited = 0; return false; }
+    if (gameState.phase !== "shop" || Number(gameState.activePlayer) !== 2) return false;
+    const prof = cpuBreakProfile();
+    const pick = cpuPickBreakTarget(submissiveBreakCandidates());
+    if (!pick) return false;                                   // nothing it may destroy right now
+    if (prof.threshold != null) {
+        const lowered = prof.threshold - (prof.waitRelief || 0) * cpuBreakWaited;
+        const needed = Math.max(Math.min(prof.threshold, CPU_BREAK_MIN_THRESHOLD), lowered);
+        if (pick.score < needed) { cpuBreakWaited++; return false; }
+    }
+    const t = pick.target;
+    if (!activateSubmissiveBreak(2, t)) return false;
+    cpuBreakWaited = 0;
+    if (cpuIsAdaptive() && typeof cpuSay === "function") cpuSay(`Uses Submissive Break on ${playerById(t.ownerId).name}'s ${t.card.name}.`);
+    return true;
+}
+
+// kept for resolveSubmissiveBreak(): same choice as above
+function cpuChooseBreakTarget(targets, pid) {
+    const pick = cpuPickBreakTarget(targets);
+    return pick ? pick.target : null;
 }
 function cpuChooseSpecialFace() {            // Deeper Bargains: which face the special die should show
 	// xander always chooses 🔥
@@ -7210,7 +7230,7 @@ function renderCardTriggerToast(notices) {
     const toast = document.getElementById('card-trigger-toast');
     if (!toast) return;
     const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    const rows = notices.map(n => `<div><span class="toast-player" style="color:${n.playerId === 1 ? 'var(--player)' : 'var(--cpu)'}">${esc(n.playerName)}</span> · <strong>${esc(n.cardName)}</strong>: ${esc(n.detail)}</div>`);
+    const rows = notices.map(n => `<div${n.kind === "break" ? ' style="border-left:3px solid #9d4edd; padding-left:6px;"' : ""}><span class="toast-player" style="color:${n.playerId === 1 ? 'var(--player)' : 'var(--cpu)'}">${esc(n.playerName)}</span> · <strong>${esc(n.cardName)}</strong>: ${esc(n.detail)}</div>`);
     const existing = toast.classList.contains('visible') ? toast.innerHTML : '';
     toast.innerHTML = existing ? `${existing}${rows.join('')}` : rows.join('');
     toast.classList.remove('visible'); void toast.offsetWidth; toast.classList.add('visible');
@@ -8988,14 +9008,8 @@ function chooseDeeperBargainsFace(playerId) {
     });
 }
 
-function activateSubmissiveBreak(playerId) {
-    const actor = playerId === 1 ? gameState.p1 : gameState.p2;
-    const breakIndex = (actor.inventory || []).findIndex(c => c && Number(c.id) === 58);
-    if (breakIndex < 0) return false;
-    if (Number(gameState.activePlayer) !== Number(playerId) || gameState.phase !== "shop") {
-        if (playerId === 1) showPopup("Submissive Break", "You can use Submissive Break during your shop phase.");
-        return false;
-    }
+// The Keep cards Submissive Break may destroy right now (either player's, not Submissive Break itself, not already resolved this turn)
+function submissiveBreakCandidates() {
     const candidates = [];
     [1, 2].forEach(ownerId => {
         const owner = ownerId === 1 ? gameState.p1 : gameState.p2;
@@ -9005,6 +9019,19 @@ function activateSubmissiveBreak(playerId) {
             candidates.push({ ownerId, card, owner });
         });
     });
+    return candidates;
+}
+
+// preChosen (CPU only): a target already picked by cpuTryUseSubmissiveBreak()
+function activateSubmissiveBreak(playerId, preChosen) {
+    const actor = playerId === 1 ? gameState.p1 : gameState.p2;
+    const breakIndex = (actor.inventory || []).findIndex(c => c && Number(c.id) === 58);
+    if (breakIndex < 0) return false;
+    if (Number(gameState.activePlayer) !== Number(playerId) || gameState.phase !== "shop") {
+        if (playerId === 1) showPopup("Submissive Break", "You can use Submissive Break during your shop phase.");
+        return false;
+    }
+    const candidates = submissiveBreakCandidates();
     if (!candidates.length) {
         if (playerId === 1) showPopup("Submissive Break", "There are no eligible Keep cards to destroy right now.");
         else log("CPU held Submissive Break because there were no eligible Keep cards.");
@@ -9018,21 +9045,21 @@ function activateSubmissiveBreak(playerId) {
             log("Submissive Break: that card is no longer eligible.");
             return false;
         }
-        const targetElement = document.querySelector(`#p${candidate.ownerId}-inventory .inv-card[data-card-id="${Number(candidate.card.id)}"]`);
-        const targetRect = targetElement ? targetElement.getBoundingClientRect() : null;
+        const fxCapture = captureSubmissiveBreakFx(playerId, candidate.ownerId, candidate.card.id);   // before the cards leave the inventory
         const [removed] = owner.inventory.splice(index, 1);
         const [usedBreak] = actor.inventory.splice(actor.inventory.findIndex(c => c && Number(c.id) === 58), 1);
         discardCard(removed);
         discardCard(usedBreak);
         owner.energy += 2;
         log(`Submissive Break destroyed ${removed.name} from ${owner.name}; ${owner.name} gains 2 ⚡. Submissive Break is discarded.`);
-        animateCardDestruction(targetElement, targetRect);
+        showSubmissiveBreakAlert(playerId, owner, removed);
         playSound("break");
         syncToFirebase(); updateUI();
+        playSubmissiveBreakEffect(fxCapture, owner.name, removed.name);
         return true;
     };
     if (playerId === 2 && gameState.gameMode === "solo") {
-		const target = cpuChooseBreakTarget(candidates, playerId);
+		const target = preChosen || cpuChooseBreakTarget(candidates, playerId);
 		return target ? removeCandidate(target) : false;
 	}
     showChoiceDialog({
@@ -9096,16 +9123,121 @@ function animateCardBetweenInventories(sourceElement, fromPlayerId, toPlayerId, 
     }));
 }
 
-function animateCardDestruction(sourceElement, capturedRect = null) {
-    if (!sourceElement || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const rect = capturedRect || sourceElement.getBoundingClientRect();
-    const ghost = sourceElement.cloneNode(true);
-    ghost.classList.add("card-destruction-ghost");
-    ghost.style.cssText += `;position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;margin:0;z-index:12001;pointer-events:none;`;
-    document.body.appendChild(ghost);
-    void ghost.offsetWidth;
-    ghost.classList.add("card-destroying");
-    window.setTimeout(() => ghost.remove(), 620);
+// ------------------------------------------------------------
+// Submissive Break: a slow, readable "this card was just destroyed" effect. Visual only; nothing here touches gameState.
+// Order of events: the Break card glows purple -> the doomed card shakes and cracks (red glow) -> it splits in two and falls away.
+// A label above the card says what happened and to whom. The alert box gets its own row (see showSubmissiveBreakAlert).
+// ------------------------------------------------------------
+const SUBMISSIVE_BREAK_FX_MS = 2600;            // length of the whole effect
+const SUBMISSIVE_BREAK_CPU_PAUSE_MS = 2300;     // the CPU waits this long before carrying on with its turn, so the player can watch
+function submissiveBreakPause() { return new Promise(resolve => setTimeout(resolve, SUBMISSIVE_BREAK_CPU_PAUSE_MS)); }
+
+// Alert box row: who used it, what was destroyed, and that its owner got 2 ⚡
+function showSubmissiveBreakAlert(actorId, owner, removed) {
+    const actor = playerById(actorId);
+    const detail = `destroyed ${owner.name}'s ${removed.name}! ${owner.name} gains 2 ⚡`;
+    renderCardTriggerToast([{ playerId: Number(actorId), playerName: (actor && actor.name) || `Player ${actorId}`, cardId: 58, cardName: "💥 Submissive Break", detail, kind: "break" }]);
+    if (isLocalPlayerTurn()) setLastEffectTicker("Submissive Break", detail);
+}
+
+// Find the doomed card and the Break card on screen and remember where they are. Call BEFORE they leave the inventory.
+function captureSubmissiveBreakFx(actorId, ownerId, cardId) {
+    const find = (pid, id) => {
+        const inv = document.getElementById(`p${pid}-inventory`);
+        const el = inv && inv.querySelector(`.inv-card[data-card-id="${Number(id)}"]`);
+        if (!el) return null;
+        const ir = el.getBoundingClientRect(), cr = inv.getBoundingClientRect();      // scroll it into view if the inventory clips it
+        if (ir.top < cr.top) inv.scrollTop += ir.top - cr.top - 4;
+        else if (ir.bottom > cr.bottom) inv.scrollTop += ir.bottom - cr.bottom + 4;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 ? { el, rect } : null;
+    };
+    return { target: find(ownerId, cardId), breaker: find(actorId, 58) };
+}
+
+function playSubmissiveBreakEffect(capture, ownerName, cardName) {
+    const T = SUBMISSIVE_BREAK_FX_MS;
+    const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const nodes = [];
+    const add = node => { document.body.appendChild(node); nodes.push(node); return node; };
+    const ghostOf = (src, rect, z) => {
+        const g = src.cloneNode(true);
+        g.classList.remove("card-triggered", "can-afford", "cannot-afford");
+        g.style.cssText += `;position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;margin:0;z-index:${z};pointer-events:none;transform-origin:50% 60%;`;
+        return add(g);
+    };
+    const target = capture && capture.target, breaker = capture && capture.breaker;
+
+    // label above the doomed card (or top-centre of the screen if we could not find the card)
+    const label = document.createElement("div");
+    label.innerHTML = `<div style="font-weight:800; letter-spacing:.05em;">💥 SUBMISSIVE BREAK</div>` +
+        `<div style="font-size:.85em; margin-top:2px;">${escapeHistoryHtml(ownerName)}'s ${escapeHistoryHtml(cardName)} is destroyed · ${escapeHistoryHtml(ownerName)} gains 2 ⚡</div>`;
+    let labelX = window.innerWidth / 2, labelY = 90, labelShift = "-50%, 0";
+    if (target) {
+        labelX = Math.min(Math.max(target.rect.left + target.rect.width / 2, 170), window.innerWidth - 170);
+        if (target.rect.top > 90) { labelY = target.rect.top - 8; labelShift = "-50%, -100%"; } else { labelY = target.rect.bottom + 8; }
+    }
+    const labelBase = `translate(${labelShift})`;
+    label.style.cssText = `position:fixed; left:${labelX}px; top:${labelY}px; transform:${labelBase}; z-index:12003; pointer-events:none; ` +
+        `max-width:min(320px, 90vw); text-align:center; color:#fff; background:#2a0f3d; border:2px solid #9d4edd; border-radius:8px; padding:8px 14px; ` +
+        `box-shadow:0 0 18px rgba(157,78,221,.8); font-size:.95em;`;
+    add(label);
+
+    if (!reduceMotion) {
+        label.animate([
+            { opacity: 0, transform: `${labelBase} translateY(10px)` },
+            { opacity: 1, transform: labelBase, offset: 0.12 },
+            { opacity: 1, transform: labelBase, offset: 0.85 },
+            { opacity: 0, transform: labelBase }
+        ], { duration: T, easing: "ease-out", fill: "forwards" });
+
+        // 1) the Break card glows purple where it sat in the user's inventory
+        if (breaker) {
+            const g = ghostOf(breaker.el, breaker.rect, 12002);
+            g.animate([
+                { transform: "scale(1)", boxShadow: "0 0 0 rgba(157,78,221,0)", opacity: 1 },
+                { transform: "scale(1.15)", boxShadow: "0 0 28px 10px rgba(157,78,221,.9)", opacity: 1, offset: 0.25 },
+                { transform: "scale(1.08)", boxShadow: "0 0 18px 6px rgba(157,78,221,.7)", opacity: 1, offset: 0.5 },
+                { transform: "scale(.9)", boxShadow: "0 0 0 rgba(157,78,221,0)", opacity: 0 }
+            ], { duration: T * 0.55, easing: "ease-in-out", fill: "forwards" });
+        }
+
+        // 2) the doomed card shakes with a red glow and a crack, then 3) splits in two and falls away
+        if (target) {
+            const phaseA = T * 0.45, phaseB = T * 0.55;
+            const main = ghostOf(target.el, target.rect, 12001);
+            const crack = document.createElement("div");
+            crack.textContent = "💥";
+            crack.style.cssText = "position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.6em; pointer-events:none; " +
+                "background:linear-gradient(135deg, transparent 46%, rgba(255,255,255,.9) 48%, rgba(255,255,255,.9) 50%, transparent 52%);";
+            crack.animate([{ opacity: 0 }, { opacity: 0, offset: 0.35 }, { opacity: 1 }], { duration: phaseA, fill: "forwards" });
+            main.appendChild(crack);
+            main.animate([
+                { transform: "translateX(0) rotate(0)", filter: "none", boxShadow: "0 0 0 0 rgba(255,60,60,0)" },
+                { transform: "translateX(-3px) rotate(-1deg)", filter: "saturate(1.4)", boxShadow: "0 0 18px 6px rgba(255,60,60,.85)", offset: 0.15 },
+                { transform: "translateX(3px) rotate(1deg)", offset: 0.3 },
+                { transform: "translateX(-3px) rotate(-1deg)", offset: 0.45 },
+                { transform: "translateX(3px) rotate(1deg)", offset: 0.6 },
+                { transform: "translateX(-2px) rotate(0)", filter: "grayscale(.6) brightness(1.2)", offset: 0.8 },
+                { transform: "translateX(0) rotate(0)", filter: "grayscale(1) brightness(1.4)", boxShadow: "0 0 28px 12px rgba(255,255,255,.9)" }
+            ], { duration: phaseA, fill: "forwards" });
+
+            window.setTimeout(() => {
+                main.remove();
+                [["polygon(0 0, 100% 0, 0 100%)", -1], ["polygon(100% 0, 100% 100%, 0 100%)", 1]].forEach(([clip, dir]) => {
+                    const half = ghostOf(target.el, target.rect, 12001);
+                    half.style.clipPath = clip;
+                    half.style.filter = "grayscale(1) brightness(1.3)";
+                    half.animate([
+                        { transform: "translate(0, 0) rotate(0)", opacity: 1 },
+                        { transform: `translate(${28 * dir}px, 18px) rotate(${8 * dir}deg)`, opacity: 1, offset: 0.35 },
+                        { transform: `translate(${60 * dir}px, 120px) rotate(${24 * dir}deg)`, opacity: 0 }
+                    ], { duration: phaseB, easing: "ease-in", fill: "forwards" });
+                });
+            }, phaseA);
+        }
+    }
+    window.setTimeout(() => nodes.forEach(n => n.remove()), T + 200);
 }
 
 function showInstantCardPurchase(card, effectMessages) {
@@ -9667,10 +9799,8 @@ function executeCPUTurn() {
                     }
                 }
 				
-                // Submissive Break remains in inventory until the CPU elects to use it.
-                if (gameState.p2.inventory.some(c => Number(c.id) === 58) && cpuBreakTargetWorthIt()) {
-                    activateSubmissiveBreak(2);
-                }
+                // Submissive Break: each CPU level decides for itself when to use it (see CPU_BREAK_PROFILE)
+                if (cpuTryUseSubmissiveBreak()) await submissiveBreakPause();
 
 				while (cpuUseQuietMind())
 				{
