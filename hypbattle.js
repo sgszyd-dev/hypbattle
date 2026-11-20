@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261119.2"; // Update this label for each release.
+const GAME_VERSION = "20261120.1"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -246,7 +246,7 @@ const CHARACTER_MANIFEST = {
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
 	"Qiyana": ["Cat","Deer","Gender","Bird"], // Deer 
-	"Princess": ["Mannequin", "Dragon", "Statue"], // Mannequin, (Gender, Robot, Werewolf)
+	"Princess": ["Mannequin", "Dragon", "Statue", "Werewolf"], // Mannequin, (Gender, Robot)
 	};
 
 
