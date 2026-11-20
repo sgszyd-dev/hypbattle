@@ -64,7 +64,7 @@ const POWERS = {
     marketmanipulator: {
         icon: "🏪", title: "Market Manipulator", impl: "core",
         description: "Market wipes cost one Energy, with no per-turn limit.",
-        helpText: "Wiping the market costs 1 ⚡ instead of 2."
+        helpText: "Wiping the market costs 1 ⚡ instead of 2 ⚡."
     },
 	// Hyeri 
     perfectharmony: {
@@ -106,6 +106,7 @@ const POWERS = {
         icon: "🔁", title: "Echo", impl: "abilities",
         description: "Once per turn, after your final roll, pay 1 ⚡ to copy one die's face onto another die."
     },
+	// Princess
     calledshot: {
         icon: "🎯", title: "Called Shot", impl: "abilities",
         description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡."
@@ -140,19 +141,20 @@ const POWERS = {
 // character name -> power key
 const CHARACTER_POWERS = {
     Alex: "unyieldingresistance",
-    Roz: "tripletrouble",
-    Xander: "heatedopening",
+	Dare: "meditation",
+	Fable: "lucidreversal",
+    Hyeri: "perfectharmony",
+    Ivy: "suggestedtransference", 
+    Luci: "submissionamplifier",
+    Mark: "lingeringtrance",
+	Princess: "calledshot",
+	Qiyana: "cornered",
+	Roz: "tripletrouble",
     "Siobhán": "predatorymomentum",
     Tex: "twisteddice",
-    Luci: "submissionamplifier",
-    Zixuan: "marketmanipulator",
-    Hyeri: "perfectharmony",
-    Mark: "lingeringtrance",
-    Fable: "lucidreversal",
-    Ivy: "suggestedtransference",
-    Dare: "meditation",
-    Val: "turntables",
-	Qiyana: "cornered",
+	Val: "turntables",
+	Xander: "heatedopening",
+	Zixuan: "marketmanipulator",
 };
 
 // Characters whose image folder is not their accent-stripped name (the help tab uses these).

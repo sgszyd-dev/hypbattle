@@ -1263,6 +1263,13 @@ const CPU_VICTORY_TAUNTS = {
 			"You tested me and found no give. Stay where you are. A wary heart still knows when the moment to submit has come.",
 			"You are trembling so nicely under my hands. The wild taught me how to hold what I catch—firm, patient, and complete.",
 			"Victory feels good when you’re open and quiet like this. Stay that way while I take my time with what I’ve won."
+		],
+		Princess: [
+			"You fought. You failed. Kneel and accept that an Amazon does not lose to the likes of you.",
+			"Pathetic. All that effort and you still end up beneath someone who was born to win.",
+			"I barely broke a sweat. Stay down while I decide whether you’re worth the trouble of keeping.",
+			"A real warrior would have lasted longer. You’re lucky I’m in a generous mood… for now.",
+			"Victory was never in doubt. Look at me when I speak. You will remember who put you there."
 		]
     }
 };
@@ -1579,6 +1586,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"Very well. I am down. Enjoy the sight. I know how to endure.",
 			"You’ve put me on my back. Unusual. Use the opening while my body is this willing… I will not stay this soft forever.",
 			"I yield. Take the heat and the stillness you’ve forced from me. Just know that I remember every place I am touched."
+		],
+		Princess: [
+			"You… actually brought me down. Enjoy it while it lasts. Amazons do not stay beaten.",
+			"This is temporary. Mark the moment you managed to best me—you will not get another.",
+			"I yield. For the moment. Do not mistake a fallen warrior for a broken one.",
+			"You’ve forced me to the ground. Rare. Use the advantage carefully before I take it back.",
+			"Fine. You win this exchange. An Amazon on her knees is still more dangerous than most standing."
 		]
     }
 };
@@ -2613,5 +2627,70 @@ const CHALLENGE_RIVAL_TAUNTS = {
 			"Almost finished. This new body may ache and open more easily, but I still choose what I do with the feeling.",
 			"One step left. You may finish the change. You will not finish me. Remember the difference."
 		]
-  }
+	},
+	Princess: {
+		TransformPlayer: [
+			"Another change takes hold. Watch yourself become a weak {HUMTRANS} while I remain exactly as I am.",
+			"Feel that? Your body is rewriting itself into {AAN} {HUMTRANS} under my watch. Try not to embarrass yourself further.",
+			"You’re shifting into a far less impressive {HUMTRANS}. Keep going—I want to see how far the drop goes.",
+			"The transformation suits you. Soft, altered, and increasingly aware of who holds the real power here.",
+			"One more stage. Your old strength is leaking away and I am still standing tall. As it should be."
+		],
+		AIGetsTransformed: [
+			"My body is changing and I despise every second of it. Do not think this makes you my equal.",
+			"You’re altering an Amazon. Bold. Foolish. I will remember the insult.",
+			"These changes are temporary setbacks. The warrior underneath remains unbroken.",
+			"I feel the shift and I hate it. When this is over you will regret forcing it on me.",
+			"You rewrite my form. The pride and skill stay exactly where they are—out of your reach."
+		],
+		PlayerIsObedient: [
+			"Finally. Proper submission. Stay exactly like that while I decide what to do with you.",
+			"Good. You’re learning your place. An Amazon appreciates when the lesser party stops wasting her time.",
+			"That is how you present to a superior. Hold the position. I may even reward the improvement.",
+			"Obedience looks better on you than defiance ever did. Keep it up.",
+			"You’re quiet and still for once. A rare improvement. Do not spoil it by speaking."
+		],
+		AIIsObedient: [
+			"I will follow the order. Briefly. Do not grow accustomed to an Amazon taking direction.",
+			"Temporary compliance. Enjoy the novelty—it will not be repeated often.",
+			"You have my obedience for this moment only. The next one belongs to me again.",
+			"I yield as instructed. Remember the feeling. You will not keep it.",
+			"Very well. I obey. For now. An Amazon’s patience has limits you have not yet tested."
+		],
+		BigRollAI: [
+			"A decisive result. Exactly what a superior warrior expects. Hold still while I press the advantage.",
+			"Fortune favors the skilled. You are about to learn the difference firsthand.",
+			"That roll belongs to me. Present yourself. I do not waste clean openings.",
+			"Perfect timing. A true Amazon knows how to turn a strong moment into a lasting one.",
+			"The numbers agree with me. Stay down. This will not be gentle."
+		],
+		PlayerAt5Transform: [
+			"Halfway altered and already softer. I expected as much from someone of your caliber.",
+			"Five stages in. Your old edge is dulling nicely. Keep changing—I’m not finished watching.",
+			"Half transformed into {AAN} {HUMTRANS}. Look at how much less threatening you are already. Amusing.",
+			"Midway through and the difference is obvious. You were never going to stay impressive.",
+			"Halfway there. You as {AAN} {HUMTRANS} makes you more suitable for the position you’re in now."
+		],
+		PlayerAt8Transform: [
+			"Two stages left. You’re almost finished becoming something I can properly disregard.",
+			"Nearly completely {AAN} {HUMTRANS}. What little fight you had left is disappearing. As expected.",
+			"So close to becoming {AAN} {HUMTRANS}. The last scraps of your old self are not worth mourning.",
+			"Almost done. Soon there will be nothing left of the opponent who thought they could match me.",
+			"Yield the rest. An Amazon does not leave a task half-finished."
+		],
+		AIAt5Transform: [
+			"Halfway changed into {AAN} {CPUTRANS} and I remain the superior fighter. Do not celebrate early.",
+			"Five stages of this insult and my skill is untouched. Try harder if you dare.",
+			"My form is shifting. My standards do not. You are still beneath me.",
+			"Halfway altered. I adapt without losing the edge that put you on the ground before.",
+			"These changes are noted and dismissed. The warrior is still the one in control of herself."
+		],
+		AIAt9Transform: [
+			"Ugh! Let it finish. An Amazon in any shape is still more than you can handle.",
+			"Almost complete. I will wear whatever you force and still look down on you while doing it.",
+			"So close. Accept this body of {AAN} {CPUTRANS} if you must. The pride inside it is not yours to claim.",
+			"Final stage approaching. You have altered me into this {CPUTRANS}. The deadly part remains exactly where it was.",
+			"One step left. When this ends I will still be the one who decides how the next fight goes."
+		]
+	}
 };

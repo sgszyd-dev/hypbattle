@@ -100,6 +100,7 @@ const CHARACTERS = [
 	{ name: "Ivy",		 gender: "female"},
     { name: "Luci", 	gender: "female" },
     { name: "Mark",       gender: "male" },
+	{ name: "Princess",  gender: "female" },
 	{ name: "Qiyana",    gender: "female" },
     { name: "Roz",       gender: "female" },
 	{ name: "Siobhán",   gender: "female" },
@@ -245,6 +246,7 @@ const CHARACTER_MANIFEST = {
 	"Val": ["Fox", "Statue", "Puppet", "Cow"], // Fox
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
 	"Qiyana": ["Cat","Deer","Gender","Bird"], // Deer 
+	"Princess": ["Mannequin"], // Mannequin, (Dragon, Gender, Robot, Statue, Werewolf)
 	};
 
 
@@ -582,7 +584,7 @@ const CLASSIC_CHALLENGE_RIVALS = [
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
     Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon",
-	Dare: "Snake", Val:"Fox", Qiyana:"Deer"
+	Dare: "Snake", Val:"Fox", Qiyana:"Deer", Princess:"Mannequin"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
