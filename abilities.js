@@ -895,9 +895,11 @@
         return Object.keys(CHARACTER_POWERS).map(name => {
             const info = infoFor(CHARACTER_POWERS[name], name); if (!info) return "";
             const folder = (typeof characterFilename === "function") ? characterFilename(name) : name;
-            return `<div class="help-box signature-power-box">
-                    <img class="signature-portrait" src="images/avatars/${folder}/${folder}_head.jpg" alt="${name}">
-                    <strong>${name}</strong><br><em>${info.icon ? info.icon + " " : ""}${info.title}</em><br>${info.helpText}
+            const accent = (typeof keyFormStyleAttr === "function") ? keyFormStyleAttr(name) : "";          // tints the box edge and head shot
+            const pip = (typeof keyPipHtml === "function") ? keyPipHtml(name) : "";                       // gold ✦ in the head shot's corner once completed
+            return `<div class="help-box signature-power-box"${accent}>
+                    <img class="signature-portrait" src="images/avatars/${folder}/${folder}_head.jpg" alt="${name}">${pip}
+                    <strong>${name}</strong>${(typeof keyFormBadgeHtml === "function") ? keyFormBadgeHtml(name) : ""}<br><em>${info.icon ? info.icon + " " : ""}${info.title}</em><br>${info.helpText}
                 </div>`;
         }).join("");
     }

@@ -1473,6 +1473,7 @@
 .signature-power-box {
     position: relative;
     padding-right: 116px; /* 100px image + a little gap */
+    box-shadow: inset 3px 0 0 var(--form-accent, transparent);   /* key-form accent colour (set per character from hypbattle.js) */
 }
 
 .signature-portrait {
@@ -1483,8 +1484,8 @@
     height: 100px;
     border-radius: 6px;
     object-fit: cover;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--form-line, rgba(255, 255, 255, 0.25));
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 8px var(--form-glow, transparent);
 }
 
 .signature-form {
@@ -2334,8 +2335,8 @@ body.game-ethereal-enabled { background-color: transparent; }
     object-fit: cover;
     object-position: center top;
     background: #1a1224;
-    border: 1px solid rgba(192, 132, 252, 0.45);
-    box-shadow: 0 0 6px rgba(157, 78, 221, 0.25);
+    border: 1px solid var(--form-line, rgba(192, 132, 252, 0.45));            /* tinted by the character's key-form accent when one is set */
+    box-shadow: 0 0 6px var(--form-glow, rgba(157, 78, 221, 0.25));
 }
 
 .cns-thumb-fallback {
@@ -2590,3 +2591,23 @@ body.game-ethereal-enabled { background-color: transparent; }
 .layaway-tile.layaway-open .layaway-head { color: #fcd34d; }
 .layaway-tile .layaway-card { margin: 0 auto; }
 .signature-power-hint .kaleido-current { display: block; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(232, 121, 249, .4); color: #f5d0fe; }
+
+/* ---- Key transformation: completed pip (ring = hardest level), True Form finish ---- */
+.cns-thumb-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+.key-pip {
+    position: absolute; right: -4px; bottom: -4px; box-sizing: border-box;
+    width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: #14101c; border: 2px solid var(--pip-ring, #ffd34d);
+    color: #ffd34d; font-size: 8px; line-height: 1; box-shadow: 0 0 5px var(--pip-ring, #ffd34d);
+}
+.signature-power-box .key-pip { width: 20px; height: 20px; right: 0; top: 98px; bottom: auto; font-size: 12px; }   /* on the corner of the 100px head shot */
+
+#final-transform-cinematic .cinematic-portrait-wrap { transition: border-color .8s ease, box-shadow .8s ease; }
+#final-transform-cinematic.cinematic-true-form .cinematic-portrait-wrap {
+    border-color: #ffd34d;
+    box-shadow: 0 0 26px 7px color-mix(in srgb, var(--cinematic-form-color, #ffd34d) 60%, transparent), 0 0 0 2px rgba(255, 211, 77, .55), 0 0 80px rgba(255, 211, 77, .3);
+}
+#final-transform-cinematic.cinematic-true-form .cinematic-kicker { color: #ffd34d; text-shadow: 0 0 14px rgba(255, 211, 77, .7); }
+#go-p1-panel.true-form-finish, #go-p2-panel.true-form-finish { box-shadow: 0 0 0 2px #ffd34d, 0 0 18px rgba(255, 211, 77, .4); }
+.true-form-finish [id^="go-p"][id$="-status"] { color: #ffd34d; letter-spacing: .1em; }
+@media (prefers-reduced-motion: reduce) { #final-transform-cinematic .cinematic-portrait-wrap { transition: none; } }

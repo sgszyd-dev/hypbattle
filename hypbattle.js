@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261120.2"; // Update this label for each release.
+const GAME_VERSION = "20261120.3"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -639,7 +639,9 @@ function cnsThumbHtml(name, labelText) {
     const fallback = characterNameThumbFallbackSrc(name);
     const alt = setupEscapeHtml(String(labelText || name).split(" ")[0]);
     // Try _head.jpg first; on error swap to baseline; if that fails show initials.
-    return `<img class="cns-thumb" src="${primary}" alt="" data-fallback="${fallback || ""}" data-name="${alt}" onerror="cnsThumbError(this)">`;
+    const img = `<img class="cns-thumb" src="${primary}" alt="" data-fallback="${fallback || ""}" data-name="${alt}" onerror="cnsThumbError(this)">`;
+    const pip = keyPipHtml(name);                       // completed key transformation: gold ✦ in the corner, ring = hardest level
+    return pip ? `<span class="cns-thumb-wrap">${img}${pip}</span>` : img;
 }
 
 function cnsThumbError(img) {
@@ -675,7 +677,8 @@ function refreshCustomNameSelect(selectEl) {
     const selectedOpt = selectEl.selectedOptions[0] || selectEl.querySelector(`option[value="${CSS.escape(value)}"]`);
     const label = selectedOpt ? selectedOpt.textContent : value;
 
-    trigger.innerHTML = `${cnsThumbHtml(value, label)}<span class="cns-label">${setupEscapeHtml(label)}</span><span class="cns-chevron" aria-hidden="true">▾</span>`;
+    trigger.innerHTML = `${cnsThumbHtml(value, label)}<span class="cns-label">${setupEscapeHtml(label)}${keyFormBadgeHtml(value)}</span><span class="cns-chevron" aria-hidden="true">▾</span>`;
+    setFormAccentVars(trigger, value);
 
     // Rebuild menu from current <option> list (keeps Random label in sync)
     const frag = document.createDocumentFragment();
@@ -686,7 +689,8 @@ function refreshCustomNameSelect(selectEl) {
         btn.dataset.value = opt.value;
         btn.setAttribute("role", "option");
         btn.setAttribute("aria-selected", opt.value === value ? "true" : "false");
-        btn.innerHTML = `${cnsThumbHtml(opt.value, opt.textContent)}<span class="cns-label">${setupEscapeHtml(opt.textContent)}</span>`;
+        btn.innerHTML = `${cnsThumbHtml(opt.value, opt.textContent)}<span class="cns-label">${setupEscapeHtml(opt.textContent)}${keyFormBadgeHtml(opt.value)}</span>`;
+        setFormAccentVars(btn, opt.value);
         btn.addEventListener("click", e => {
             e.preventDefault();
             e.stopPropagation();
@@ -4189,24 +4193,101 @@ function keyFormForCharacter(name) {
     return hit ? CHALLENGE_CHARACTER_FORMS[hit] : null;
 }
 function hasDefeatedKeyTransform(name) { const r = loadKeyDefeats()[keyDefeatName(name)]; return !!(r && r.wins > 0); }
+// ---------- what a character's key transformation looks like around the game ----------
+// Accent colour per key form. It tints the head-shot border/glow and the caption on the select screens and the Characters tab. Edit freely.
+const KEY_FORM_ACCENTS = {
+    Eevee: "#d2a679", Doll: "#f4a9c8", Otter: "#2bb3a8", Gender: "#d946ef", Squirrel: "#b5651d", Cow: "#e7dcc0", Cat: "#b8a5ff",
+    Bunny: "#cfe3ff", Bat: "#5b6ee1", Robot: "#7f9bb5", Demon: "#e5383b", Snake: "#84cc16", Fox: "#ff7a1a"
+};
+function keyFormAccent(name) { try { const f = keyFormForCharacter(name); return (f && KEY_FORM_ACCENTS[f]) || null; } catch (e) { return null; } }
+function accentRgba(hex, alpha) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ""));
+    if (!m) return `rgba(255,255,255,${alpha})`;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+function keyFormStyleVars(name) {                      // the CSS variables the stylesheet reads (--form-accent / --form-glow / --form-line)
+    const c = keyFormAccent(name);
+    return c ? `--form-accent:${c}; --form-glow:${accentRgba(c, 0.45)}; --form-line:${accentRgba(c, 0.6)};` : "";
+}
+function keyFormStyleAttr(name) { const v = keyFormStyleVars(name); return v ? ` style="${v}"` : ""; }
+function setFormAccentVars(el, name) {
+    if (!el) return;
+    ["--form-accent", "--form-glow", "--form-line"].forEach(p => el.style.removeProperty(p));
+    const c = keyFormAccent(name);
+    if (!c) return;
+    el.style.setProperty("--form-accent", c);
+    el.style.setProperty("--form-glow", accentRgba(c, 0.45));
+    el.style.setProperty("--form-line", accentRgba(c, 0.6));
+}
+// Difficulty ladder, lowest to highest, taken from the Seven's stage profiles (Beginner ... Master), with their colours.
+function difficultyLadder() { return CHALLENGE_STAGE_PROFILES.map(p => p.difficulty); }
+// the ring colour for the highest CPU level the human has completed this character's key transformation on (null = never completed)
+function keyDefeatRing(name) {
+    const r = loadKeyDefeats()[keyDefeatName(name)];
+    if (!r || !(r.wins > 0)) return null;
+    const profile = CHALLENGE_STAGE_PROFILES.find(p => p.difficulty === r.best);
+    return profile ? { color: profile.color, label: profile.tier } : { color: "#ffd34d", label: null };   // online / older records: plain gold
+}
+// Small gold ✦ in the corner of the head shot once the key transformation has been completed; its ring is the hardest level it was done on.
+function keyPipHtml(name) {
+    try {
+        const ring = keyDefeatRing(name);
+        if (!ring) return "";
+        const tip = ring.label ? `Key transformation completed on ${ring.label}` : "Key transformation completed";
+        return `<span class="key-pip" style="--pip-ring:${ring.color};" title="${tip}">✦</span>`;
+    } catch (e) { return ""; }
+}
+// Small caption after the name on the select screens and the Characters tab: "· Robot", in the form's accent colour.
+function keyFormBadgeHtml(name) {
+    try {
+        const form = keyFormForCharacter(name);
+        if (!form) return "";
+        const c = keyFormAccent(name);
+        return `<span class="key-form-badge" style="font-size:.75em; margin-left:.5em; white-space:nowrap; opacity:.8;${c ? ` color:${c};` : ""}">· ${form}</span>`;
+    } catch (e) { return ""; }
+}
+// The loser was taken all the way to their OWN key transformation (not a forfeit). Drives the "True Form" finish and the defeat record.
+function isTrueFormFinish(loser) {
+    try {
+        if (!loser || !gameState || gameState.endReason === "forfeit" || !(Number(loser.transform) >= 10)) return false;
+        const keyForm = keyFormForCharacter(loser.name);
+        return !!keyForm && String(loser.transformTarget || "").toLowerCase() === keyForm.toLowerCase();
+    } catch (e) { return false; }
+}
+function refreshNameSelectBadges() {                  // redraw the two character pickers so a new ✦ shows up straight away
+    ["p1-name", "cpu-name"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && typeof refreshCustomNameSelect === "function") refreshCustomNameSelect(el);
+    });
+}
+function noteKeyDefeatLevel(record, level) {          // remembers which CPU levels it was done on; record.best = the hardest
+    level = String(level || "") === "trans" ? "transformer" : String(level || "");
+    const ladder = difficultyLadder();
+    if (!ladder.includes(level)) return;
+    record.levels = record.levels || {};
+    record.levels[level] = (record.levels[level] || 0) + 1;
+    if (!record.best || ladder.indexOf(level) > ladder.indexOf(record.best)) record.best = level;
+}
 function recordKeyTransformDefeat(winnerId) {        // called once when a finished game is presented
     if (!gameState || gameState.endReason === "forfeit") return;
     const localWinner = gameState.gameMode === "solo" ? 1 : (gameState.gameMode === "online" ? Number(onlineLocalRole) : null);
     if (Number(winnerId) !== localWinner) return;     // only the human playing on this screen earns it (not local two-player games)
     const loser = Number(winnerId) === 1 ? gameState.p2 : gameState.p1;
-    if (!loser || !(Number(loser.transform) >= 10)) return;
-    const keyForm = keyFormForCharacter(loser.name);
-    if (!keyForm || String(loser.transformTarget || "").toLowerCase() !== keyForm.toLowerCase()) return;
+    if (!isTrueFormFinish(loser)) return;
     const all = loadKeyDefeats(), id = keyDefeatName(loser.name), now = new Date().toISOString();
     const r = all[id] || { wins: 0, firstWin: now };
     r.wins++; r.lastWin = now; all[id] = r;
+    noteKeyDefeatLevel(r, gameState.gameMode === "solo" ? getCpuDifficulty() : null);   // online games count, but do not change the ring
     safeStorage.set(KEY_DEFEATS_KEY, JSON.stringify(all));
+    refreshNameSelectBadges();
 }
 window.hypDuelKeyDefeats = loadKeyDefeats;                                   // console: hypDuelKeyDefeats()
-window.hypDuelMarkKeyDefeat = (name, on = true) => {                         // console: hypDuelMarkKeyDefeat("Luci")  /  hypDuelMarkKeyDefeat("Luci", false)  (handy for testing)
+window.hypDuelMarkKeyDefeat = (name, on = true, level) => {                  // console: hypDuelMarkKeyDefeat("Luci")  /  ("Luci", true, "adaptive") to test a ring  /  ("Luci", false)
     const all = loadKeyDefeats(), id = keyDefeatName(name), now = new Date().toISOString();
-    if (on) all[id] = all[id] || { wins: 1, firstWin: now, lastWin: now }; else delete all[id];
+    if (on) { all[id] = all[id] || { wins: 1, firstWin: now, lastWin: now }; if (level) noteKeyDefeatLevel(all[id], level); } else delete all[id];
     safeStorage.set(KEY_DEFEATS_KEY, JSON.stringify(all));
+    refreshNameSelectBadges();
     return all;
 };
 function recClear() { try { localStorage.removeItem(REC_STORAGE_KEY); } catch (e) {} }
@@ -6428,6 +6509,51 @@ function showTransformMilestone(playerKey, text) {
     if (milestoneTimers[playerKey]) window.clearTimeout(milestoneTimers[playerKey]);
     milestoneTimers[playerKey] = window.setTimeout(() => { el.classList.remove("visible"); el.textContent = ""; }, 900);
 }
+// ------------------------------------------------------------
+// Key-form foreshadowing: when a character is being taken to THEIR OWN key transformation (CHALLENGE_CHARACTER_FORMS), the finished form
+// (the Transform 10 art) flickers very faintly over the portrait as they pass Transform 5, 8 and 9: stronger each time. Any other form: nothing.
+// Visual only. A copy is laid over the portrait for a moment; the portrait itself is never changed.
+// ------------------------------------------------------------
+const KEY_FORM_FORESHADOW = {            // Transform level -> strength (opacity) and how long it holds before melting away
+    5: { peak: 0.14, holdMs: 200 }, // was 120, 200, 340
+    8: { peak: 0.24, holdMs: 300 },
+    9: { peak: 0.42, holdMs: 400 }
+};
+const KEY_FORM_FORESHADOW_DELAY_MS = 1000;      // wait for the portrait's own stage crossfade to finish first
+const KEY_FORM_FORESHADOW_FADE_MS = 420;
+function keyFormForeshadow(playerKey, level) {
+    const cfg = KEY_FORM_FORESHADOW[level];
+    if (!cfg || !gameState || !gameState[playerKey]) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const pObj = gameState[playerKey];
+    const keyForm = keyFormForCharacter(pObj.name);
+    if (!keyForm || String(pObj.transformTarget || "").toLowerCase() !== keyForm.toLowerCase()) return;
+    const safe = characterFilename(pObj.name);
+    const url = `images/avatars/${safe}/${safe}_to_${pObj.transformTarget}_10.jpg`;
+    const pre = new Image();                                       // also warms the cache, so the later, stronger flashes never wait
+    pre.onload = () => window.setTimeout(() => {
+        const now = Math.min(10, Number(gameState && gameState[playerKey] && gameState[playerKey].transform) || 0);
+        const container = document.getElementById(`${playerKey}-image`);
+        const base = container && container.querySelector("img");
+        if (!base || !base.offsetParent || gameState.gameEnded || now < level || now >= 10) return;   // moved on, or the game is over
+        const cs = getComputedStyle(base);
+        const ghost = document.createElement("img");
+        ghost.src = url; ghost.alt = ""; ghost.setAttribute("aria-hidden", "true");
+        ghost.style.cssText = `position:absolute; left:${base.offsetLeft}px; top:${base.offsetTop}px; width:${base.offsetWidth}px; height:${base.offsetHeight}px; ` +
+            `margin:0; object-fit:${cs.objectFit}; border-radius:${cs.borderRadius}; filter:grayscale(.6) contrast(1.15); opacity:0; pointer-events:none; z-index:2;`;
+        base.insertAdjacentElement("afterend", ghost);
+        const rampMs = 40, total = rampMs + cfg.holdMs + KEY_FORM_FORESHADOW_FADE_MS;
+        ghost.animate([
+            { opacity: 0 },
+            { opacity: cfg.peak, offset: rampMs / total },
+            { opacity: cfg.peak, offset: (rampMs + cfg.holdMs) / total },
+            { opacity: 0 }
+        ], { duration: total, easing: "linear" });
+        window.setTimeout(() => ghost.remove(), total + 150);
+    }, KEY_FORM_FORESHADOW_DELAY_MS);
+    pre.src = url;
+}
+
 function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stageChanged, cumulativeGainThisTurn) {
     const portrait = document.getElementById(`${playerKey}-image`);
     const progressTrack = document.getElementById(`${playerKey}-transform-progress-track`);
@@ -6452,6 +6578,8 @@ function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stag
         let caption = null;
         if (currentLevel < 10) { if (prevLevel < 8 && currentLevel >= 8) caption = "Almost gone"; else if (prevLevel < 5 && currentLevel >= 5) caption = "Halfway"; }
         if (caption) showTransformMilestone(playerKey, caption);
+        const crossed = [9, 8, 5].find(lv => prevLevel < lv && currentLevel >= lv);      // the highest milestone just passed
+        if (crossed && currentLevel < 10) keyFormForeshadow(playerKey, crossed);
         const tickEl = document.getElementById(`${playerKey}-transform-progress-label`);
         if (tickEl) { tickEl.classList.remove("label-tick"); void tickEl.offsetWidth; tickEl.classList.add("label-tick"); window.setTimeout(() => tickEl.classList.remove("label-tick"), 450); }
         const crossedMilestone = currentLevel >= 10 || (currentLevel >= 8 && currentLevel - amountChanged < 8) || (currentLevel >= 5 && currentLevel - amountChanged < 5);
@@ -6544,6 +6672,14 @@ async function playFinalTransformationCinematic(loserId) {
     const fill = document.getElementById("cinematic-fill");
     const skipButton = document.getElementById("cinematic-skip");
     if (!loser || !overlay || !portrait) return;
+    const trueForm = isTrueFormFinish(loser);          // taken all the way to their own key transformation: gold edge + "True Form" kicker at the end
+    const kicker = overlay.querySelector(".cinematic-kicker"), kickerText = kicker ? kicker.textContent : null;
+    const markTrueForm = () => {
+        if (!trueForm) return;
+        overlay.style.setProperty("--cinematic-form-color", keyFormAccent(loser.name) || "#ffd34d");
+        overlay.classList.add("cinematic-true-form");
+        if (kicker) kicker.textContent = "✦ True Form ✦";
+    };
 
     const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const stageDelay = reducedMotion ? 70 : 330;
@@ -6560,7 +6696,7 @@ async function playFinalTransformationCinematic(loserId) {
     overlay.style.setProperty("--cinematic-player-color", loserId === 1 ? "var(--player)" : "var(--cpu)");
     overlay.style.display = "flex";
 	playMusic("final");
-    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
+    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final", "cinematic-true-form");
     void overlay.offsetWidth;
     overlay.classList.add("cinematic-enter");
     if (caption) {
@@ -6604,6 +6740,7 @@ async function playFinalTransformationCinematic(loserId) {
         void overlay.offsetWidth;
         if (stage === 10) {
             overlay.classList.add("cinematic-final");
+            markTrueForm();
             if (caption) caption.textContent = finalCaption;
             if (counterWrap) counterWrap.style.display = "none";
         } else {
@@ -6631,6 +6768,7 @@ async function playFinalTransformationCinematic(loserId) {
             portrait.alt = `${loser.name}, final transformation stage`;
             shownStage = 10;
             overlay.classList.add("cinematic-final");
+            markTrueForm();
         }
     }
     if (shownStage !== null) {
@@ -6638,6 +6776,7 @@ async function playFinalTransformationCinematic(loserId) {
         if (counterWrap) counterWrap.style.display = "none";
         overlay.classList.remove("cinematic-shimmer", "cinematic-intense");
         overlay.classList.add("cinematic-final");
+        markTrueForm();
         skipButton.textContent = "Continue";
         waitingForContinue = true;
         await new Promise(resolve => { continueCinematic = resolve; });
@@ -6649,7 +6788,8 @@ async function playFinalTransformationCinematic(loserId) {
     overlay.style.display = "none";
 	// Cinematic finished; game-over modal is about to appear — stop BGM or leave quiet.
 	stopAllMusic(true);
-    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final");
+    overlay.classList.remove("cinematic-enter", "cinematic-shimmer", "cinematic-intense", "cinematic-final", "cinematic-true-form");
+    if (kicker && kickerText !== null) kicker.textContent = kickerText;
     portrait.classList.remove("is-fading");
 	
 	if (typeof syncFinalBoardPortrait === "function") {
@@ -9988,6 +10128,14 @@ function presentFinishedGame() {
         `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
     document.getElementById("go-p2-panel").classList.remove("winner-highlight");
     if (!p1Wins) document.getElementById("go-p2-panel").classList.add("winner-highlight");
+
+    ["go-p1-panel", "go-p2-panel"].forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove("true-form-finish"); });
+    const trueFormLoserId = p1Wins ? 2 : 1;                                   // the loser was taken all the way to their own key transformation
+    if (isTrueFormFinish(trueFormLoserId === 1 ? gameState.p1 : gameState.p2)) {
+        const panel = document.getElementById(`go-p${trueFormLoserId}-panel`), status = document.getElementById(`go-p${trueFormLoserId}-status`);
+        if (panel) panel.classList.add("true-form-finish");
+        if (status) status.innerText = "✦ TRUE FORM";
+    }
 
     recFinish(p1Wins ? 1 : 2);
     recordGlobalMatchResult(winnerId, challengeStatsContext).catch(error => console.warn("Global leaderboard update failed:", error));
