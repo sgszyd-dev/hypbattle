@@ -1423,7 +1423,7 @@ function renderChallengeScreen(kind, extra={}) {
     } else if (kind === "victory") {
 		clearChallengeSave();
         title.textContent = challengeBrainwash ? "🧠 BRAINWASH COMPLETE 🧠" : "✦ THE SEVEN ARE DEFEATED ✦";
-        html=`<p style="text-align:center;font-size:1.12rem">${challengeBrainwash ? "Seven rivals and not a single defeat. Your victory has been entered in the Brainwash Hall of Fame." : "You have overcome all seven rivals. The gauntlet recognizes you as its champion!"}</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=> {const safe=characterFilename(r.name); return `<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img src="images/avatars/${safe}/${safe}_to_${r.form}_10.jpg" alt="${r.name} transformed into ${r.form}" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`;}).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
+        html=`<p style="text-align:center;font-size:1.12rem">${challengeBrainwash ? "Seven rivals and not a single defeat. Your victory has been entered in the Brainwash Hall of Fame." : "You have overcome all seven rivals. The gauntlet recognizes you as its champion!"}</p><p style="text-align:center;color:#c4b5fd">Your defeated opponents · select any portrait to enlarge it</p><div class="challenge-result-gallery">${CHALLENGE_RIVALS.map(r=> {const safe=characterFilename(r.name); return `<div><div class="challenge-portrait" role="button" tabindex="0" title="View ${r.name}'s transformed portrait" onclick="openImageModal(this.querySelector('img')?.src)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openImageModal(this.querySelector('img')?.src)}"><span>${r.form}</span><img data-transform-person="${safe}" data-transform-target="${r.form}" data-transform-stage="10" alt="${r.name} transformed into ${r.form}" onerror="this.remove()"></div><div class="challenge-rival-name">${r.name}</div></div>`;}).join("")}</div><p style="text-align:center;color:#a99ab8">The Seven will remember this defeat. Or, if you prefer, the curtain can rise again.</p>`;
         buttons=`<button onclick="replayChallengeVictoryCinematic()">✦ Replay Victory Cinematic</button><button onclick="finishChallengeRun()">Finish Challenge</button>`;
     } else if (kind === "failed") {
         title.textContent="✦ CHALLENGE ENDED ✦";
@@ -1442,6 +1442,13 @@ function renderChallengeScreen(kind, extra={}) {
         buttons = `<button onclick="startChallengeRun(true)">🧠 Begin Brainwash</button><button class="challenge-cancel" onclick="renderChallengeScreen('rules')">Back</button>`;
 	}
     content.innerHTML=html; actions.innerHTML=buttons; overlay.style.display="flex";
+    content.querySelectorAll('img[data-transform-person]').forEach(img => {
+        loadTransformationStageImage(img.dataset.transformPerson, img.dataset.transformTarget, img.dataset.transformStage).then(loaded => {
+            if (!loaded || !img.isConnected) { if (!loaded) img.remove(); return; }
+            img.onload = () => { const label = img.previousElementSibling; if (label) label.style.display = 'none'; };
+            img.src = loaded.src;
+        });
+    });
 }
 function openChallengeRules(){ if(document.getElementById("game-mode-option")?.value!=="solo") return; renderChallengeScreen("rules"); }
 function resumeSavedChallenge(){
@@ -1554,9 +1561,8 @@ async function playChallengeVictoryCinematic(){
             if(challengeVictoryCinematicSkip) break;
             const rival=CHALLENGE_RIVALS[i];
 			const safeName = characterFilename(rival.name);
-            const base=`images/avatars/${safeName}/${safeName}_to_${rival.form}_`;
-            const zero=await preloadCinematicStage(base+"0.jpg") || await preloadCinematicStage(`images/avatars/${safeName}/${safeName}_baseline.jpg`);
-            const ten=await preloadCinematicStage(base+"10.jpg");
+            const zero=await preloadTransformationCinematicStage(rival.name, rival.form, 0) || await preloadCinematicStage(`images/avatars/${safeName}/${safeName}_baseline.jpg`);
+            const ten=await preloadTransformationCinematicStage(rival.name, rival.form, 10);
             if(challengeVictoryCinematicSkip) break;
             name.classList.remove("cvc-name-flash");
             name.textContent=rival.name;
@@ -6529,9 +6535,10 @@ function keyFormForeshadow(playerKey, level) {
     const keyForm = keyFormForCharacter(pObj.name);
     if (!keyForm || String(pObj.transformTarget || "").toLowerCase() !== keyForm.toLowerCase()) return;
     const safe = characterFilename(pObj.name);
-    const url = `images/avatars/${safe}/${safe}_to_${pObj.transformTarget}_10.jpg`;
-    const pre = new Image();                                       // also warms the cache, so the later, stronger flashes never wait
-    pre.onload = () => window.setTimeout(() => {
+    loadTransformationStageImage(pObj.name, pObj.transformTarget, 10).then(pre => {
+        if (!pre) return;
+        const url = pre.src;
+        window.setTimeout(() => {
         const now = Math.min(10, Number(gameState && gameState[playerKey] && gameState[playerKey].transform) || 0);
         const container = document.getElementById(`${playerKey}-image`);
         const base = container && container.querySelector("img");
@@ -6550,8 +6557,8 @@ function keyFormForeshadow(playerKey, level) {
             { opacity: 0 }
         ], { duration: total, easing: "linear" });
         window.setTimeout(() => ghost.remove(), total + 150);
-    }, KEY_FORM_FORESHADOW_DELAY_MS);
-    pre.src = url;
+        }, KEY_FORM_FORESHADOW_DELAY_MS);
+    });
 }
 
 function playTransformationUIEffect(playerKey, amountChanged, currentLevel, stageChanged, cumulativeGainThisTurn) {
@@ -6606,6 +6613,86 @@ function cinematicWait(ms) {
     return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
+// Transformation artwork loader: prefer a 3x4 spritesheet, then fall back to
+// the legacy per-stage JPG. Sheets live beside the legacy frames and are named
+// {Person}_to_{Thing}_sheet.webp or {Person}_to_{Thing}_sheet.jpg.
+const TRANSFORM_SHEET_COLUMNS = 3;
+const TRANSFORM_SHEET_ROWS = 4;
+const TRANSFORM_FRAME_WIDTH = 600;
+const TRANSFORM_FRAME_HEIGHT = 900;
+const transformationSheetCache = new Map();
+const transformationFrameCache = new Map();
+
+function transformationArtworkBase(personName, targetName) {
+    const safePerson = characterFilename(personName);
+    return `images/avatars/${safePerson}/${safePerson}_to_${targetName}`;
+}
+
+function loadImageElement(src) {
+    return new Promise(resolve => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = src;
+        if (image.complete && image.naturalWidth > 0) resolve(image);
+    });
+}
+
+async function loadTransformationSheet(base) {
+    if (!transformationSheetCache.has(base)) {
+        const promise = (async () => {
+            for (const ext of ['webp', 'jpg']) {
+                const image = await loadImageElement(`${base}_sheet.${ext}`);
+                if (!image) continue;
+                // Fixed geometry makes frame selection deterministic and avoids
+                // silently slicing a wrongly exported sheet.
+                if (image.naturalWidth !== TRANSFORM_SHEET_COLUMNS * TRANSFORM_FRAME_WIDTH ||
+                    image.naturalHeight !== TRANSFORM_SHEET_ROWS * TRANSFORM_FRAME_HEIGHT) {
+                    console.warn(`Ignoring ${base}_sheet.${ext}: expected 1800x3600, got ${image.naturalWidth}x${image.naturalHeight}.`);
+                    continue;
+                }
+                return image;
+            }
+            return null;
+        })();
+        transformationSheetCache.set(base, promise);
+    }
+    return transformationSheetCache.get(base);
+}
+
+async function loadTransformationStageImage(personName, targetName, stage) {
+    const safeStage = Math.max(0, Math.min(10, Math.floor(Number(stage) || 0)));
+    const base = transformationArtworkBase(personName, targetName);
+    const cacheKey = `${base}#${safeStage}`;
+    if (!transformationFrameCache.has(cacheKey)) {
+        const promise = (async () => {
+            const sheet = await loadTransformationSheet(base);
+            if (sheet) {
+                try {
+                    const col = safeStage % TRANSFORM_SHEET_COLUMNS;
+                    const row = Math.floor(safeStage / TRANSFORM_SHEET_COLUMNS);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = TRANSFORM_FRAME_WIDTH;
+                    canvas.height = TRANSFORM_FRAME_HEIGHT;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(sheet,
+                        col * TRANSFORM_FRAME_WIDTH, row * TRANSFORM_FRAME_HEIGHT,
+                        TRANSFORM_FRAME_WIDTH, TRANSFORM_FRAME_HEIGHT,
+                        0, 0, TRANSFORM_FRAME_WIDTH, TRANSFORM_FRAME_HEIGHT);
+                    const frame = await loadImageElement(canvas.toDataURL('image/jpeg', 0.94));
+                    if (frame) return frame;
+                } catch (error) {
+                    console.warn(`Could not extract ${base} stage ${safeStage} from spritesheet; trying the individual JPG.`, error);
+                }
+            }
+            // Compatibility path: all existing individual JPGs continue to work.
+            return await loadImageElement(`${base}_${safeStage}.jpg`);
+        })();
+        transformationFrameCache.set(cacheKey, promise);
+    }
+    return transformationFrameCache.get(cacheKey);
+}
+
 function preloadCinematicStage(path) {
     return new Promise(resolve => {
         const image = new Image();
@@ -6613,6 +6700,10 @@ function preloadCinematicStage(path) {
         image.onerror = () => resolve(null); // Missing artwork is skipped, never shown as a blank frame.
         image.src = path;
     });
+}
+
+function preloadTransformationCinematicStage(personName, targetName, stage) {
+    return loadTransformationStageImage(personName, targetName, stage);
 }
 
 async function playFinalTransformationCinematic(loserId) {
@@ -6707,12 +6798,12 @@ async function playFinalTransformationCinematic(loserId) {
     if (counterWrap) counterWrap.style.display = "block";
 
 	const normalLoserName = characterFilename(loser.name);
-    const stagePath = stage => `images/avatars/${normalLoserName}/${normalLoserName}_to_${loser.transformTarget}_${Math.min(10, Math.max(0, Number(stage) || 0))}.jpg`;
+    const stagePath = stage => preloadTransformationCinematicStage(loser.name, loser.transformTarget, stage);
     let shownStage = null;
     // Begin at stage 0, then play the complete 1–10 sequence regardless of the actual finishing stage.
     for (let stage = 0; stage <= 10; stage++) {
         if (skipped) break;
-        const loaded = await preloadCinematicStage(stagePath(stage));
+        const loaded = await stagePath(stage);
         if (skipped) break;
         if (!loaded) continue;
 
@@ -6762,7 +6853,7 @@ async function playFinalTransformationCinematic(loserId) {
     // If stage 0 is absent, the first available stage still plays; if stage 10 is absent,
     // finish cleanly on the last available artwork instead of displaying a broken image.
     if (skipped && shownStage !== null) {
-        const finalLoaded = await preloadCinematicStage(stagePath(10));
+        const finalLoaded = await stagePath(10);
         if (finalLoaded) {
             portrait.src = finalLoaded.src;
             portrait.alt = `${loser.name}, final transformation stage`;
@@ -6866,60 +6957,60 @@ function updateAllSubliminalDepthBadges() {
     window.setTimeout(wrap, 500);
 })();
 
-function updateAvatarPortrait(container, imgPath, filename, stageChanged) {
+function updateAvatarPortrait(container, personName, targetName, stage, stageChanged) {
     if (!container) return;
+    const safePerson = characterFilename(personName);
+    const safeStage = Math.max(0, Math.min(10, Math.floor(Number(stage) || 0)));
+    const filename = `${safePerson}_to_${targetName}_${safeStage}.jpg`;
+    const logicalPath = `${transformationArtworkBase(personName, targetName)}_${safeStage}.jpg`;
     const existing = container.querySelector("img");
-    let alreadyShowing = false;
-    try {
-        alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath && existing.src === new URL(imgPath, document.baseURI).href);
-    } catch (e) { alreadyShowing = !!(existing && existing.dataset.avatarPath === imgPath); }
-    if (alreadyShowing) return;
+    if (existing && existing.dataset.avatarPath === logicalPath && existing.complete && existing.naturalWidth > 0) return;
 
     const token = String((Number(container.dataset.portraitToken) || 0) + 1);
     container.dataset.portraitToken = token;
-
     const img = document.createElement("img");
-    img.dataset.avatarPath = imgPath;
+    img.dataset.avatarPath = logicalPath;
     img.alt = filename;
-    img.onclick = () => openImageModal(imgPath);
-    const commit = () => {
+    img.onclick = () => openImageModal(img.currentSrc || img.src);
+    loadTransformationStageImage(personName, targetName, safeStage).then(loaded => {
         if (container.dataset.portraitToken !== token) return;
-        if (!img.complete || img.naturalWidth === 0) return;
-        const old = container.querySelector("img");
-        const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS && old && !reduce) {          // crossfade: the new art fades in over the old
-            img.style.cssText = "position:absolute; top:0; left:0; opacity:0; transition:opacity .65s ease;";
-            container.appendChild(img);
-            void img.offsetWidth;
-            img.style.opacity = "1";
-            window.setTimeout(() => {
-                if (container.dataset.portraitToken === token) {
-                    img.style.cssText = "";
-                    container.replaceChildren(img);
-                    if (container.id === "p1-image" || container.id === "p2-image") {
-                        updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
-                    }
-                }
-            }, 700);
+        if (!loaded) {
+            container.textContent = `Image Req: ${filename}`;
             return;
         }
-        container.replaceChildren(img);
-        if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
-            img.classList.add("art-stage-transition");
-            window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
-        }
-        if (container.id === "p1-image" || container.id === "p2-image") {
-            updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
-        }
-    };
-    img.onload = commit;
-    img.onerror = () => {
-        if (container.dataset.portraitToken !== token) return;
-		const safe = characterFilename(filename);
-        container.textContent = `Image Req: ${safe}`;
-    };
-    img.src = imgPath;
-    if (img.complete) commit();
+        img.onload = () => {
+            if (container.dataset.portraitToken !== token) return;
+            const old = container.querySelector("img");
+            const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS && old && !reduce) {
+                img.style.cssText = "position:absolute; top:0; left:0; opacity:0; transition:opacity .65s ease;";
+                container.appendChild(img);
+                void img.offsetWidth;
+                img.style.opacity = "1";
+                window.setTimeout(() => {
+                    if (container.dataset.portraitToken === token) {
+                        img.style.cssText = "";
+                        container.replaceChildren(img);
+                        if (container.id === "p1-image" || container.id === "p2-image")
+                            updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
+                    }
+                }, 700);
+                return;
+            }
+            container.replaceChildren(img);
+            if (stageChanged && ENABLE_TRANSFORMATION_ART_TRANSITIONS) {
+                img.classList.add("art-stage-transition");
+                window.setTimeout(() => img.classList.remove("art-stage-transition"), 700);
+            }
+            if (container.id === "p1-image" || container.id === "p2-image")
+                updateSubliminalDepthBadge(container.id === "p1-image" ? 1 : 2);
+        };
+        img.onerror = () => {
+            if (container.dataset.portraitToken === token) container.textContent = `Image Req: ${filename}`;
+        };
+        img.src = loaded.src;
+        if (img.complete && img.naturalWidth > 0) img.onload();
+    });
 }
 
 function pulseChangedStat(playerPrefix, statName, currentValue) {
@@ -7032,10 +7123,8 @@ function updateUI() {
         const transformDelta = previousTransform === null ? 0 : Number(pObj.transform) - previousTransform;
         const stageChanged = previousTransform !== null && Math.min(10, Number(pObj.transform)) !== Math.min(10, previousTransform);
 		const normalPObjName = characterFilename(pObj.name);
-        const filename = `${normalPObjName}_to_${pObj.transformTarget}_${Math.min(10, pObj.transform)}.jpg`;
-        const imgPath = `images/avatars/${normalPObjName}/${filename}`;
         const container = document.getElementById(`${p}-image`);
-        updateAvatarPortrait(container, imgPath, filename, stageChanged);
+        updateAvatarPortrait(container, pObj.name, pObj.transformTarget, Math.min(10, pObj.transform), stageChanged);
         if (previousTransform !== null && transformDelta !== 0) {
             if (transformDelta > 0) transformationGainThisTurn[p] += transformDelta;
             showStatDelta(progressLabel || progressTrack, transformDelta, "👁️");
@@ -10001,28 +10090,22 @@ function syncFinalBoardPortrait(playerId) {
     if (label) label.textContent = `${level} / 10`;
     if (track) track.setAttribute('aria-valuenow', String(level));
     const stage = Math.min(10, Math.max(0, Number(player.transform) || 0));
-	const normalPlayerName = characterFilename(player.name);
+    const normalPlayerName = characterFilename(player.name);
     const filename = `${normalPlayerName}_to_${player.transformTarget}_${stage}.jpg`;
-    const path = `images/avatars/${normalPlayerName}/${filename}`;
-        const container = document.getElementById(`${key}-image`);
+    const container = document.getElementById(`${key}-image`);
     if (!container) return;
     const token = String((Number(container.dataset.portraitToken) || 0) + 1);
     container.dataset.portraitToken = token;
     let img = container.querySelector('img');
-    if (!img) {
-        img = document.createElement('img');
-        container.replaceChildren(img);
-    }
-    img.dataset.avatarPath = path;
+    if (!img) { img = document.createElement('img'); container.replaceChildren(img); }
+    img.dataset.avatarPath = `${transformationArtworkBase(player.name, player.transformTarget)}_${stage}.jpg`;
     img.alt = filename;
-    img.onclick = () => openImageModal(path);
-    img.onload = null;
-    img.onerror = () => {
+    img.onclick = () => openImageModal(img.currentSrc || img.src);
+    loadTransformationStageImage(player.name, player.transformTarget, stage).then(loaded => {
         if (container.dataset.portraitToken !== token) return;
-		const safe = characterFilename(filename);
-        container.textContent = `Image Req: ${safe}`;
-    };
-    img.src = path;
+        if (!loaded) { container.textContent = `Image Req: ${filename}`; return; }
+        img.src = loaded.src;
+    });
     updateSubliminalDepthBadge(playerId);
 }
 
@@ -10113,8 +10196,13 @@ function presentFinishedGame() {
     const p1FinalT = Math.min(10, Math.max(0, Number(gameState.p1.transform) || 0));
 	const normalP1Name = characterFilename(gameState.p1.name);
     const p1Path = `images/avatars/${normalP1Name}/${normalP1Name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`;
-    document.getElementById("go-p1-image").innerHTML =
-        `<img src="${p1Path}" onclick="openImageModal('${p1Path}')" onerror="this.outerHTML='Image Req:<br>${normalP1Name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg'"/>`;
+    document.getElementById("go-p1-image").innerHTML = `<img alt="${normalP1Name} transformed portrait">`;
+    const goP1Img = document.querySelector("#go-p1-image img");
+    goP1Img.onclick = () => openImageModal(goP1Img.currentSrc || goP1Img.src);
+    loadTransformationStageImage(gameState.p1.name, gameState.p1.transformTarget, p1FinalT).then(loaded => {
+        if (goP1Img.isConnected && loaded) goP1Img.src = loaded.src;
+        else if (goP1Img.isConnected) goP1Img.replaceWith(document.createTextNode(`Image Req: ${normalP1Name}_to_${gameState.p1.transformTarget}_${p1FinalT}.jpg`));
+    });
     document.getElementById("go-p1-panel").classList.remove("winner-highlight");
     if (p1Wins) document.getElementById("go-p1-panel").classList.add("winner-highlight");
 
@@ -10124,8 +10212,13 @@ function presentFinishedGame() {
     const p2FinalT = Math.min(10, Math.max(0, Number(gameState.p2.transform) || 0));
 	const normalP2Name = characterFilename(gameState.p2.name);
     const p2Path = `images/avatars/${normalP2Name}/${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`;
-    document.getElementById("go-p2-image").innerHTML =
-        `<img src="${p2Path}" onclick="openImageModal('${p2Path}')" onerror="this.outerHTML='Image Req:<br>${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg'"/>`;
+    document.getElementById("go-p2-image").innerHTML = `<img alt="${normalP2Name} transformed portrait">`;
+    const goP2Img = document.querySelector("#go-p2-image img");
+    goP2Img.onclick = () => openImageModal(goP2Img.currentSrc || goP2Img.src);
+    loadTransformationStageImage(gameState.p2.name, gameState.p2.transformTarget, p2FinalT).then(loaded => {
+        if (goP2Img.isConnected && loaded) goP2Img.src = loaded.src;
+        else if (goP2Img.isConnected) goP2Img.replaceWith(document.createTextNode(`Image Req: ${normalP2Name}_to_${gameState.p2.transformTarget}_${p2FinalT}.jpg`));
+    });
     document.getElementById("go-p2-panel").classList.remove("winner-highlight");
     if (!p1Wins) document.getElementById("go-p2-panel").classList.add("winner-highlight");
 
