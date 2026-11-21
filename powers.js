@@ -111,6 +111,7 @@ const POWERS = {
         icon: "🎯", title: "Called Shot", impl: "abilities",
         description: "Before your first roll, name a face. If it shows 3 or more times when you resolve, its effect is +1. If it shows fewer than 2 times, lose 1 ⚡."
     },
+	// Enrique
     surrender: {
         icon: "🚒", title: "Surrender to Heat", impl: "abilities",
         description: "Arousal never costs you rerolls. At the end of your turn you gain 1 Trance for every 2 Arousal, which can trigger The Deepening."
@@ -136,13 +137,13 @@ const POWERS = {
         icon: "🔮", title: "Kaleidoscope", impl: "abilities",
         description: "You hold one random borrowed power. Use it and you draw a new one (all get used before any repeat). Once per turn, pay 3 ⚡ to swap it for another."
     }
-    // 5 more???
 };
 
 // character name -> power key
 const CHARACTER_POWERS = {
     Alex: "unyieldingresistance",
 	Dare: "meditation",
+	Enrique: "surrender",
 	Fable: "lucidreversal",
     Hyeri: "perfectharmony",
     Ivy: "suggestedtransference", 

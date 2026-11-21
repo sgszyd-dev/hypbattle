@@ -1270,6 +1270,13 @@ const CPU_VICTORY_TAUNTS = {
 			"I barely broke a sweat. Stay down while I decide whether you’re worth the trouble of keeping.",
 			"A real warrior would have lasted longer. You’re lucky I’m in a generous mood… for now.",
 			"Victory was never in doubt. Look at me when I speak. You will remember who put you there."
+		],
+		Enrique: [
+			"Ha! See? I told you I could win. Stay down and admit I’m stronger this time.",
+			"Finally. You’re the one on the bottom for once. Don’t look so surprised—I can be in charge.",
+			"I won. Me. Look at me when I’m talking to you. I’m not the little one right now.",
+			"That’s what you get for underestimating me. Hold still while I enjoy this for once.",
+			"You’re mine this round. I don’t care if it doesn’t happen often—I’m taking it."
 		]
     }
 };
@@ -1593,6 +1600,13 @@ const CPU_DEFEAT_SUBMISSIONS = {
 			"I yield. For the moment. Do not mistake a fallen warrior for a broken one.",
 			"You’ve forced me to the ground. Rare. Use the advantage carefully before I take it back.",
 			"Fine. You win this exchange. An Amazon on her knees is still more dangerous than most standing."
+		],
+		Enrique: [
+			"Okay… you got me again. I’ll be good. Just tell me what you want me to do.",
+			"I lost. Of course I did. Please don’t be too hard on me… I’ll listen this time.",
+			"You always end up on top. It’s fine. I’ll stay right here and take it. I promise.",
+			"I’m sorry I tried to act big. You can use me however you want. I won’t fight it.",
+			"You win. Again. I’ll be soft and quiet for you… just don’t send me away."
 		]
     }
 };
@@ -2691,6 +2705,71 @@ const CHALLENGE_RIVAL_TAUNTS = {
 			"So close. Accept this body of {AAN} {CPUTRANS} if you must. The pride inside it is not yours to claim.",
 			"Final stage approaching. You have altered me into this {CPUTRANS}. The deadly part remains exactly where it was.",
 			"One step left. When this ends I will still be the one who decides how the next fight goes."
+		]
+	},
+	Enrique: {
+		TransformPlayer: [
+			"Look at you changing. I’m the one making it happen for once. Keep going—I like seeing you smaller.",
+			"Another stage. You’re becoming something I can actually handle. Don’t stop now.",
+			"Feel that? I’m the one in control of your body this time. Admit it feels different when I’m winning.",
+			"You’re shifting into {AAN} {HUMTRANS} and I’m still standing over you. This is how it’s supposed to go… right?",
+			"Keep transforming. I want to see how far you can become {AAN} {HUMTRANS} while I still have the upper hand."
+		],
+		AIGetsTransformed: [
+			"My body is changing and I already feel smaller. Please don’t make it worse… I’ll be good.",
+			"You’re turning me into something weaker again. I’ll take it. Just… be a little gentle?",
+			"I can feel it happening. I always end up the one getting altered. Tell me what you want from me.",
+			"This is so unfair… and I still can’t stop it. I’ll stay still for you. I promise.",
+			"You’re rewriting me into {AAN} {CPUTRANS} and I already know how this ends. I’ll try to be pleasing. Just don’t be too mean."
+		],
+		PlayerIsObedient: [
+			"Oh. You’re actually listening to me. Stay just like that. I could get used to this.",
+			"Good. You’re being good for me for once. Don’t move—I want to enjoy it while it lasts.",
+			"Look at you obeying. Maybe I really can be the strong one. Keep that up.",
+			"You’re quiet and still under me. Finally. Hold that position so I can feel like I’m in charge.",
+			"That’s better. Soft and obedient. I’m not going to let this moment go to waste."
+		],
+		AIIsObedient: [
+			"I’ll do whatever you say. Just tell me. I’ll be good—I always end up being good for you.",
+			"Yes… I’ll obey. Please don’t be disappointed in me. I’ll try harder this time.",
+			"You have me. I’ll follow every order. I don’t want to make you upset again.",
+			"I’m listening. I’ll stay soft and do exactly what you want. I promise I won’t fight.",
+			"Okay. I’m yours right now. Use me however you like… I’m better when I’m like this anyway."
+		],
+		BigRollAI: [
+			"Yes! A big roll and it’s mine. Stay right there—I’m not letting this chance slip.",
+			"Finally something goes my way. Hold still while I actually get to press the advantage.",
+			"That number is mine. Don’t look at me like that. I’m allowed to be the strong one sometimes.",
+			"A real opening for once. You’re going to feel this. I won’t waste it.",
+			"Luck is on my side. Stay down. I want to remember what it feels like to win cleanly."
+		],
+		PlayerAt5Transform: [
+			"You’re already softer. I like this {HUMTRANS} version of you better.",
+			"You’re becoming easier to handle. Keep changing for me.",
+			"Half transformed into {AAN} {HUMTRANS} and you look so much more manageable. Don’t stop now.",
+			"Look at you… altered and already quieter. This is nice for a change.",
+			"Midway through and I can actually feel like I’m the one shaping you. Continue."
+		],
+		PlayerAt8Transform: [
+			"Almost done. You’re so close to being completely {AAN} {HUMTRANS}. Just a little more.",
+			"Two stages left. You’re nearly {AAN} {HUMTRANS} and I still have the upper hand. Stay with it.",
+			"So close. I want to see the last of the old you disappear while I’m still winning.",
+			"Nearly complete. You’re going to be exactly how I want you: {AAN} {HUMTRANS}. Don’t fight the last steps.",
+			"Yield the rest. For once let me be the one who finishes it."
+		],
+		AIAt5Transform: [
+			"Halfway changed and I already feel smaller. I’ll be good… just don’t push too hard yet.",
+			"Five stages of this and I’m already softer. Please tell me what you want me to do.",
+			"My body is shifting into {AAN} {CPUTRANS} and I know how this usually ends. I’ll try to stay pleasing.",
+			"Halfway there. I can feel myself becoming easier for you. I won’t resist much.",
+			"These changes make me quieter. I’ll stay still and take whatever comes next."
+		],
+		AIAt9Transform: [
+			"One stage left. Go ahead and finish it. I’ll be whatever you make me… I usually am.",
+			"Almost done. I’ll accept the last of it. Just… let me be useful to you after.",
+			"So close. I already know I’m going to end up soft and obedient. It’s okay. Do it.",
+			"Final stage. Change me all the way into {AAN} {CPUTRANS}. I’ll try to be good for you once it’s over.",
+			"One step remaining. Finish it. I’m better when I’m the one who’s been thoroughly beaten and reshaped."
 		]
 	}
 };

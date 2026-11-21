@@ -355,11 +355,146 @@ function closeHelpModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// ============================================================
+// SUBLIMINAL HEAD FLASH (Characters tab)
+// Every so often one character's head on the Characters tab "flickers" into its transformed head shot for a moment and
+// melts back. Uses images/avatars/<Name>/<Name>_head_transformed.jpg (the same files The Seven uses). Characters without
+// that file are simply skipped. Nothing here touches the game; it only adds a short-lived picture on top of the head shot.
+// Characters whose key transformation the player has completed (hasDefeatedKeyTransform in hypbattle.js) do not just flash: when their turn comes
+// they fade to the full-colour transformed head and STAY that way until the tab is redrawn (leave the tab and come back: everyone starts normal again).
+// To switch it off: enabled: false.   To tune it: everything is in HEAD_FLASH below.
+// ============================================================
+const HEAD_FLASH = {
+    enabled: true,
+    style: "ghost",                 // "ghost" = grey, dimmed | "shadow" = almost black | "tint" = violet | "full" = normal colours (see HEAD_FLASH_LOOKS)
+    firstDelayMs: [2500, 6000],     // wait before the first flash after the tab opens (random between these)
+    gapMs: [5000, 15000],           // wait between flashes (random between these)
+    holdMs: [300, 600],             // how long the transformed face stays at full strength
+    fadeMs: 260,                    // how long it takes to melt away
+    doubleChance: 0.15,             // chance that it blinks twice in a row
+    keepDefeated: true,             // a character whose key transformation you have completed turns FULL colour and stays that way until you leave the tab
+    defeatedBias: 0.5,              // when one of those heads is on screen, chance that it is the next one picked
+    transformFadeMs: 900            // how long the permanent change takes
+};
+const HEAD_FLASH_LOOKS = {
+    ghost:  { filter: "grayscale(1) brightness(.6) contrast(1.4)", peak: 0.85 },
+    shadow: { filter: "grayscale(1) brightness(.2) contrast(1.8)", peak: 0.9 },
+    tint:   { filter: "grayscale(1) sepia(1) hue-rotate(230deg) saturate(3) brightness(.75)", peak: 0.8 },
+    full:   { filter: "none", peak: 1 }
+};
+
+const HeadFlash = (() => {
+    let timer = null, running = false, lastName = "";
+    const status = {};                                           // image url -> "loading" | "ok" | "missing"
+    const rand = ([a, b]) => a + Math.random() * (b - a);
+    const reduceMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const urlFor = name => {
+        const safe = characterFilename(name).replace(/[^a-z0-9 _-]/gi, "");
+        return `images/avatars/${safe}/${safe}_head_transformed.jpg`;
+    };
+    const heads = () => Array.from(document.querySelectorAll("#help-content .signature-portrait"));
+
+    function probe(url) {                                        // load each transformed head once, so a flash never waits on the network
+        if (status[url]) return;
+        status[url] = "loading";
+        const im = new Image();
+        im.onload = () => { status[url] = "ok"; };
+        im.onerror = () => { status[url] = "missing"; };
+        im.src = url;
+    }
+    function onScreen(img) {                                     // really visible: not scrolled out of the panel, not covered by something
+        const r = img.getBoundingClientRect();
+        if (!r.width || !r.height) return false;
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === img;
+    }
+
+    function overlayFor(img, url, filter) {                      // a copy of the head shot laid over the real one; the real one is never changed while it flashes
+        const cs = getComputedStyle(img);
+        const ghost = document.createElement("img");
+        ghost.src = url;
+        ghost.alt = "";
+        ghost.setAttribute("aria-hidden", "true");
+        ghost.style.cssText = `position:absolute; left:${img.offsetLeft}px; top:${img.offsetTop}px; width:${img.offsetWidth}px; height:${img.offsetHeight}px; ` +
+            `margin:0; object-fit:${cs.objectFit}; border-radius:${cs.borderRadius}; filter:${filter}; opacity:0; pointer-events:none; z-index:2;`;
+        img.insertAdjacentElement("afterend", ghost);
+        return ghost;
+    }
+
+    function flash(img, url, allowDouble) {                      // the ghost: appears, holds, melts away
+        if (!img.isConnected || img.offsetParent === null) return;
+        const look = HEAD_FLASH_LOOKS[HEAD_FLASH.style] || HEAD_FLASH_LOOKS.ghost;
+        const ghost = overlayFor(img, url, look.filter);
+        const rampMs = 30, holdMs = rand(HEAD_FLASH.holdMs), total = rampMs + holdMs + HEAD_FLASH.fadeMs;
+        ghost.animate([
+            { opacity: 0 },
+            { opacity: look.peak, offset: rampMs / total },
+            { opacity: look.peak, offset: (rampMs + holdMs) / total },
+            { opacity: 0 }
+        ], { duration: total, easing: "linear" });
+        window.setTimeout(() => ghost.remove(), total + 150);
+        if (allowDouble) window.setTimeout(() => flash(img, url, false), total * 0.6 + 90);
+    }
+
+    function transformForGood(img, url) {                        // fades to the full-colour transformed head and stays
+        if (!img.isConnected || img.offsetParent === null) return;
+        img.dataset.keyShown = "1";
+        const ghost = overlayFor(img, url, "none");
+        ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: HEAD_FLASH.transformFadeMs, easing: "ease-in-out", fill: "forwards" });
+        window.setTimeout(() => {                                // then make the real head shot the transformed one, so it also survives a window resize
+            const swap = () => { img.src = url; window.setTimeout(() => ghost.remove(), 60); };
+            const pre = new Image();
+            pre.src = url;
+            if (pre.decode) pre.decode().then(swap, swap); else swap();
+        }, HEAD_FLASH.transformFadeMs + 40);
+    }
+    const isDefeated = name => typeof hasDefeatedKeyTransform === "function" && hasDefeatedKeyTransform(name);
+
+    function schedule(first) {
+        window.clearTimeout(timer);
+        if (!running) return;
+        timer = window.setTimeout(tick, rand(first ? HEAD_FLASH.firstDelayMs : HEAD_FLASH.gapMs));
+    }
+    function tick() {
+        if (!running) return;
+        const all = heads();
+        if (!all.length) { stop(); return; }                     // the Characters tab is gone
+        if (!document.hidden) {
+            let pool = all.filter(img => !img.dataset.keyShown && status[urlFor(img.alt)] === "ok" && onScreen(img));
+            const defeated = HEAD_FLASH.keepDefeated ? pool.filter(img => isDefeated(img.alt)) : [];
+            let img = null;
+            if (defeated.length && Math.random() < HEAD_FLASH.defeatedBias) {
+                img = defeated[Math.floor(Math.random() * defeated.length)];
+            } else {
+                const others = pool.filter(i => i.alt !== lastName);
+                if (others.length) pool = others;                // do not flash the same character twice in a row
+                if (pool.length) img = pool[Math.floor(Math.random() * pool.length)];
+            }
+            if (img) {
+                lastName = img.alt;
+                if (HEAD_FLASH.keepDefeated && isDefeated(img.alt)) transformForGood(img, urlFor(img.alt));
+                else flash(img, urlFor(img.alt), Math.random() < HEAD_FLASH.doubleChance);
+            }
+        }
+        schedule(false);
+    }
+
+    function start() {                                           // call after the Characters tab has been drawn
+        if (!HEAD_FLASH.enabled || reduceMotion()) return;
+        heads().forEach(img => probe(urlFor(img.alt)));
+        if (running) return;
+        running = true;
+        schedule(true);
+    }
+    function stop() { running = false; window.clearTimeout(timer); timer = null; }
+    return { start, stop };
+})();
+
 function showHelpTab(tab) {
     const content = document.getElementById('help-content');
     if (!content) return;
     content.innerHTML = HELP_CONTENT[tab] || HELP_CONTENT.quick;
 	if (tab === 'characters') { const grid = content.querySelector('.help-grid'); if (grid) grid.insertAdjacentHTML('beforeend', Abilities.helpBoxes()); }
+    if (tab === 'characters') HeadFlash.start(); else HeadFlash.stop();      // subliminal head flashes only on this tab
     document.querySelectorAll('#help-tabs .help-tab').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });

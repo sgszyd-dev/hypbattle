@@ -1,4 +1,4 @@
-const GAME_VERSION = "20261120.1"; // Update this label for each release.
+const GAME_VERSION = "20261120.2"; // Update this label for each release.
 const FACES = ["🌀 SPIRAL", "💧 LUCIDITY", "⚡ ENERGY", "⛓️ SUBMISSION", "🔥 AROUSAL", "👁️ TRANSFORM"];
 // Local preference: defaults ON for desktop; mobile/touch devices force both ambience layers OFF.
 const GAME_SPIRAL_STORAGE_KEY = "hypduel_game_spiral_background";
@@ -91,10 +91,11 @@ window.addEventListener("orientationchange", applyGameSpiralBackground, { passiv
 // Each character has a gender field ("male" / "female"). It is used for things like the Master / Mistress title.
 // current ratio, male: 6, female: 7
 // need 7 more (4 male, 3 female)
-// missing letters: B, C, E, G, J, K, N, O, P, U, W, Y
+// missing letters: B, C, G, J, K, N, O, P, U, W, Y
 const CHARACTERS = [
     { name: "Alex",      gender: "male" },
 	{ name: "Dare",      gender: "male"},
+	{ name: "Enrique",	 gender: "male"},
     { name: "Fable",     gender: "female"},
 	{ name: "Hyeri", 	 gender: "female" },
 	{ name: "Ivy",		 gender: "female"},
@@ -247,6 +248,7 @@ const CHARACTER_MANIFEST = {
 	"Dare": ["Snake","Skunk","Cow","Gender","Demon"], // Snake
 	"Qiyana": ["Cat","Deer","Gender","Bird"], // Deer 
 	"Princess": ["Mannequin", "Dragon", "Statue", "Werewolf"], // Mannequin, (Gender, Robot)
+	"Enrique": ["Bird"] // Bird? Horse, Goat
 	};
 
 
@@ -584,7 +586,7 @@ const CLASSIC_CHALLENGE_RIVALS = [
 const CHALLENGE_CHARACTER_FORMS = {
     Roz:"Eevee", Zixuan:"Doll", Fable:"Otter", Mark:"Gender", Hyeri:"Squirrel",
     Tex:"Cow", "Siobhán":"Cat", Alex:"Bunny", Xander:"Bat", Luci:"Robot", Ivy:"Demon",
-	Dare: "Snake", Val:"Fox", Qiyana:"Deer", Princess:"Mannequin"
+	Dare: "Snake", Val:"Fox", Qiyana:"Deer", Princess:"Mannequin", Enrique:"Bird"
 };
 // Alex may still buy/use cards that cost him Submission (e.g. Pendulum Swing). Only cards
 // whose primary purpose is defensive Submission protection are unavailable to him.
@@ -4171,8 +4173,42 @@ function getDefeatProgress() {
         return { difficulty: d, label: CPU_DIFFICULTY_NAMES[d] || d, games: r.games, wins: r.wins, losses: r.losses, defeated: r.wins > 0, firstWin: r.firstWin, lastWin: r.lastWin };
     });
 }
-function clearDefeats() { try { localStorage.removeItem(DEFEATS_KEY); } catch (e) {} }
+function clearDefeats() { try { localStorage.removeItem(DEFEATS_KEY); localStorage.removeItem(KEY_DEFEATS_KEY); } catch (e) {} }
 window.hypDuelProgress = getDefeatProgress;      // try it in the console: console.table(hypDuelProgress())
+
+// ---------- progress: which characters' KEY transformation the human has completed ----------
+// A character's key transformation is their own form in CHALLENGE_CHARACTER_FORMS (Luci -> Robot). It counts when the human wins by taking that
+// character all the way to 10 Transform while their transformation target is that form: in The Seven or in any other solo or online game.
+// Forfeits do not count. The Characters help tab reads this: a defeated character's head stays transformed when it flashes (HeadFlash in help_additions.js).
+const KEY_DEFEATS_KEY = "hypduel_key_defeats_v1";
+function keyDefeatName(name) { return characterFilename(String(name || "").trim().split(/\s+/)[0]); }
+function loadKeyDefeats() { try { return JSON.parse(safeStorage.get(KEY_DEFEATS_KEY) || "{}") || {}; } catch (e) { return {}; } }
+function keyFormForCharacter(name) {
+    const id = keyDefeatName(name);
+    const hit = Object.keys(CHALLENGE_CHARACTER_FORMS).find(k => characterFilename(k) === id);
+    return hit ? CHALLENGE_CHARACTER_FORMS[hit] : null;
+}
+function hasDefeatedKeyTransform(name) { const r = loadKeyDefeats()[keyDefeatName(name)]; return !!(r && r.wins > 0); }
+function recordKeyTransformDefeat(winnerId) {        // called once when a finished game is presented
+    if (!gameState || gameState.endReason === "forfeit") return;
+    const localWinner = gameState.gameMode === "solo" ? 1 : (gameState.gameMode === "online" ? Number(onlineLocalRole) : null);
+    if (Number(winnerId) !== localWinner) return;     // only the human playing on this screen earns it (not local two-player games)
+    const loser = Number(winnerId) === 1 ? gameState.p2 : gameState.p1;
+    if (!loser || !(Number(loser.transform) >= 10)) return;
+    const keyForm = keyFormForCharacter(loser.name);
+    if (!keyForm || String(loser.transformTarget || "").toLowerCase() !== keyForm.toLowerCase()) return;
+    const all = loadKeyDefeats(), id = keyDefeatName(loser.name), now = new Date().toISOString();
+    const r = all[id] || { wins: 0, firstWin: now };
+    r.wins++; r.lastWin = now; all[id] = r;
+    safeStorage.set(KEY_DEFEATS_KEY, JSON.stringify(all));
+}
+window.hypDuelKeyDefeats = loadKeyDefeats;                                   // console: hypDuelKeyDefeats()
+window.hypDuelMarkKeyDefeat = (name, on = true) => {                         // console: hypDuelMarkKeyDefeat("Luci")  /  hypDuelMarkKeyDefeat("Luci", false)  (handy for testing)
+    const all = loadKeyDefeats(), id = keyDefeatName(name), now = new Date().toISOString();
+    if (on) all[id] = all[id] || { wins: 1, firstWin: now, lastWin: now }; else delete all[id];
+    safeStorage.set(KEY_DEFEATS_KEY, JSON.stringify(all));
+    return all;
+};
 function recClear() { try { localStorage.removeItem(REC_STORAGE_KEY); } catch (e) {} }
 
 // Wrap the game's own action functions so every call is recorded (behaviour is unchanged).
@@ -9878,6 +9914,7 @@ function presentFinishedGame() {
     const winnerId = winnerIdFromState();
     if (!winnerId) return;
     gameOverPresentationStarted = true;
+    recordKeyTransformDefeat(winnerId);
 	if (window.Subliminal)
 		Subliminal.onGameOver();
     playSound("win");
